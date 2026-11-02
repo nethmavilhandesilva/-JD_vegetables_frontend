@@ -365,11 +365,12 @@ const SalesSummaryFooter = ({ sales, formatDecimal }) => {
             acc.billTotal += (weight * price);
             acc.totalBagPrice += (packs * packCost);
             acc.totalLabour += (packs * packLabour);
+            acc.totalKuliya += parseFloat(s.Kuliya) || 0;
             return acc;
-        }, { billTotal: 0, totalBagPrice: 0, totalLabour: 0 });
+        }, { billTotal: 0, totalBagPrice: 0, totalLabour: 0, totalKuliya: 0 });
     }, [sales]);
 
-    const finalPayable = totals.billTotal + totals.totalBagPrice;
+    const finalPayable = totals.billTotal + totals.totalBagPrice + totals.totalKuliya;
 
     return (
         <div className="sales-totals-bar flex flex-row flex-nowrap items-center justify-between w-full p-2 mt-2 rounded-xl border-2 border-blue-500 bg-gray-900 text-white font-bold shadow-lg overflow-hidden">
@@ -391,6 +392,7 @@ const SalesSummaryFooter = ({ sales, formatDecimal }) => {
             <div className="flex flex-row items-center whitespace-nowrap px-4 border-r border-gray-700 h-full ml-auto" style={{ transform: 'translateY(-72px)' }}>
                 <span className="text-gray-400 uppercase text-[10px] mr-2" style={{ marginLeft: '480px' }}>ගෙවිය:</span>
                 <span className="font-bold text-sm text-yellow-400" style={{ marginLeft: '6px' }}>{formatDecimal(finalPayable)}</span>
+                <span className="text-gray-400 text-[10px]" style={{ marginLeft: '6px' }}>(කුලිය: {formatDecimal(totals.totalKuliya)})</span>
             </div>
         </div>
     );

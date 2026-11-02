@@ -1688,7 +1688,7 @@ const SupplierReport = () => {
 
         // Full print document for a bill number (the number of a new bill is only known after Print)
         const buildDocument = (billNo) => {
-            const content = isA4 ? getA4Content(billNo, "155mm", topMargin) : getBillContent(billNo);
+            const content = isA4 ? getA4Content(billNo, "98mm", topMargin) : getBillContent(billNo);
             return `
         <!DOCTYPE html>
         <html>
@@ -1705,7 +1705,7 @@ const SupplierReport = () => {
                     @media print {
                         @page {
                             margin: 0;
-                            size: ${isA4 ? 'A4' : '80mm auto'};
+                            ${isA4 ? '' : 'size: 80mm auto;'}
                         }
                         body {
                             margin: 0 !important;
@@ -1834,7 +1834,7 @@ const SupplierReport = () => {
 
         const onClose = () => setShowBillPreview(false);
         const isA4 = printFormat === 'a4';
-        const previewHtml = isA4 ? getA4Content(selectedBillNo, "155mm", "20mm") : getBillContent(selectedBillNo);
+        const previewHtml = isA4 ? getA4Content(selectedBillNo, "98mm", "20mm") : getBillContent(selectedBillNo);
 
         return (
             <div
@@ -2312,7 +2312,10 @@ const SupplierReport = () => {
                             තෝරාගත් බිල් එකතුව (Selected Bill Total)
                         </span>
                         <span style={{ color: '#28a745', fontWeight: 'bold', fontSize: '1.5rem' }}>
-                            Rs. {totalsupplierSales.toFixed(2)}
+                            Rs. {(totalsupplierSales + totalCustomerPackCost).toFixed(2)}
+                            <span style={{ color: '#9ca3af', fontSize: '0.9rem', marginLeft: '8px' }}>
+                                (මලු: {totalCustomerPackCost.toFixed(2)})
+                            </span>
                         </span>
                     </div>
                 )}
