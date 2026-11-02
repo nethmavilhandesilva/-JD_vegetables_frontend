@@ -8,9 +8,13 @@ import { ThermalBillHTML, A4BillHTML } from '../BillTemplates';
 import ImagePreviewModal from '../ImagePreviewModal';
 import { SHOP_PHONE } from '../../config/shop';
 import { BACKEND_URL } from '../../config/paths';
+import { printHtml } from '../../utils/printHtml';
+import PrintPreviewDialog from '../PrintPreviewDialog';
 
 const routes = {
     markPrinted: "/sales/mark-printed",
+    confirmPrint: "/sales/confirm-print",
+    cancelPrint: "/sales/cancel-print",
     getLoanAmount: "/get-loan-amount",
     markAllProcessed: "/sales/mark-all-processed",
     givenAmount: "/sales",
@@ -730,6 +734,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'thermal', setPr
     const [allSalesRecords, setAllSalesRecords] = useState([]);
     const [isLoadingAllSales, setIsLoadingAllSales] = useState(false);
     // Last printed bill's final total, persisted in localStorage so it survives reloads/navigation
+    // Bill waiting in the app's own print window (F1): nothing is marked printed until Print
+    const [printJob, setPrintJob] = useState(null);
     const [lastPrintedBill, setLastPrintedBill] = useState(() => {
         try {
             const saved = localStorage.getItem('lastPrintedBill');
@@ -2256,30 +2262,76 @@ export default function SalesEntry({ printMode: propPrintMode = 'thermal', setPr
             return;
         }
 
+        const customerCode = salesData[0].customer_code || "N/A";
+        const customerName = salesData[0].customer_code || salesData[0].customer_code || customerCode;
+        const mobile = salesData[0].mobile || SHOP_PHONE;
+
+        // Reuse the loan amount already tracked in state (kept fresh as the customer is
+        // selected/typed via fetchLoanAmount) instead of re-fetching it here.
+        const currentLoan = loanAmount || 0;
+
+        // Get original IDs for marking as printed
+        let idsToMark = salesData.map(s => s.id);
+        if (shouldCombine) {
+            idsToMark = printData.flatMap(s => s.original_ids);
+        }
+
+        // Compute the same bill total shown as "එකතුව" on the receipt (weight*price + pack cost + Kuliya,
+        // grouped by row id the same way ThermalBillHTML groups it) so the spoken amount matches the print.
+        const billFinalTotal = printData.reduce((sum, s) => {
+            const weight = parseFloat(s.weight) || 0;
+            const price = parseFloat(s.price_per_kg) || 0;
+            const packs = parseInt(s.packs) || 0;
+            const packCost = parseFloat(s.CustomerPackCost) || 0;
+            const kuliya = parseFloat(s.Kuliya) || 0;
+            return sum + (weight * price) + (packs * packCost) + kuliya;
+        }, 0);
+
+        // FIXED: Use the printMode prop to determine which template to use
+        const buildReceipt = (billNo) => (printMode === 'a4'
+            ? buildA4ReceiptHTML(printData, billNo, customerName, mobile, currentLoan)
+            : buildFullReceiptHTML(printData, billNo, customerName, mobile, currentLoan, billSize));
+
+        // Open the app's own print window. The bill number is given when Print is pressed;
+        // a reprint already has its number.
+        const previewBillNo = salesData.find(s => s.bill_no)?.bill_no || "—";
+        setPrintJob({
+            previewHtml: buildReceipt(previewBillNo),
+            buildReceipt,
+            customerCode,
+            customerName,
+            currentLoan,
+            idsToMark,
+            telephoneNo: formData.telephone_no,
+            billFinalTotal,
+            busy: false,
+            error: '',
+        });
+    };
+
+    // Cancel in the print window: nothing was marked, the bill stays where it is
+    const handleCancelPrintJob = () => {
+        setPrintJob(null);
+        refs.customer_code_input.current?.focus();
+    };
+
+    // Print in the print window: mark printed (bill number + SMS), then print
+    const executePrintJob = async () => {
+        const job = printJob;
+        if (!job || job.busy) return;
+
+        setPrintJob(prev => (prev ? { ...prev, busy: true, error: '' } : prev));
+        updateState({ isPrinting: true });
+
         try {
-            updateState({ isPrinting: true });
-
-            const customerCode = salesData[0].customer_code || "N/A";
-            const customerName = salesData[0].customer_code || salesData[0].customer_code || customerCode;
-            const mobile = salesData[0].mobile || SHOP_PHONE;
-
-            // Reuse the loan amount already tracked in state (kept fresh as the customer is
-            // selected/typed via fetchLoanAmount) instead of re-fetching it here — this removes
-            // a full network round trip from the critical path so F1 reaches the print dialog faster.
-            const currentLoan = loanAmount || 0;
-
-            // Get original IDs for marking as printed
-            let idsToMark = salesData.map(s => s.id);
-            if (shouldCombine) {
-                idsToMark = printData.flatMap(s => s.original_ids);
-            }
+            const { idsToMark, customerName, billFinalTotal } = job;
 
             const printResponse = await api.post(routes.markPrinted, {
                 sales_ids: idsToMark,
-                telephone_no: formData.telephone_no,
-                customer_code: customerCode,
+                telephone_no: job.telephoneNo,
+                customer_code: job.customerCode,
                 customer_name: customerName,
-                loan_amount: currentLoan
+                loan_amount: job.currentLoan
             });
 
             if (printResponse.data.status !== "success") {
@@ -2305,17 +2357,6 @@ export default function SalesEntry({ printMode: propPrintMode = 'thermal', setPr
                 }
             }
 
-            // Compute the same bill total shown as "එකතුව" on the receipt (weight*price + pack cost + Kuliya,
-            // grouped by row id the same way ThermalBillHTML groups it) so the spoken amount matches the print.
-            const billFinalTotal = printData.reduce((sum, s) => {
-                const weight = parseFloat(s.weight) || 0;
-                const price = parseFloat(s.price_per_kg) || 0;
-                const packs = parseInt(s.packs) || 0;
-                const packCost = parseFloat(s.CustomerPackCost) || 0;
-                const kuliya = parseFloat(s.Kuliya) || 0;
-                return sum + (weight * price) + (packs * packCost) + kuliya;
-            }, 0);
-
             // Persist the last printed bill's total so it's still shown after a page reload/navigation
             const lastPrintedBillInfo = { billNo, customerName, total: billFinalTotal, timestamp: Date.now() };
             try {
@@ -2325,19 +2366,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'thermal', setPr
             }
             setLastPrintedBill(lastPrintedBillInfo);
 
-            // FIXED: Use the printMode prop to determine which template to use
-            let receiptHtml;
-            if (printMode === 'a4') {
-                // Use A4 template
-                receiptHtml = buildA4ReceiptHTML(printData, billNo, customerName, mobile, currentLoan);
-            } else {
-                // Use Thermal template (default)
-                receiptHtml = buildFullReceiptHTML(printData, billNo, customerName, mobile, currentLoan, billSize);
-            }
-
             // Update local state immediately (optimistic, no page reload). Uses a functional
-            // setState so this doesn't clobber any save that resolved into allSales while
-            // this print request was in flight.
+            // setState so this doesn't clobber any save that resolved into allSales meanwhile.
             setState(prev => ({
                 ...prev,
                 allSales: prev.allSales.map(s =>
@@ -2350,40 +2380,14 @@ export default function SalesEntry({ printMode: propPrintMode = 'thermal', setPr
                 isPrinting: false
             }));
 
+            setPrintJob(null);
             handleClearForm(true);
 
-            // Print via a hidden iframe — jumps straight to the native print dialog,
-            // no visible preview window and no page reload.
-            const iframe = document.createElement('iframe');
-            iframe.style.position = 'fixed';
-            iframe.style.width = '0';
-            iframe.style.height = '0';
-            iframe.style.border = '0';
-            iframe.style.visibility = 'hidden';
-            document.body.appendChild(iframe);
-
-            let cleanedUp = false;
-            const finishPrint = () => {
-                if (cleanedUp) return;
-                cleanedUp = true;
-                if (iframe.parentNode) document.body.removeChild(iframe);
-                refs.customer_code_input.current?.focus();
-            };
-
-            const iframeDoc = iframe.contentWindow.document;
-            iframeDoc.open();
-            iframeDoc.write(receiptHtml);
-            iframeDoc.close();
-
-            iframe.contentWindow.focus();
-            iframe.contentWindow.print();
-            // Announce the bill total in Sinhala (x3) right as the print dialog opens
+            // Announce the bill total in Sinhala (x3) as it prints
             speakSinhalaBillTotal(billFinalTotal);
-            iframe.contentWindow.onafterprint = finishPrint;
-            // Safety fallback in case onafterprint doesn't fire in this browser
-            setTimeout(finishPrint, 5000);
+            await printHtml(job.buildReceipt(billNo));
 
-            // Keep the cursor in the customer code field right away
+            // Keep the cursor in the customer code field
             refs.customer_code_input.current?.focus();
 
             // Sync with the server in the background so the sidebars reflect the DB immediately
@@ -2392,7 +2396,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'thermal', setPr
 
         } catch (error) {
             console.error("Printing error:", error);
-            alert("මුද්‍රණය කිරීමේදී දෝෂයක් ඇති විය.");
+            setPrintJob(prev => (prev ? { ...prev, busy: false, error: 'මුද්‍රණය කිරීමේදී දෝෂයක් ඇති විය. / Printing failed, please try again.' } : prev));
             updateState({ isPrinting: false });
         }
     };
@@ -3154,6 +3158,17 @@ export default function SalesEntry({ printMode: propPrintMode = 'thermal', setPr
                 </div>
             </div>
             {renderBillPreviewModal()}
+            {printJob && (
+                <PrintPreviewDialog
+                    html={printJob.previewHtml}
+                    title={`බිල මුද්‍රණය / Print bill — ${printJob.customerName}`}
+                    onPrint={executePrintJob}
+                    onCancel={handleCancelPrintJob}
+                    busy={printJob.busy}
+                    error={printJob.error}
+                    wide={printMode === 'a4'}
+                />
+            )}
         </div>
     );
 }

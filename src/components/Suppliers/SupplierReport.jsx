@@ -3,6 +3,8 @@ import api from "../../api";
 import { useNavigate } from 'react-router-dom';
 import { SHOP_NAME, SHOP_PHONE } from '../../config/shop';
 import { STORAGE_URL } from '../../config/paths';
+import { printHtml } from '../../utils/printHtml';
+import PrintPreviewDialog from '../PrintPreviewDialog';
 
 // Surfaces the real backend error (Laravel validation errors, custom error/message
 // fields, etc.) instead of a hardcoded generic string, so failures are diagnosable
@@ -14,6 +16,32 @@ const extractApiErrorMessage = (error, fallback) => {
         return Object.values(data.errors).flat().join('\n');
     }
     return data.message || data.error || fallback;
+};
+
+// Bulk Printing (same idea as the sales entry page): on the printed supplier bill, lines
+// for the same customer, item, price and pack cost are merged into one line with their
+// weight, packs and amount added up. Only the printout changes, not the saved records.
+const combineSupplierBillLines = (records) => {
+    const combined = new Map();
+    records.forEach(record => {
+        const key = [
+            (record.customer_code || '').toUpperCase(),
+            record.item_code || record.item_name || '',
+            parseFloat(record.SupplierPricePerKg) || 0,
+            parseFloat(record.CustomerPackCost) || 0,
+        ].join('|');
+
+        const existing = combined.get(key);
+        if (!existing) {
+            combined.set(key, { ...record, original_ids: [record.id] });
+            return;
+        }
+        existing.weight = (parseFloat(existing.weight) || 0) + (parseFloat(record.weight) || 0);
+        existing.packs = (parseInt(existing.packs) || 0) + (parseInt(record.packs) || 0);
+        existing.SupplierTotal = (parseFloat(existing.SupplierTotal) || 0) + (parseFloat(record.SupplierTotal) || 0);
+        existing.original_ids.push(record.id);
+    });
+    return Array.from(combined.values());
 };
 
 // Hoisted to module scope (and memoized) so it keeps a stable identity across
@@ -340,6 +368,23 @@ const SupplierReport = () => {
         return saved || 'thermal';
     });
 
+    // Bulk Printing: merge matching bill lines on the printout - PERSISTED, on by default like sales entry
+    const [isBulkPrintEnabled, setIsBulkPrintEnabled] = useState(() => {
+        try {
+            return localStorage.getItem('supplier_bulk_print') !== 'false';
+        } catch {
+            return true;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('supplier_bulk_print', String(isBulkPrintEnabled));
+        } catch {
+            // ignore storage errors (private mode etc.)
+        }
+    }, [isBulkPrintEnabled]);
+
     // Save billSize to localStorage whenever it changes
     useEffect(() => {
         localStorage.setItem('supplier_bill_size', billSize);
@@ -403,6 +448,8 @@ const SupplierReport = () => {
 
     // 🚀 NEW STATE: To hold the advance amount from the suppliers table
     const [advanceAmount, setAdvanceAmount] = useState(0);
+    // Bill waiting in the app's own print window (F4)
+    const [printJob, setPrintJob] = useState(null);
     // Farmer's outstanding loan from the loan manager (ගොවියා ලාද පරණ නය / අද දින නය ගැනීම),
     // printed on the bill as "පෙර ණය" the same way customer bills show it
     const [farmerLoanTotal, setFarmerLoanTotal] = useState(0);
@@ -1134,7 +1181,8 @@ const SupplierReport = () => {
             return pages;
         };
 
-        const itemPages = splitItemsIntoPages(supplierDetails, ITEMS_PER_PAGE);
+        const billLines = isBulkPrintEnabled ? combineSupplierBillLines(supplierDetails) : supplierDetails;
+        const itemPages = splitItemsIntoPages(billLines, ITEMS_PER_PAGE);
 
         // Calculate grand totals once for all pages
         const grandTotalPacks = supplierDetails.reduce((sum, record) => sum + (parseInt(record.packs) || 0), 0);
@@ -1439,7 +1487,7 @@ const SupplierReport = () => {
     ${allPagesHTML}
 </body>
 </html>`;
-    }, [selectedSupplier, supplierDetails, totalsupplierSales, advanceAmount, payingAmount, totalPacksSum, totalWeight, totalCustomerPackCost, farmerLoanTotal]);
+    }, [selectedSupplier, supplierDetails, totalsupplierSales, advanceAmount, payingAmount, totalPacksSum, totalWeight, totalCustomerPackCost, farmerLoanTotal, isBulkPrintEnabled]);
 
     const getBillContent = useCallback((currentBillNo) => {
         const date = new Date().toLocaleDateString('si-LK');
@@ -1472,7 +1520,8 @@ const SupplierReport = () => {
             return parts[1] ? `${wholePart}.${parts[1]}` : wholePart;
         };
 
-        const detailedItemsHtml = supplierDetails.map(record => {
+        const billLines = isBulkPrintEnabled ? combineSupplierBillLines(supplierDetails) : supplierDetails;
+        const detailedItemsHtml = billLines.map(record => {
             const weight = parseFloat(record.weight) || 0;
             const packs = parseInt(record.packs) || 0;
             const price = parseFloat(record.SupplierPricePerKg) || 0;
@@ -1624,61 +1673,23 @@ const SupplierReport = () => {
 </div>
 </body>
 </html>`;
-    }, [selectedSupplier, supplierDetails, totalPacksSum, totalsupplierSales, itemSummaryData, billSize, advanceAmount, payingAmount, totalCustomerPackCost, farmerLoanTotal]);
+    }, [selectedSupplier, supplierDetails, totalPacksSum, totalsupplierSales, itemSummaryData, billSize, advanceAmount, payingAmount, totalCustomerPackCost, farmerLoanTotal, isBulkPrintEnabled]);
 
-    const handlePrint = useCallback(async () => {
+    // F4: open the app's own print window. Nothing is marked printed until Print is pressed.
+    const handlePrint = useCallback(() => {
         if (!supplierDetails || supplierDetails.length === 0) return;
 
-        // Pause auto-refresh during print process
+        // Pause auto-refresh while the print window is open
         isPrintingOrUpdatingRef.current = true;
-
-        let finalBillNo = selectedBillNo;
-
-        // If it's a new bill (Unprinted), finalize it first to get the bill number.
-        // The backend sends the SMS only after replying (and only if SMS is configured),
-        // so the bill prints straight away.
-        if (isUnprintedBill) {
-            setIsDetailsLoading(true);
-            try {
-                const response = await api.post('/suppliers/mark-as-printed', {
-                    transaction_ids: supplierDetails.map(r => r.id),
-                    telephone_no: phoneNo,
-                    advance_amount: advanceAmount,
-                    supplier_code: selectedSupplier
-                });
-
-                finalBillNo = response.data.new_bill_no;
-                setSelectedBillNo(finalBillNo);
-                console.log(`Finalized Bill ${finalBillNo}. SMS: ${response.data.sms || 'unknown'}`);
-            } catch (err) {
-                console.error('Finalize Error:', err);
-                alert(`Bill could not be finalized:\n${extractApiErrorMessage(err, 'Unknown error')}`);
-                setIsDetailsLoading(false);
-                isPrintingOrUpdatingRef.current = false;
-                return;
-            } finally {
-                setIsDetailsLoading(false);
-            }
-        }
 
         // 🎯 ONLY apply top margin for A4 format
         const isA4 = printFormat === 'a4';
         const topMargin = "20mm"; // Only used for A4
 
-        // Create content for printing
-        const content = isA4 ? getA4Content(finalBillNo, "155mm", topMargin) : getBillContent(finalBillNo);
-
-        // Create an iframe for printing (hidden) to avoid opening a new window
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'absolute';
-        iframe.style.width = '0px';
-        iframe.style.height = '0px';
-        iframe.style.border = '0';
-        document.body.appendChild(iframe);
-
-        const iframeDoc = iframe.contentWindow.document;
-        iframeDoc.open();
-        iframeDoc.write(`
+        // Full print document for a bill number (the number of a new bill is only known after Print)
+        const buildDocument = (billNo) => {
+            const content = isA4 ? getA4Content(billNo, "155mm", topMargin) : getBillContent(billNo);
+            return `
         <!DOCTYPE html>
         <html>
             <head>
@@ -1729,85 +1740,76 @@ const SupplierReport = () => {
                 </div>
             </body>
         </html>
-    `);
-        iframeDoc.close();
+    `;
+        };
 
-        // Print immediately — iframeDoc.write()/close() above are synchronous, so the
-        // content is already in place; the old 300ms "wait for it to load" delay before
-        // calling print() was pure dead time on every F4 press.
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
+        setPrintJob({
+            previewHtml: buildDocument(isUnprintedBill ? '—' : selectedBillNo),
+            buildDocument,
+            isUnprinted: isUnprintedBill,
+            billNo: selectedBillNo,
+            transactionIds: supplierDetails.map(r => r.id),
+            phoneNo,
+            advanceAmount,
+            supplierCode: selectedSupplier,
+            isA4,
+            busy: false,
+            error: '',
+        });
+    }, [supplierDetails, selectedBillNo, isUnprintedBill, phoneNo, advanceAmount, selectedSupplier, getBillContent, getA4Content, printFormat]);
 
-        // Reprint of an already printed bill: resend the SMS after printing.
-        // The backend skips it when no SMS credentials are configured.
-        if (!isUnprintedBill) {
-            if (phoneNo) {
-                api.post('/suppliers/resend-sms', {
-                    bill_no: selectedBillNo,
-                    telephone_no: phoneNo,
-                    supplier_code: selectedSupplier,
-                    transaction_ids: supplierDetails.map(r => r.id),
-                    advance_amount: advanceAmount,
-                    is_reprint: true
-                })
-                    .then(res => {
-                        console.log(`Reprint SMS for bill ${selectedBillNo}: ${res.data?.sms || 'unknown'}`);
-                        setPhoneStatus(res.data?.sms === 'queued' ? '📱 SMS resent' : '⚠️ SMS not configured');
-                        setTimeout(() => setPhoneStatus(''), 2000);
-                    })
-                    .catch(err => {
-                        console.error('SMS Resend Error:', err);
-                        setPhoneStatus('⚠️ SMS failed');
-                        setTimeout(() => setPhoneStatus(''), 2000);
-                    });
-            } else {
-                setPhoneStatus('⚠️ No phone number');
-                setTimeout(() => setPhoneStatus(''), 2000);
+    // Cancel in the print window: nothing was marked, the bill stays unprinted
+    const handleCancelPrintJob = () => {
+        setPrintJob(null);
+        isPrintingOrUpdatingRef.current = false;
+    };
+
+    // Print in the print window: finalize a new bill (bill number + SMS), then print
+    const executePrintJob = async () => {
+        const job = printJob;
+        if (!job || job.busy) return;
+
+        setPrintJob(prev => (prev ? { ...prev, busy: true, error: '' } : prev));
+        let finalBillNo = job.billNo;
+
+        if (job.isUnprinted) {
+            try {
+                const response = await api.post('/suppliers/mark-as-printed', {
+                    transaction_ids: job.transactionIds,
+                    telephone_no: job.phoneNo,
+                    advance_amount: job.advanceAmount,
+                    supplier_code: job.supplierCode
+                });
+                finalBillNo = response.data.new_bill_no;
+            } catch (err) {
+                console.error('Finalize Error:', err);
+                setPrintJob(prev => (prev ? { ...prev, busy: false, error: `Bill could not be finalized: ${extractApiErrorMessage(err, 'Unknown error')}` } : prev));
+                return;
             }
         }
 
-        // Remove iframe after print dialog closes
-        const checkPrintDone = setInterval(() => {
+        await printHtml(job.buildDocument(finalBillNo));
+
+        if (!job.isUnprinted && job.phoneNo) {
+            // Reprint of an already printed bill: resend the SMS.
+            // The backend skips it when no SMS credentials are configured.
             try {
-                if (iframe.contentWindow.document && iframe.contentWindow.document.hasFocus()) {
-                    // Print dialog might still be open
-                } else {
-                    clearInterval(checkPrintDone);
-                    setTimeout(() => {
-                        if (iframe && iframe.parentNode) {
-                            document.body.removeChild(iframe);
-                        }
-                        // Reload the page after printing
-                        window.location.reload();
-                    }, 500);
-                }
-            } catch (e) {
-                // If we can't access the iframe, remove it
-                clearInterval(checkPrintDone);
-                setTimeout(() => {
-                    if (iframe && iframe.parentNode) {
-                        document.body.removeChild(iframe);
-                    }
-                    window.location.reload();
-                }, 500);
+                await api.post('/suppliers/resend-sms', {
+                    bill_no: job.billNo,
+                    telephone_no: job.phoneNo,
+                    supplier_code: job.supplierCode,
+                    transaction_ids: job.transactionIds,
+                    advance_amount: job.advanceAmount,
+                    is_reprint: true
+                });
+            } catch (err) {
+                console.error('SMS Resend Error:', err);
             }
-        }, 1000);
+        }
 
-        // Safety timeout - force cleanup after 10 seconds
-        setTimeout(() => {
-            clearInterval(checkPrintDone);
-            if (iframe && iframe.parentNode) {
-                document.body.removeChild(iframe);
-            }
-            window.location.reload();
-        }, 10000);
-
-        // Re-enable auto-refresh
-        setTimeout(() => {
-            isPrintingOrUpdatingRef.current = false;
-        }, 1000);
-
-    }, [supplierDetails, selectedBillNo, isUnprintedBill, phoneNo, advanceAmount, selectedSupplier, getBillContent, getA4Content, printFormat]);
+        // Reload so both sections show the bill where it now belongs
+        window.location.reload();
+    };
 
     // --- Keyboard event listener ---
     useEffect(() => {
@@ -2364,6 +2366,20 @@ const SupplierReport = () => {
                         </select>
                     </div>
 
+                    {/* Bulk Printing: merge matching lines on the printed bill (same as sales entry) */}
+                    <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#495057', padding: '5px 10px', borderRadius: '5px', gap: '8px' }}>
+                        <input
+                            type="checkbox"
+                            id="bulkPrintCheckbox"
+                            checked={isBulkPrintEnabled}
+                            onChange={(e) => setIsBulkPrintEnabled(e.target.checked)}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#4CAF50' }}
+                        />
+                        <label htmlFor="bulkPrintCheckbox" style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            Bulk Printing
+                        </label>
+                    </div>
+
                     {/* 🚀 NEW: Bill Size (Only for Thermal) */}
                     {printFormat === 'thermal' && (
                         <button style={{ padding: '8px 15px', fontSize: '0.9rem', fontWeight: 'bold', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }} onClick={() => setBillSize(billSize === '3inch' ? '4inch' : '3inch')}>
@@ -2409,6 +2425,17 @@ const SupplierReport = () => {
                 handleBulkUpdate={handleBulkUpdate}
                 closeContextMenu={closeContextMenu}
             />
+            {printJob && (
+                <PrintPreviewDialog
+                    html={printJob.previewHtml}
+                    title={`ගොවි බිල මුද්‍රණය / Print supplier bill — ${printJob.supplierCode}`}
+                    onPrint={executePrintJob}
+                    onCancel={handleCancelPrintJob}
+                    busy={printJob.busy}
+                    error={printJob.error}
+                    wide={printJob.isA4}
+                />
+            )}
         </>
     );
 };
