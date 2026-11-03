@@ -153,6 +153,14 @@ export default function SupplierProfitReport() {
                                 </tr>
                             ))}
                         </tbody>
+                        <tfoot>
+                            <tr style={{ background: "#004d00", color: "#fff", fontWeight: "bold" }}>
+                                <td style={{ padding: "12px 10px" }}>මුළු එකතුව (Total)</td>
+                                <td style={{ padding: "12px 10px" }}>
+                                    Rs. {filteredProfitReport.reduce((sum, item) => sum + item.total_profit, 0).toFixed(2)}
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
                 )}
             </div>
