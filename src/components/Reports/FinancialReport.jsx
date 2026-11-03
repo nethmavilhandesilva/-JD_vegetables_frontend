@@ -5,11 +5,14 @@ import './FinancialReport.css';
 import { SHOP_NAME } from '../../config/shop';
 
 const FinancialReport = () => {
-    const [reportData, setReportData] = useState([]);
+    const [loanRows, setLoanRows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [password, setPassword] = useState('');
-    const [showProfit, setShowProfit] = useState(false);
+    // Morning drawer cash: typed in the box, applied to the calculations on Enter
+    const [openingCash, setOpeningCash] = useState(() => {
+        try { return localStorage.getItem('financial_opening_cash') || '0'; } catch { return '0'; }
+    });
+    const [appliedOpeningCash, setAppliedOpeningCash] = useState(() => parseFloat(openingCash) || 0);
 
     // State for financial report
     const [financialData, setFinancialData] = useState({
@@ -17,6 +20,8 @@ const FinancialReport = () => {
         totalCr: 0,
         salesTotal: 0,
         supplierTotalCost: 0,
+        commissionProfit: 0,
+        kuliyaTotal: 0,
         totalProfit: 0,
         totalDamages: 0,
         totalOldLoans: 0,
@@ -58,13 +63,15 @@ const FinancialReport = () => {
             const response = await api.get('/financial-report');
             if (response.data.success) {
                 const data = response.data.data;
-                setReportData(data.reportData || []);
+                setLoanRows(data.loanRows || []);
                 setFinancialData(prev => ({
                     ...prev,
                     totalDr: data.totalDr || 0,
                     totalCr: data.totalCr || 0,
                     salesTotal: data.salesTotal || 0,
                     supplierTotalCost: data.supplierTotalCost || 0,
+                    commissionProfit: data.commissionProfit || 0,
+                    kuliyaTotal: data.kuliyaTotal || 0,
                     totalProfit: data.totalProfit || 0,
                     totalDamages: data.totalDamages || 0,
                     totalOldLoans: data.totalOldLoans || 0,
@@ -89,9 +96,9 @@ const FinancialReport = () => {
 
     const handlePrint = () => window.print();
 
-    const handlePasswordSubmit = () => {
-        if (password === 'nethma123') setShowProfit(true);
-        else alert('Incorrect password');
+    const applyOpeningCash = () => {
+        setAppliedOpeningCash(parseFloat(openingCash) || 0);
+        try { localStorage.setItem('financial_opening_cash', openingCash); } catch { /* ignore */ }
     };
 
     const formatNumber = (num) => {
@@ -100,13 +107,6 @@ const FinancialReport = () => {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
-    };
-
-    const calculateBalance = () => financialData.totalDr + financialData.totalCr;
-
-    // Calculate the actual difference (Dr - Cr)
-    const calculateNetAmount = () => {
-        return financialData.totalDr - Math.abs(financialData.totalCr);
     };
 
     if (loading) return (
@@ -128,11 +128,24 @@ const FinancialReport = () => {
         </Layout>
     );
 
-    const netAmount = calculateNetAmount();
+    const salesTotal = financialData.salesTotal;
+    const supplierTotal = financialData.supplierTotalCost;
+    const commissionProfit = financialData.commissionProfit;
+    const kuliyaTotal = financialData.kuliyaTotal;
+    const loansReceived = loanRows.reduce((sum, r) => sum + Math.abs(r.received || 0), 0);
+    const loansPaid = loanRows.reduce((sum, r) => sum + Math.abs(r.paid || 0), 0);
+
+    // Morning drawer cash is taken off the sales total before working out cash in hand
+    const salesAfterOpeningCash = salesTotal - appliedOpeningCash;
+
+    // Cash in hand = everything received - everything paid out
+    const totalReceived = salesAfterOpeningCash + loansReceived;
+    const totalPaid = supplierTotal + kuliyaTotal + loansPaid;
+    const cashInHand = totalReceived - totalPaid;
 
     return (
         <Layout>
-            <div className="container mt-4 financial-report-container">
+            <div className="container mt-4 financial-report-container fr-fullscreen">
                 <div className="report-card">
                     <div className="report-title-bar" style={{
                         display: 'flex',
@@ -152,102 +165,126 @@ const FinancialReport = () => {
                         </div>
                     </div>
 
-                    {/* Sales Total and Supplier Cost Summary */}
-                    <div className="row mb-3">
-                        <div className="col-md-6">
-                            <div className="alert alert-info fw-bold">
-                                විකිණුම් මුළු එකතුව: {formatNumber(financialData.salesTotal)}
-                            </div>
+                    {/* Summary: sales, commission profit, farmers' payout */}
+                    <div className="fr-summary">
+                        <div className="fr-summary-row">
+                            <span className="fr-summary-label">මුළු වෙළදාමේ එකතුව :</span>
+                            <span className="fr-summary-value">{formatNumber(salesTotal)}</span>
                         </div>
-                        <div className="col-md-6">
-                            <div className="alert alert-warning fw-bold">
-                                සැපයුම්කරු පිරිවැය: {formatNumber(financialData.supplierTotalCost)}
-                            </div>
+                        <div className="fr-summary-row">
+                            <span className="fr-summary-label">ලොරි වලින් ලද ආදායම :</span>
+                            <span className="fr-summary-value">{formatNumber(0)}</span>
+                            <span className="fr-summary-value">{formatNumber(0)}</span>
+                            <span className="fr-summary-label ms-auto">ගොවියන්ගෙන් ලද ආදායම :</span>
+                            <span className="fr-summary-value" title="ගනුදෙ මිල - සැපයුම් මිල (ලාභය)">{formatNumber(commissionProfit)}</span>
+                            <span className="fr-summary-value" title="කොමිස් අඩු කළ සැපයුම්කරු එකතුව">{formatNumber(supplierTotal)}</span>
                         </div>
                     </div>
 
-                    {/* Report Table */}
-                    <div className="table-responsive">
-                        <table className="table table-bordered table-striped">
+                    {/* Cash ledger */}
+                    <table className="fr-ledger">
+                        <thead>
+                            <tr>
+                                <th>විස්තරය</th>
+                                <th>ලැබීම</th>
+                                <th>ගෙවීම</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="fr-row-a">
+                                <td>මුළු වෙළදාමේ එකතුව</td>
+                                <td className="text-end">{formatNumber(salesTotal)}</td>
+                                <td></td>
+                            </tr>
+                            <tr className="fr-row-b">
+                                <td>කොමිස් අඩු කර ලොරි වලට ගෙවූ මුදල</td>
+                                <td></td>
+                                <td className="text-end">{formatNumber(0)}</td>
+                            </tr>
+                            <tr className="fr-row-a">
+                                <td>කොමිස් අඩු කර ගොවියන්ට ගෙවූ මුදල</td>
+                                <td></td>
+                                <td className="text-end">{formatNumber(supplierTotal)}</td>
+                            </tr>
+                            <tr className="fr-row-b">
+                                <td>බෙදා හරිනු ලැබූ මුළු කුලී එකතුව</td>
+                                <td></td>
+                                <td className="text-end">{formatNumber(kuliyaTotal)}</td>
+                            </tr>
+                            <tr className="fr-row-a">
+                                <td>දවස ආරම්භයේ ලාච්චුවේ තිබූ මුදල</td>
+                                <td className="text-end">
+                                    <input
+                                        type="number"
+                                        className="fr-opening-input"
+                                        value={openingCash}
+                                        onChange={(e) => setOpeningCash(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyOpeningCash(); } }}
+                                        onFocus={(e) => e.target.select()}
+                                    />
+                                </td>
+                                <td></td>
+                            </tr>
+                            <tr className="fr-row-b">
+                                <td>වෙනත් ලැබීම්/ආදායම</td>
+                                <td className="text-end">{formatNumber(0)}</td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {/* Loans received / given today */}
+                    <div className="fr-loans">
+                        <table>
                             <thead>
                                 <tr>
                                     <th>විස්තරය</th>
-                                    <th>ලැබීම්</th>
+                                    <th>ලැබීම</th>
                                     <th>ගෙවීම</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {reportData.map((row, index) => (
+                                {loanRows.length === 0 ? (
+                                    <tr><td colSpan="3" className="text-center">ණය වාර්තා නැත</td></tr>
+                                ) : loanRows.map((row, index) => (
                                     <tr key={index}>
                                         <td>{row.description}</td>
-                                        <td className="text-end">{row.dr ? formatNumber(Math.abs(row.dr)) : ''}</td>
-                                        <td className="text-end">{row.cr ? formatNumber(Math.abs(row.cr)) : ''}</td>
+                                        <td className="text-end">{row.received ? formatNumber(Math.abs(row.received)) : ''}</td>
+                                        <td className="text-end">{row.paid ? formatNumber(Math.abs(row.paid)) : ''}</td>
                                     </tr>
                                 ))}
                             </tbody>
+                        </table>
+                    </div>
+
+                    {/* Cash in hand */}
+                    <div className="fr-summary">
+                        <div className="fr-summary-row">
+                            <span className="fr-summary-label">වෙළදාමේ එකතුව - ලාච්චුවේ තිබූ මුදල :</span>
+                            <span className="fr-summary-value">
+                                {formatNumber(salesTotal)} - {formatNumber(appliedOpeningCash)} = {formatNumber(salesAfterOpeningCash)}
+                            </span>
+                        </div>
+                        <div className="fr-summary-row">
+                            <span className="fr-summary-label">ඇතැති මුදල</span>
+                            <span className="fr-summary-value">{formatNumber(cashInHand)}</span>
+                            <span className="fr-summary-label ms-auto">කුලී මුදල අඩු නොකර ඇතැති මුදල :</span>
+                            <span className="fr-summary-value">{formatNumber(cashInHand + kuliyaTotal)}</span>
+                        </div>
+                        <div className="fr-summary-row">
+                            <span className="fr-summary-label">මුළු කොමිස් ආදායම</span>
+                            <span className="fr-summary-value">{formatNumber(commissionProfit)}</span>
+                        </div>
+                    </div>
+
+                    {/* Other details */}
+                    <div className="table-responsive mt-3">
+                        <table className="table table-bordered table-striped">
                             <tfoot>
-                                <tr className="fw-bold">
-                                    <td>මුළු</td>
-                                    <td className="text-end">{formatNumber(Math.abs(financialData.totalDr))}</td>
-                                    <td className="text-end">{formatNumber(Math.abs(financialData.totalCr))}</td>
-                                </tr>
-
-                                {/* UPDATED: Show the calculated difference (Dr - Cr) */}
-                                <tr className="fw-bold table-warning">
-                                    <td>ඇතැති මුදල්</td>
-                                    <td colSpan="2" className="text-end">
-                                        {(() => {
-                                            // Calculate net amount: Dr - Cr
-                                            const netAmount = financialData.totalDr - Math.abs(financialData.totalCr);
-                                            const calculationString = `${formatNumber(Math.abs(financialData.totalDr))} - ${formatNumber(Math.abs(financialData.totalCr))} = ${formatNumber(netAmount)}`;
-                                            
-                                            return netAmount < 0 ? (
-                                                <span className="text-danger">{netAmount}</span>
-                                            ) : (
-                                                <span className="text-success">{netAmount}</span>
-                                            );
-                                        })()}
-                                    </td>
-                                </tr>
-
-                                <tr className="fw-bold table-warning">
-                                    <td>💰ලාභය</td>
-                                    <td colSpan="2" className="text-end">
-                                        {showProfit ? (
-                                            <span className="text-success">{formatNumber(financialData.totalProfit)}</span>
-                                        ) : (
-                                            <div className="d-flex align-items-center gap-2">
-                                                <input
-                                                    type="password"
-                                                    className="form-control form-control-sm"
-                                                    placeholder="Enter password"
-                                                    value={password}
-                                                    onChange={(e) => setPassword(e.target.value)}
-                                                    style={{ width: '150px' }}
-                                                />
-                                                <button 
-                                                    className="btn btn-sm btn-success"
-                                                    onClick={handlePasswordSubmit}
-                                                >
-                                                    Show
-                                                </button>
-                                            </div>
-                                        )}
-                                    </td>
-                                </tr>
-
                                 <tr className="fw-bold table-warning">
                                     <td>මුළු හානිය</td>
                                     <td colSpan="2" className="text-end text-danger">
                                         {formatNumber(financialData.totalDamages)}
-                                    </td>
-                                </tr>
-
-                                {/* Supplier Cost Display */}
-                                <tr className="fw-bold table-warning">
-                                    <td>සැපයුම්කරු පිරිවැය</td>
-                                    <td colSpan="2" className="text-end">
-                                        <span className="text-info">{formatNumber(financialData.supplierTotalCost)}</span>
                                     </td>
                                 </tr>
 
