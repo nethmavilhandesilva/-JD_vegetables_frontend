@@ -1,7 +1,7 @@
 // src/components/Auth/RegisterPage.jsx
 import React, { useState } from "react";
 import api from "../../api"; // ✅ USE CENTRALIZED AXIOS INSTANCE
-import { SHOP_NAME, SHOP_PHONE } from "../../config/shop";
+import { SHOP_NAME, SHOP_PHONE, SHOP_PHONE_PRIMARY } from "../../config/shop";
 import { APP_BASE } from "../../config/paths";
 import "./LoginPage.css";
 
@@ -140,7 +140,7 @@ const RegisterPage = () => {
 
           <div className="lp-contact">
             <span aria-hidden="true">📞</span>
-            <a href={`tel:${SHOP_PHONE}`}>{SHOP_PHONE}</a>
+            <a href={`tel:${SHOP_PHONE_PRIMARY}`}>{SHOP_PHONE}</a>
           </div>
         </div>
 

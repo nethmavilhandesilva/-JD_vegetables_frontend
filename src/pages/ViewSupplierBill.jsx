@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import api from "../api";
-import { SHOP_NAME, SHOP_PHONE } from '../config/shop';
+import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/shop';
 import { API_BASE_URL } from '../config/paths';
 
 const ViewSupplierBill = () => {
@@ -164,13 +164,13 @@ const ViewSupplierBill = () => {
     <div style="text-align:center; font-weight:bold;">
         <div style="font-size:24px;">${SHOP_NAME}</div>
         <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;">
-            <span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">F2-1</span>
+            <span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">${SHOP_STALL_NO}</span>
             <div style="font-size:18px;">ගොවියා: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${bill.supplier_code}</span></div>
         </div>
-      <div style="font-size:16px; white-space: nowrap;">විශේෂ ආර්ථික මධ්‍යස්ථානය දඹුල්ල</div>
+      <div style="font-size:16px; white-space: nowrap;">${SHOP_ADDRESS}</div>
     </div>
     <div style="font-size:19px; margin-top:10px; padding:0 5px;">
-        <div style="font-weight: bold;">දුර:${mobile}</div>
+        <div style="font-weight: bold; white-space: normal;">දුර: ${mobile}</div>
         <div style="display:flex; justify-content:space-between; margin-top:3px;">
             <span>බිල් අංකය:${bill.bill_no}</span>
             <span>දිනය:${date}</span>

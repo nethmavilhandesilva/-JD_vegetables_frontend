@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import api from "../../api";
-import { SHOP_NAME, SHOP_PHONE } from "../../config/shop";
+import { SHOP_NAME, SHOP_PHONE, SHOP_PHONE_PRIMARY } from "../../config/shop";
 import "./LoginPage.css";
 import { APP_BASE } from "../../config/paths";
 
@@ -128,7 +128,7 @@ const LoginPage = () => {
 
           <div className="lp-contact">
             <span aria-hidden="true">📞</span>
-            <a href={`tel:${SHOP_PHONE}`}>{SHOP_PHONE}</a>
+            <a href={`tel:${SHOP_PHONE_PRIMARY}`}>{SHOP_PHONE}</a>
           </div>
         </div>
 

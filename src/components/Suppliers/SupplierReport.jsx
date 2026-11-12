@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import api from "../../api";
 import { useNavigate } from 'react-router-dom';
-import { SHOP_NAME, SHOP_PHONE } from '../../config/shop';
+import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../../config/shop';
 import { STORAGE_URL } from '../../config/paths';
 import { printHtml } from '../../utils/printHtml';
 import PrintPreviewDialog from '../PrintPreviewDialog';
@@ -1208,7 +1208,7 @@ const SupplierReport = () => {
             ${pageNumber === 1 ? `
             <div class="header">
                 <div class="shop-name">${SHOP_NAME}</div>
-                <div class="shop-address">දඹුල්ල විශේෂ ආර්ථික මධ්‍යස්ථානය</div>
+                <div class="shop-address">${SHOP_ADDRESS}</div>
                 <div class="shop-phone">දුරකථන: ${SHOP_PHONE}</div>
             </div>
             
@@ -1305,7 +1305,7 @@ const SupplierReport = () => {
         <div class="bill-border">
             <div class="header">
                 <div class="shop-name">${SHOP_NAME}</div>
-                <div class="shop-address">දඹුල්ල විශේෂ ආර්ථික මධ්‍යස්ථානය</div>
+                <div class="shop-address">${SHOP_ADDRESS}</div>
                 <div class="shop-phone">දුරකථන: ${SHOP_PHONE}</div>
             </div>
             
@@ -1587,13 +1587,13 @@ const SupplierReport = () => {
     <div style="text-align:center; font-weight:bold;">
         <div style="font-size:24px;">${SHOP_NAME}</div>
         <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;">
-            <span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">F2-1</span>
+            <span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">${SHOP_STALL_NO}</span>
             <div style="font-size:18px;">ගොවියා: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${selectedSupplier}</span></div>
         </div>
-      <div style="font-size:16px; white-space: nowrap;">විශේෂ ආර්ථික මධ්‍යස්ථානය දඹුල්ල</div>
+      <div style="font-size:16px; white-space: nowrap;">${SHOP_ADDRESS}</div>
     </div>
     <div style="font-size:19px; margin-top:10px; padding:0 5px;">
-        <div style="font-weight: bold;">දුර:${mobile}</div>
+        <div style="font-weight: bold; white-space: normal;">දුර: ${mobile}</div>
         <div style="display:flex; justify-content:space-between; margin-top:3px;">
             <span>බිල් අංකය:${currentBillNo}</span>
             <span>දිනය:${date}</span>

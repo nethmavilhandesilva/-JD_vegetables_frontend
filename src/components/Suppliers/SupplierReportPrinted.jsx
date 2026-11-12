@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import api from "../../api";
 import { useNavigate } from 'react-router-dom';
-import { SHOP_PHONE } from '../../config/shop';
+import { SHOP_PHONE, SHOP_TAGLINE } from '../../config/shop';
 import { STORAGE_URL } from '../../config/paths';
 
 const SupplierReport = () => {
@@ -593,10 +593,10 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
             <span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">xx</span>
             <div style="font-size:18px;">ගොවියා: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${selectedSupplier}</span></div>
         </div>
-      <div style="font-size:16px; white-space: nowrap;">එළවළු තොග වෙළෙන්දෝ බණ්ඩාරවෙල</div>
+      <div style="font-size:14px;">${SHOP_TAGLINE}</div>
     </div>
     <div style="font-size:19px; margin-top:10px; padding:0 5px;">
-        <div style="font-weight: bold;">දුර:${mobile}</div>
+        <div style="font-weight: bold; white-space: normal;">දුර: ${mobile}</div>
         <div style="display:flex; justify-content:space-between; margin-top:3px;">
             <span>බිල් අංකය:${currentBillNo}</span>
             <span>දිනය:${date}</span>

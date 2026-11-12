@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import html2pdf from 'html2pdf.js';
-import { SHOP_NAME, SHOP_PHONE } from '../config/shop';
+import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/shop';
 import { API_BASE_URL } from '../config/paths';
 
 // Copy the exact ThermalBillHTML function here
@@ -134,10 +134,10 @@ const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAm
             <div class="header">
                 <div style="font-size: 22px; font-weight: bold;">${SHOP_NAME}</div>
                 <div style="margin: 10px 0;">
-                    <span class="badge">F2-1</span>
+                    <span class="badge">${SHOP_STALL_NO}</span>
                     <span class="badge">${customerName.toUpperCase()}</span>
                 </div>
-                <div style="font-size: 14px; font-weight: bold;">විශේෂ ආර්ථික මධ්‍යස්ථානය දඹුල්ල</div>
+                <div style="font-size: 14px; font-weight: bold;">${SHOP_ADDRESS}</div>
             </div>
 
             <div class="info-section">

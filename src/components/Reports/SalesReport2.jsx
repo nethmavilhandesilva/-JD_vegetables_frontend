@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../Sidebar';
 import api from "../../api"; // ✅ axios wrapper
-import { SHOP_NAME, SHOP_PHONE } from '../../config/shop';
+import { SHOP_NAME, SHOP_PHONE, SHOP_TAGLINE, SHOP_ADDRESS } from '../../config/shop';
 
 const SalesReport = () => {
     const [sales, setSales] = useState([]);
@@ -95,8 +95,8 @@ const SalesReport = () => {
                 </div>
                 <div style="font-size:20px; margin-bottom:5px;font-weight:bold;">${SHOP_NAME}</div>
                 <div style="display:flex; justify-content:center; gap:15px; margin:12px 0;"><span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">xx</span><span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">${customerName.toUpperCase()}</span></div>
-                <div style="font-size:16px;">එළවළු,පළතුරු තොග වෙළෙන්දෝ</div>
-                <div style="display:flex; justify-content:space-between; font-size:14px; margin-top:6px; padding:0 5px;"><span>බණ්ඩාරවෙල</span><span>${time}</span></div>
+                <div style="font-size:16px;">${SHOP_TAGLINE}</div>
+                <div style="display:flex; justify-content:space-between; font-size:14px; margin-top:6px; padding:0 5px;"><span>${SHOP_ADDRESS}</span><span>${time}</span></div>
             </div>
             <div style="font-size:19px; margin-top:10px; padding:0 5px;"><div style="font-weight: bold;">දුර: ${SHOP_PHONE}</div><div style="display:flex; justify-content:space-between; margin-top:3px;"><span>බිල් අංකය:${billNo}</span><span>දිනය:${date}</span></div></div>
             <hr style="border:none; border-top:2.5px solid #000; margin:10px 0;">
@@ -158,9 +158,9 @@ const SalesReport = () => {
                 <span style="font-size: 14px; margin-left: -160px; margin-right: 40px; color: #666;">පරණ බිල්</span>xxxx
                 </div>
                 <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;"><span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">xx</span><div style="font-size:18px;">ගොවියා: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${selectedSupplier}</span></div></div>
-                <div style="font-size:16px; white-space: nowrap;">එළවළු තොග වෙළෙන්දෝ බණ්ඩාරවෙල</div>
+                <div style="font-size:14px;">${SHOP_TAGLINE}</div>
             </div>
-            <div style="font-size:19px; margin-top:10px; padding:0 5px;"><div style="font-weight: bold;">දුර:${mobile}</div><div style="display:flex; justify-content:space-between; margin-top:3px;"><span>බිල් අංකය:${currentBillNo}</span><span>දිනය:${date}</span></div></div>
+            <div style="font-size:19px; margin-top:10px; padding:0 5px;"><div style="font-weight: bold; white-space: normal;">දුර: ${mobile}</div><div style="display:flex; justify-content:space-between; margin-top:3px;"><span>බිල් අංකය:${currentBillNo}</span><span>දිනය:${date}</span></div></div>
             <hr style="border:none; border-top:2.5px solid #000; margin:10px 0;">
             <table style="width:100%; border-collapse:collapse; font-size:${fontSizeBody}; table-layout: fixed;">${colGroups}<thead><tr style="border-bottom:2.5px solid #000; font-weight:bold;"><th style="text-align:left; padding-bottom:8px; font-size:${fontSizeHeader};">වර්ගය<br>මලු</th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -50px; top: 24px;"> කිලෝ </th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -45px; top: 24px;">මිල</th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};">කේතය<br>අගය</th></tr></thead><tbody>${detailedItemsHtml}</tbody><tfoot><tr style="border-top:2.5px solid #000; font-weight:bold;"><td style="padding-top:12px; font-size:${fontSizeTotal};">${formatNumber(totalPacksSum)}</td><td colspan="3" style="padding-top:12px; font-size:${fontSizeTotal}; text-align:right;">${totalsupplierSales.toFixed(2)}</td></tr></tfoot></table>
             <table style="width:100%; margin-top:20px; font-weight:bold; font-size:22px;"><tr><td>මෙම බිලට ගෙවන්න:</td><td style="text-align:right;"><span style="border-bottom:5px double #000; border-top:2px solid #000; font-size:${fontSizeTotal}; padding:5px 10px;">${totalsupplierSales.toFixed(2)}</span></td></tr><tr style="font-weight:900;"><td>ඉතිරි ශේෂය:</td><td style="text-align:right;"><span style="font-size:${fontSizeTotal};">${netPayable.toFixed(2)}</span></td></tr></table>

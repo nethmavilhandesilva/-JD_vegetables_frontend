@@ -1,4 +1,4 @@
-import { SHOP_NAME, SHOP_PHONE } from '../config/shop';
+import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/shop';
 // src/components/BillTemplates.jsx
 
 export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAmount = 0, billSize = '3inch' }) => {
@@ -136,7 +136,7 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
     <body>
         <div class="receipt-main">
             <div class="header">
-         <span class="badge" style="position: relative; top: 3px;">F2-1</span>
+         <span class="badge" style="position: relative; top: 3px;">${SHOP_STALL_NO}</span>
              <div style="margin-top: 8px; font-size: 22px; font-weight: bold;">
     ${SHOP_NAME}
 </div>
@@ -144,7 +144,7 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
 <div style="margin: 5px 0 10px 0;">
     <span class="badge">${customerName.toUpperCase()}</span>
 </div>
-                <div style="font-size: 14px; font-weight: bold;">විශේෂ ආර්ථික මධ්‍යස්ථානය දඹුල්ල</div>
+                <div style="font-size: 14px; font-weight: bold;">${SHOP_ADDRESS}</div>
             </div>
 
             <div class="info-section">
@@ -390,12 +390,12 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
             ${pageNumber === 1 ? `
             <div class="header">
                 <div class="shop-name">${SHOP_NAME}</div>
-                <div class="shop-address">දඹුල්ල විශේෂ ආර්ථික මධ්‍යස්ථානය</div>
+                <div class="shop-address">${SHOP_ADDRESS}</div>
                 <div class="shop-phone">දුරකථන: ${SHOP_PHONE}</div>
             </div>
             
             <div class="info-row" style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-size: 4.6mm; font-weight: bold;">F2-1</div>
+                <div style="font-size: 4.6mm; font-weight: bold;">${SHOP_STALL_NO}</div>
                 <div style="font-size: 4.6mm; font-weight: bold;">ගණුම්කරු: ${(customerName || '').toUpperCase()}</div>
             </div>
             
@@ -479,12 +479,12 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
             <div class="receipt-container">
                 <div class="header">
                     <div class="shop-name">${SHOP_NAME}</div>
-                    <div class="shop-address">දඹුල්ල විශේෂ ආර්ථික මධ්‍යස්ථානය</div>
+                    <div class="shop-address">${SHOP_ADDRESS}</div>
                     <div class="shop-phone">දුරකථන: ${SHOP_PHONE}</div>
                 </div>
                 
                 <div class="info-row" style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="font-size: 4.6mm; font-weight: bold;">F2-1</div>
+                    <div style="font-size: 4.6mm; font-weight: bold;">${SHOP_STALL_NO}</div>
                     <div style="font-size: 4.6mm; font-weight: bold;">ගණුම්කරු: ${(customerName || '').toUpperCase()}</div>
                 </div>
                 
