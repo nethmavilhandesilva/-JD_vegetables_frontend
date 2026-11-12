@@ -37,4 +37,4 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
           # Relative to the FTP account's home folder (public_html)
-          server-dir: shantha_frontend/
+          server-dir: JD_vegetables_frontend/

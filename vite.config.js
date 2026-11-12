@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [react()],
 
   // 🔥 Ensure assets load correctly under subfolder in production
-  base: mode === 'production' ? '/shantha_frontend/' : '/',
+  base: mode === 'production' ? '/JD_vegetables_frontend/' : '/',
 
   server: {
     // Local development proxy to Laravel backend
