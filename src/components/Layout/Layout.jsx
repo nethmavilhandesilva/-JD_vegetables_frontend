@@ -59,9 +59,9 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
     // === Local Print Mode State with localStorage persistence ===
     const [localPrintMode, setLocalPrintMode] = useState(() => {
         // Try to get saved print mode from localStorage
-        const savedPrintMode = localStorage.getItem('printMode');
-        // Return saved value if exists, otherwise default to 'thermal'
-        return savedPrintMode || 'thermal';
+        const savedPrintMode = localStorage.getItem('printModeV2');
+        // Return saved value if exists, otherwise default to A4
+        return savedPrintMode || 'a4';
     });
 
     useEffect(() => {
@@ -154,7 +154,7 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
         const newMode = e.target.value;
         setLocalPrintMode(newMode);
         // Save to localStorage
-        localStorage.setItem('printMode', newMode);
+        localStorage.setItem('printModeV2', newMode);
         
         // Also update parent component if setPrintMode is provided
         if (setPrintMode && typeof setPrintMode === 'function') {
@@ -198,8 +198,6 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
                                         <li><Link to="/items" className="dropdown-item"><i className="material-icons align-middle me-1">inventory_2</i> භාණ්ඩ</Link></li>
                                         <li><Link to="/suppliers" className="dropdown-item"><i className="material-icons align-middle me-1">local_shipping</i> සැපයුම්කරුවන්</Link></li>
                                         <li><Link to="/commissions" className="dropdown-item"><i className="material-icons align-middle me-1">attach_money</i>කොමිස් මුදල්</Link></li>
-                                        <li><Link to="/reports/printed-sales" className="dropdown-item flex items-center"><i className="material-icons me-1">analytics</i>ප්‍රින්ට් කළ වාර්තා</Link></li>
-                                        <li><Link to="/reports/printed-sales2" className="dropdown-item flex items-center"><i className="material-icons me-1">analytics</i>ප්‍රින්ට් කළ වාර්තා 2</Link></li>
                                         <li><hr className="dropdown-divider" /></li>
                                         <li>
                                             <button type="button" className="dropdown-item text-warning" onClick={() => navigateTo('/customers-loans/report')}>

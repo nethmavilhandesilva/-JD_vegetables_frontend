@@ -59,7 +59,7 @@ const ProtectedRoute = ({ children }) => {
 export default function App() {
     // State for bill size and print mode
     const [billSize, setBillSize] = useState('3inch');
-    const [printMode, setPrintMode] = useState('thermal');
+    const [printMode, setPrintMode] = useState('a4');
 
     // Handler for bill size change
     const handleBillSizeChange = (e) => {

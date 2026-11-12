@@ -364,8 +364,8 @@ const SupplierReport = () => {
 
     // 🚀 NEW STATE: Print Format selector (Thermal or A4) - PERSISTED
     const [printFormat, setPrintFormat] = useState(() => {
-        const saved = localStorage.getItem('supplier_print_format');
-        return saved || 'thermal';
+        const saved = localStorage.getItem('supplier_print_format_v2');
+        return saved || 'a4';
     });
 
     // Bulk Printing: merge matching bill lines on the printout - PERSISTED, on by default like sales entry
@@ -392,7 +392,7 @@ const SupplierReport = () => {
 
     // Save printFormat to localStorage whenever it changes
     useEffect(() => {
-        localStorage.setItem('supplier_print_format', printFormat);
+        localStorage.setItem('supplier_print_format_v2', printFormat);
     }, [printFormat]);
 
     const [printedSearchTerm, setPrintedSearchTerm] = useState('');
@@ -424,7 +424,7 @@ const SupplierReport = () => {
             setBillSize(savedBillSize);
         }
 
-        const savedPrintFormat = localStorage.getItem('supplier_print_format');
+        const savedPrintFormat = localStorage.getItem('supplier_print_format_v2');
         if (savedPrintFormat) {
             setPrintFormat(savedPrintFormat);
         }
@@ -437,7 +437,7 @@ const SupplierReport = () => {
 
     // Save printFormat to localStorage whenever it changes
     useEffect(() => {
-        localStorage.setItem('supplier_print_format', printFormat);
+        localStorage.setItem('supplier_print_format_v2', printFormat);
     }, [printFormat]);
     // State for Details Panel
     const [selectedSupplier, setSelectedSupplier] = useState(null);

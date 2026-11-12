@@ -726,8 +726,8 @@ const initialFormData = { customer_code: "", customer_name: "", supplier_code: "
 const fieldOrder = ["telephone_no", "customer_code_input", "customer_code_select", "supplier_code", "item_code_select", "weight", "price_per_kg_grid_item", "packs", "kuliya"];
 const skipMap = { telephone_no: "customer_code_input", customer_code_input: "supplier_code", customer_code_select: "supplier_code", given_amount: "supplier_code", supplier_code: "item_code_select", item_code_select: "weight", price_per_kg: "packs", price_per_kg_grid_item: "packs", packs: "kuliya", kuliya: null };
 
-export default function SalesEntry({ printMode: propPrintMode = 'thermal', setPrintMode: propSetPrintMode }) {
-    const [localPrintMode, setLocalPrintMode] = useState(propPrintMode || 'thermal');
+export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMode: propSetPrintMode }) {
+    const [localPrintMode, setLocalPrintMode] = useState(propPrintMode || 'a4');
 
     // Use propPrintMode if available, otherwise use local state
     const printMode = propPrintMode || localPrintMode;
