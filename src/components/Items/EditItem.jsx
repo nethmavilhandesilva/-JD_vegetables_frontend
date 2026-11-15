@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
 import { useNavigate, Link, useParams } from 'react-router-dom';
+import { tr } from '../../i18n/language';
 
 const EditItem = () => {
     const [formData, setFormData] = useState({
@@ -64,34 +65,34 @@ const EditItem = () => {
 
     return (
         <div className="form-card">
-            <h3 className="mb-4 text-center text-primary">අයිතමය සංස්කරණය කරන්න (Edit Item)</h3>
+            <h3 className="mb-4 text-center text-primary">{tr('Edit Item', 'අයිතමය සංස්කරණය කරන්න (Edit Item)')}</h3>
             
             {errors.general && <div className="alert alert-danger">{errors.general}</div>}
 
             <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                    <label className="form-label">අංකය</label>
+                    <label className="form-label">{tr('No', 'අංකය')}</label>
                     <input type="text" name="no" value={formData.no} onChange={handleChange} className="form-control" required />
                 </div>
 
                 <div className="mb-3">
-                    <label className="form-label">වර්ගය</label>
+                    <label className="form-label">{tr('Type', 'වර්ගය')}</label>
                     <input type="text" name="type" value={formData.type} onChange={handleChange} className="form-control" required />
                 </div>
 
                 <div className="mb-3">
-                    <label className="form-label">මල්ලක අගය</label>
+                    <label className="form-label">{tr('Bag Value', 'මල්ලක අගය')}</label>
                     <input type="number" name="pack_cost" step="0.01" value={formData.pack_cost} onChange={handleChange} className="form-control" required />
                 </div>
 
                 <div className="mb-3">
-                    <label className="form-label">මල්ලක කුලිය</label>
+                    <label className="form-label">{tr('Bag Kuliya', 'මල්ලක කුලිය')}</label>
                     <input type="number" name="pack_due" step="0.01" value={formData.pack_due} onChange={handleChange} className="form-control" required />
                 </div>
 
                 {/* --- New Field: Bag Real Price --- */}
                 <div className="mb-3">
-                    <label className="form-label">පෙට්ටියක/කූඩයක/කෙසෙල් නැට් බර අඩු කිරීම</label>
+                    <label className="form-label">{tr('Box / Basket / Banana Net Weight Deduction', 'පෙට්ටියක/කූඩයක/කෙසෙල් නැට් බර අඩු කිරීම')}</label>
                     <input 
                         type="number" 
                         name="bag_real_price" 
@@ -106,9 +107,9 @@ const EditItem = () => {
 
                 <div className="d-flex justify-content-center mt-4">
                     <button type="submit" className="btn btn-success px-4" disabled={loading}>
-                        {loading ? 'Updating...' : 'සංස්කරණය කරන්න'}
+                        {loading ? 'Updating...' : tr('Update', 'සංස්කරණය කරන්න')}
                     </button>
-                    <Link to="/items" className="btn btn-secondary px-4 ms-2">අවලංගු කරන්න</Link>
+                    <Link to="/items" className="btn btn-secondary px-4 ms-2">{tr('Cancel', 'අවලංගු කරන්න')}</Link>
                 </div>
             </form>
             <style jsx>{`

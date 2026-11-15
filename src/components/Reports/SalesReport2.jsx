@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../Sidebar';
 import api from "../../api"; // ✅ axios wrapper
 import { SHOP_NAME, SHOP_PHONE, SHOP_TAGLINE, SHOP_ADDRESS } from '../../config/shop';
+import { tr } from '../../i18n/language';
 
 const SalesReport = () => {
     const [sales, setSales] = useState([]);
@@ -77,7 +78,7 @@ const SalesReport = () => {
         const finalGrandTotal = totalSales + totalPackCost;
         const givenAmount = salesData.find(s => parseFloat(s.given_amount) > 0)?.given_amount || 0;
         const remaining = givenAmount > 0 ? Math.abs(givenAmount - finalGrandTotal) : 0;
-        const loanRow = globalLoanAmount !== 0 ? `<tr><td style="font-size:20px; padding-top:8px;">පෙර ණය:</td><td style="text-align:right; font-size:22px; font-weight:bold; padding-top:8px;">Rs. ${formatNumber(Math.abs(globalLoanAmount).toFixed(2))}</td></tr>` : '';
+        const loanRow = globalLoanAmount !== 0 ? `<tr><td style="font-size:20px; padding-top:8px;">${tr('Previous Loan', 'පෙර ණය')}:</td><td style="text-align:right; font-size:22px; font-weight:bold; padding-top:8px;">Rs. ${formatNumber(Math.abs(globalLoanAmount).toFixed(2))}</td></tr>` : '';
 
         const summaryEntries = Object.entries(consolidatedSummary);
         let summaryHtmlContent = '';
@@ -91,19 +92,19 @@ const SalesReport = () => {
         <div style="width:${receiptMaxWidth}; margin:0 auto; padding:10px; font-family: 'Courier New', monospace; color:#000; background:#fff;">
             <div style="text-align:center; font-weight:bold;">
                 <div style="font-size:24px;">
-                <span style="font-size: 14px; margin-left: -160px; margin-right: 40px; color: #666;">පරණ බිල්</span>xxxx
+                <span style="font-size: 14px; margin-left: -160px; margin-right: 40px; color: #666;">${tr('Old Bill', 'පරණ බිල්')}</span>xxxx
                 </div>
                 <div style="font-size:20px; margin-bottom:5px;font-weight:bold;">${SHOP_NAME}</div>
                 <div style="display:flex; justify-content:center; gap:15px; margin:12px 0;"><span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">xx</span><span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">${customerName.toUpperCase()}</span></div>
                 <div style="font-size:16px;">${SHOP_TAGLINE}</div>
                 <div style="display:flex; justify-content:space-between; font-size:14px; margin-top:6px; padding:0 5px;"><span>${SHOP_ADDRESS}</span><span>${time}</span></div>
             </div>
-            <div style="font-size:19px; margin-top:10px; padding:0 5px;"><div style="font-weight: bold;">දුර: ${SHOP_PHONE}</div><div style="display:flex; justify-content:space-between; margin-top:3px;"><span>බිල් අංකය:${billNo}</span><span>දිනය:${date}</span></div></div>
+            <div style="font-size:19px; margin-top:10px; padding:0 5px;"><div style="font-weight: bold;">${tr('Tel', 'දුර')}: ${SHOP_PHONE}</div><div style="display:flex; justify-content:space-between; margin-top:3px;"><span>${tr('Bill No', 'බිල් අංකය')}:${billNo}</span><span>${tr('Date', 'දිනය')}:${date}</span></div></div>
             <hr style="border:none; border-top:2.5px solid #000; margin:10px 0;">
-            <table style="width:100%; border-collapse:collapse; font-size:${fontSizeBody}; table-layout: fixed;">${colGroups}<thead><tr style="border-bottom:2.5px solid #000; font-weight:bold;"><th style="text-align:left; padding-bottom:8px; font-size:${fontSizeHeader};">වර්ගය<br>මලු</th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -50px; top: 24px;"> කිලෝ </th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -45px;top: 24px;">මිල</th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};">අයිතිය<br>අගය</th></tr></thead><tbody>${itemsHtml}</tbody><tfoot><tr style="border-top:2.5px solid #000; font-weight:bold;"><td style="padding-top:12px; font-size:${fontSizeTotal};">${formatNumber(totalPacksSum)}</td><td colspan="3" style="padding-top:12px; font-size:${fontSizeTotal};"><div style="text-align:right; float:right; white-space:nowrap;">${Number(totalSales).toFixed(2)}</div></td></tr></tfoot></table>
-            <table style="width:100%; margin-top:20px; font-weight:bold; font-size:22px; padding:0 5px;"><tr><td>මලු:</td><td style="text-align:right; font-weight:bold;">${formatNumber(totalPackCost.toFixed(2))}</td></tr><tr><td style="font-size:20px; padding-top:8px;">එකතුව:</td><td style="text-align:right; padding-top:8px;"><span style="border-bottom:5px double #000; border-top:2px solid #000; font-size:${fontSizeTotal}; padding:5px 10px;">${(Number(finalGrandTotal).toFixed(2))}</span></td></tr>${loanRow}${givenAmount > 0 ? '<tr><td>දුන් මුදල:</td><td style="text-align:right;">' + formatNumber(parseFloat(givenAmount).toFixed(2)) + '</td></tr><tr><td>ඉතිරිය:</td><td style="text-align:right; font-size:26px;">' + formatNumber(remaining.toFixed(2)) + '</td></tr>' : ''}</table>
+            <table style="width:100%; border-collapse:collapse; font-size:${fontSizeBody}; table-layout: fixed;">${colGroups}<thead><tr style="border-bottom:2.5px solid #000; font-weight:bold;"><th style="text-align:left; padding-bottom:8px; font-size:${fontSizeHeader};">${tr('Type', 'වර්ගය')}<br>${tr('Bags', 'මලු')}</th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -50px; top: 24px;"> ${tr('Kg', 'කිලෝ')} </th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -45px;top: 24px;">${tr('Price', 'මිල')}</th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};">${tr('Item', 'අයිතිය')}<br>${tr('Value', 'අගය')}</th></tr></thead><tbody>${itemsHtml}</tbody><tfoot><tr style="border-top:2.5px solid #000; font-weight:bold;"><td style="padding-top:12px; font-size:${fontSizeTotal};">${formatNumber(totalPacksSum)}</td><td colspan="3" style="padding-top:12px; font-size:${fontSizeTotal};"><div style="text-align:right; float:right; white-space:nowrap;">${Number(totalSales).toFixed(2)}</div></td></tr></tfoot></table>
+            <table style="width:100%; margin-top:20px; font-weight:bold; font-size:22px; padding:0 5px;"><tr><td>${tr('Bags', 'මලු')}:</td><td style="text-align:right; font-weight:bold;">${formatNumber(totalPackCost.toFixed(2))}</td></tr><tr><td style="font-size:20px; padding-top:8px;">${tr('Total', 'එකතුව')}:</td><td style="text-align:right; padding-top:8px;"><span style="border-bottom:5px double #000; border-top:2px solid #000; font-size:${fontSizeTotal}; padding:5px 10px;">${(Number(finalGrandTotal).toFixed(2))}</span></td></tr>${loanRow}${givenAmount > 0 ? '<tr><td>' + tr('Given Amount', 'දුන් මුදල') + ':</td><td style="text-align:right;">' + formatNumber(parseFloat(givenAmount).toFixed(2)) + '</td></tr><tr><td>' + tr('Balance', 'ඉතිරිය') + ':</td><td style="text-align:right; font-size:26px;">' + formatNumber(remaining.toFixed(2)) + '</td></tr>' : ''}</table>
             <table style="width:100%; border-collapse:collapse; margin-top:25px; font-size:14px; text-align:center;">${summaryHtmlContent}</table>
-            <div style="text-align:center; margin-top:25px; font-size:13px; border-top:2.5px solid #000; padding-top:10px;"><p style="margin:4px 0; font-weight:bold;">භාණ්ඩ පරීක්ෂාකර බලා රැගෙන යන්න</p><p style="margin:4px 0;">නැවත භාර ගනු නොලැබේ</p></div>
+            <div style="text-align:center; margin-top:25px; font-size:13px; border-top:2.5px solid #000; padding-top:10px;"><p style="margin:4px 0; font-weight:bold;">${tr('Please check goods before taking them', 'භාණ්ඩ පරීක්ෂාකර බලා රැගෙන යන්න')}</p><p style="margin:4px 0;">${tr('Goods will not be taken back', 'නැවත භාර ගනු නොලැබේ')}</p></div>
         </div>`;
     };
 
@@ -155,16 +156,16 @@ const SalesReport = () => {
         <div style="width:${receiptMaxWidth}; margin:0 auto; padding:10px; font-family:'Courier New', monospace; color:#000; background:#fff;">
             <div style="text-align:center; font-weight:bold;">
                  <div style="font-size:24px;">
-                <span style="font-size: 14px; margin-left: -160px; margin-right: 40px; color: #666;">පරණ බිල්</span>xxxx
+                <span style="font-size: 14px; margin-left: -160px; margin-right: 40px; color: #666;">${tr('Old Bill', 'පරණ බිල්')}</span>xxxx
                 </div>
-                <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;"><span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">xx</span><div style="font-size:18px;">ගොවියා: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${selectedSupplier}</span></div></div>
+                <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;"><span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">xx</span><div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${selectedSupplier}</span></div></div>
                 <div style="font-size:14px;">${SHOP_TAGLINE}</div>
             </div>
-            <div style="font-size:19px; margin-top:10px; padding:0 5px;"><div style="font-weight: bold; white-space: normal;">දුර: ${mobile}</div><div style="display:flex; justify-content:space-between; margin-top:3px;"><span>බිල් අංකය:${currentBillNo}</span><span>දිනය:${date}</span></div></div>
+            <div style="font-size:19px; margin-top:10px; padding:0 5px;"><div style="font-weight: bold; white-space: normal;">${tr('Tel', 'දුර')}: ${mobile}</div><div style="display:flex; justify-content:space-between; margin-top:3px;"><span>${tr('Bill No', 'බිල් අංකය')}:${currentBillNo}</span><span>${tr('Date', 'දිනය')}:${date}</span></div></div>
             <hr style="border:none; border-top:2.5px solid #000; margin:10px 0;">
-            <table style="width:100%; border-collapse:collapse; font-size:${fontSizeBody}; table-layout: fixed;">${colGroups}<thead><tr style="border-bottom:2.5px solid #000; font-weight:bold;"><th style="text-align:left; padding-bottom:8px; font-size:${fontSizeHeader};">වර්ගය<br>මලු</th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -50px; top: 24px;"> කිලෝ </th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -45px; top: 24px;">මිල</th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};">කේතය<br>අගය</th></tr></thead><tbody>${detailedItemsHtml}</tbody><tfoot><tr style="border-top:2.5px solid #000; font-weight:bold;"><td style="padding-top:12px; font-size:${fontSizeTotal};">${formatNumber(totalPacksSum)}</td><td colspan="3" style="padding-top:12px; font-size:${fontSizeTotal}; text-align:right;">${totalsupplierSales.toFixed(2)}</td></tr></tfoot></table>
-            <table style="width:100%; margin-top:20px; font-weight:bold; font-size:22px;"><tr><td>මෙම බිලට ගෙවන්න:</td><td style="text-align:right;"><span style="border-bottom:5px double #000; border-top:2px solid #000; font-size:${fontSizeTotal}; padding:5px 10px;">${totalsupplierSales.toFixed(2)}</span></td></tr><tr style="font-weight:900;"><td>ඉතිරි ශේෂය:</td><td style="text-align:right;"><span style="font-size:${fontSizeTotal};">${netPayable.toFixed(2)}</span></td></tr></table>
-            <div style="text-align:center; margin-top:25px; font-size:13px; border-top:2.5px solid #000; padding-top:10px;"><p style="margin:4px 0; font-weight:bold;">භාණ්ඩ පරීක්ෂාකර බලා රැගෙන යන්න</p><p style="margin:4px 0;">නැවත භාර ගනු නොලැබේ</p></div>
+            <table style="width:100%; border-collapse:collapse; font-size:${fontSizeBody}; table-layout: fixed;">${colGroups}<thead><tr style="border-bottom:2.5px solid #000; font-weight:bold;"><th style="text-align:left; padding-bottom:8px; font-size:${fontSizeHeader};">${tr('Type', 'වර්ගය')}<br>${tr('Bags', 'මලු')}</th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -50px; top: 24px;"> ${tr('Kg', 'කිලෝ')} </th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -45px; top: 24px;">${tr('Price', 'මිල')}</th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};">${tr('Code', 'කේතය')}<br>${tr('Value', 'අගය')}</th></tr></thead><tbody>${detailedItemsHtml}</tbody><tfoot><tr style="border-top:2.5px solid #000; font-weight:bold;"><td style="padding-top:12px; font-size:${fontSizeTotal};">${formatNumber(totalPacksSum)}</td><td colspan="3" style="padding-top:12px; font-size:${fontSizeTotal}; text-align:right;">${totalsupplierSales.toFixed(2)}</td></tr></tfoot></table>
+            <table style="width:100%; margin-top:20px; font-weight:bold; font-size:22px;"><tr><td>${tr('Pay for this bill', 'මෙම බිලට ගෙවන්න')}:</td><td style="text-align:right;"><span style="border-bottom:5px double #000; border-top:2px solid #000; font-size:${fontSizeTotal}; padding:5px 10px;">${totalsupplierSales.toFixed(2)}</span></td></tr><tr style="font-weight:900;"><td>${tr('Remaining Balance', 'ඉතිරි ශේෂය')}:</td><td style="text-align:right;"><span style="font-size:${fontSizeTotal};">${netPayable.toFixed(2)}</span></td></tr></table>
+            <div style="text-align:center; margin-top:25px; font-size:13px; border-top:2.5px solid #000; padding-top:10px;"><p style="margin:4px 0; font-weight:bold;">${tr('Please check goods before taking them', 'භාණ්ඩ පරීක්ෂාකර බලා රැගෙන යන්න')}</p><p style="margin:4px 0;">${tr('Goods will not be taken back', 'නැවත භාර ගනු නොලැබේ')}</p></div>
         </div>`;
     };
 
@@ -214,10 +215,10 @@ const SalesReport = () => {
             <Sidebar />
             <div style={mainContentStyle}>
                 <div style={headerStyle}>
-                    <h2 style={{ margin: 0, color: '#004d00' }}>{reportMode === 'customer' ? 'විකුණුම් වාර්තාව' : 'ගොවීන්ගේ වාර්තාව (Farmers)'}</h2>
+                    <h2 style={{ margin: 0, color: '#004d00' }}>{reportMode === 'customer' ? tr('Sales Report', 'විකුණුම් වාර්තාව') : tr('Farmers Report', 'ගොවීන්ගේ වාර්තාව (Farmers)')}</h2>
                     <div style={filterBarStyle}>
                         <div style={inputGroupStyle}>
-                            <label>සොයන්න (Search):</label>
+                            <label>{tr('Search:', 'සොයන්න (Search):')}</label>
                             <input
                                 type="text"
                                 placeholder={reportMode === 'customer' ? "Bill No / Code / Name" : "Bill No / Supplier Code"}
@@ -243,10 +244,10 @@ const SalesReport = () => {
                     <table style={modernTableStyle}>
                         <thead>
                             <tr>
-                                <th style={thCellStyle}>දිනය (Date)</th>
-                                <th style={thCellStyle}>බිල් අංකය (Bill No)</th>
-                                <th style={thCellStyle}>{reportMode === 'customer' ? 'ගනුදෙනුකරු (Customer)' : 'ගොවියා (Supplier)'}</th>
-                                <th style={{ ...thCellStyle, textAlign: 'right' }}>මුළු එකතුව</th>
+                                <th style={thCellStyle}>{tr('Date', 'දිනය (Date)')}</th>
+                                <th style={thCellStyle}>{tr('Bill No', 'බිල් අංකය (Bill No)')}</th>
+                                <th style={thCellStyle}>{reportMode === 'customer' ? tr('Customer', 'ගනුදෙනුකරු (Customer)') : tr('Supplier', 'ගොවියා (Supplier)')}</th>
+                                <th style={{ ...thCellStyle, textAlign: 'right' }}>{tr('Grand Total', 'මුළු එකතුව')}</th>
                                 <th style={{ ...thCellStyle, textAlign: 'center' }}>Action</th>
                             </tr>
                         </thead>

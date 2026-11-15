@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from "../../api";
 import { useNavigate } from 'react-router-dom';
+import { tr } from '../../i18n/language';
 
 const SupplierLoanReport = () => {
     const navigate = useNavigate();
@@ -42,22 +43,22 @@ const SupplierLoanReport = () => {
         <div style={containerStyle}>
             {/* Header */}
             <div style={headerStyle}>
-                <h1 style={{ margin: 0, fontSize: '24px' }}>ණය සහ ගෙවීම් වාර්තාව (Loan Report)</h1>
-                <button onClick={() => navigate(-1)} style={backButtonStyle}>ආපසු (Back)</button>
+                <h1 style={{ margin: 0, fontSize: '24px' }}>{tr('Loan & Payments Report', 'ණය සහ ගෙවීම් වාර්තාව (Loan Report)')}</h1>
+                <button onClick={() => navigate(-1)} style={backButtonStyle}>{tr('Back', 'ආපසු (Back)')}</button>
             </div>
 
             {/* Summary Cards */}
             <div style={cardRowStyle}>
                 <div style={{ ...cardStyle, borderLeft: '5px solid #00d2ff' }}>
-                    <span style={cardLabelStyle}>මුළු ශේෂය (Total Balance)</span>
-                    <span style={cardValueStyle}>රු. {summary.total_loan_balance.toLocaleString()}</span>
+                    <span style={cardLabelStyle}>{tr('Total Balance', 'මුළු ශේෂය (Total Balance)')}</span>
+                    <span style={cardValueStyle}>{tr('Rs.', 'රු.')} {summary.total_loan_balance.toLocaleString()}</span>
                 </div>
                 <div style={{ ...cardStyle, borderLeft: '5px solid #28a745' }}>
-                    <span style={cardLabelStyle}>ගෙවූ මුළු මුදල (Total Paid)</span>
-                    <span style={cardValueStyle}>රු. {summary.total_paid.toLocaleString()}</span>
+                    <span style={cardLabelStyle}>{tr('Total Paid', 'ගෙවූ මුළු මුදල (Total Paid)')}</span>
+                    <span style={cardValueStyle}>{tr('Rs.', 'රු.')} {summary.total_paid.toLocaleString()}</span>
                 </div>
                 <div style={{ ...cardStyle, borderLeft: '5px solid #ffc107' }}>
-                    <span style={cardLabelStyle}>වාර්තා ගණන (Total Records)</span>
+                    <span style={cardLabelStyle}>{tr('Total Records', 'වාර්තා ගණන (Total Records)')}</span>
                     <span style={cardValueStyle}>{summary.count}</span>
                 </div>
             </div>
@@ -65,41 +66,41 @@ const SupplierLoanReport = () => {
             {/* Filter Bar */}
             <div style={filterBarStyle}>
                 <div style={inputGroupStyle}>
-                    <label style={labelStyle}>ගෙවීම් ක්‍රමය (Type)</label>
+                    <label style={labelStyle}>{tr('Payment Type', 'ගෙවීම් ක්‍රමය (Type)')}</label>
                     <select name="type" onChange={handleFilterChange} style={selectStyle}>
-                        <option value="">සියල්ල (All Types)</option>
-                        <option value="Cash">මුදල් (Cash)</option>
-                        <option value="Cheque">චෙක්පත් (Cheque)</option>
+                        <option value="">{tr('All Types', 'සියල්ල (All Types)')}</option>
+                        <option value="Cash">{tr('Cash', 'මුදල් (Cash)')}</option>
+                        <option value="Cheque">{tr('Cheque', 'චෙක්පත් (Cheque)')}</option>
                     </select>
                 </div>
 
                 <div style={inputGroupStyle}>
-                    <label style={labelStyle}>ණය තත්ත්වය (Status)</label>
+                    <label style={labelStyle}>{tr('Loan Status', 'ණය තත්ත්වය (Status)')}</label>
                     <select name="status" onChange={handleFilterChange} style={selectStyle}>
-                        <option value="">සියල්ල (All Status)</option>
-                        <option value="loan">ණය සහිත (Loan Payments)</option>
-                        <option value="not_loan">ණය රහිත (Fully Paid)</option>
+                        <option value="">{tr('All Statuses', 'සියල්ල (All Status)')}</option>
+                        <option value="loan">{tr('Loan Payments', 'ණය සහිත (Loan Payments)')}</option>
+                        <option value="not_loan">{tr('Fully Paid', 'ණය රහිත (Fully Paid)')}</option>
                     </select>
                 </div>
                 
-                <button onClick={() => window.print()} style={printButtonStyle}>බිල්පත මුද්‍රණය (Print)</button>
+                <button onClick={() => window.print()} style={printButtonStyle}>{tr('Print', 'බිල්පත මුද්‍රණය (Print)')}</button>
             </div>
 
             {/* Data Table */}
             <div style={tableContainerStyle}>
                 {isLoading ? (
-                    <div style={{ padding: '50px', textAlign: 'center' }}>වාර්තාව සකස් කරමින්...</div>
+                    <div style={{ padding: '50px', textAlign: 'center' }}>{tr('Preparing report...', 'වාර්තාව සකස් කරමින්...')}</div>
                 ) : (
                     <table style={tableStyle}>
                         <thead>
                             <tr>
-                                <th style={thStyle}>දිනය</th>
-                                <th style={thStyle}>කේතය</th>
-                                <th style={thStyle}>බිල් අංකය</th>
-                                <th style={thStyle}>ක්‍රමය</th>
-                                <th style={thStyle}>ගෙවූ මුදල</th>
-                                <th style={thStyle}>ඉතිරි ණය</th>
-                                <th style={thStyle}>බැංකුව / විස්තර</th>
+                                <th style={thStyle}>{tr('Date', 'දිනය')}</th>
+                                <th style={thStyle}>{tr('Code', 'කේතය')}</th>
+                                <th style={thStyle}>{tr('Bill No', 'බිල් අංකය')}</th>
+                                <th style={thStyle}>{tr('Method', 'ක්‍රමය')}</th>
+                                <th style={thStyle}>{tr('Paid Amount', 'ගෙවූ මුදල')}</th>
+                                <th style={thStyle}>{tr('Remaining Loan', 'ඉතිරි ණය')}</th>
+                                <th style={thStyle}>{tr('Bank / Details', 'බැංකුව / විස්තර')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -121,7 +122,7 @@ const SupplierLoanReport = () => {
                                         {loan.type === 'Cheque' ? (
                                             <div style={{ fontSize: '12px' }}>
                                                 {loan.bank_name} | {loan.cheque_no}<br/>
-                                                <small>මාරු වන දිනය: {loan.realized_date}</small>
+                                                <small>{tr('Realized Date:', 'මාරු වන දිනය:')} {loan.realized_date}</small>
                                             </div>
                                         ) : (
                                             <small>{loan.notes || '-'}</small>

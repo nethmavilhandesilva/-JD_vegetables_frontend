@@ -1,3 +1,4 @@
+import { tr } from '../../i18n/language';
 import React, { useState, useEffect } from 'react';
 import GrnSaleReportView from './ReportView';
 import api from '../../api'; // <-- IMPORTANT: adjust path if needed
@@ -143,7 +144,7 @@ const GrnSaleReportModal = ({ isOpen, onClose }) => {
       <div className="modal-dialog">
         <div className="modal-content" style={{ backgroundColor: '#99ff99' }}>
           <div className="modal-header">
-            <h5 className="modal-title">📄 GRN කේතය අනුව විකුණුම් වාර්තාව</h5>
+            <h5 className="modal-title">{tr('📄 Sales Report by GRN Code', '📄 GRN කේතය අනුව විකුණුම් වාර්තාව')}</h5>
             <button type="button" className="btn-close" onClick={onClose} disabled={loading}></button>
           </div>
 
@@ -152,7 +153,7 @@ const GrnSaleReportModal = ({ isOpen, onClose }) => {
 
               {/* GRN Select */}
               <div className="mb-3">
-                <label className="form-label fw-bold">GRN තොරතුරු තෝරන්න</label>
+                <label className="form-label fw-bold">{tr('Select GRN Details', 'GRN තොරතුරු තෝරන්න')}</label>
                 <select
                   className="form-select"
                   required
@@ -160,7 +161,7 @@ const GrnSaleReportModal = ({ isOpen, onClose }) => {
                   onChange={handleGrnCodeChange}
                   disabled={loading}
                 >
-                  <option value="">-- GRN තෝරන්න --</option>
+                  <option value="">{tr('-- Select GRN --', '-- GRN තෝරන්න --')}</option>
                   {grnEntries.map((entry) => (
                     <option key={entry.code} value={entry.code}>
                       {entry.code} | {entry.supplier_code} | {entry.item_code} | {entry.item_name} | {entry.packs} | {entry.grn_no} | {entry.txn_date}
@@ -171,7 +172,7 @@ const GrnSaleReportModal = ({ isOpen, onClose }) => {
 
               {/* Password */}
               <div className="mb-3">
-                <label className="form-label fw-bold">මුරපදය</label>
+                <label className="form-label fw-bold">{tr('Password', 'මුරපදය')}</label>
                 <input
                   type="password"
                   className="form-control"
@@ -185,7 +186,7 @@ const GrnSaleReportModal = ({ isOpen, onClose }) => {
               {showDateRange && (
                 <>
                   <div className="mb-3">
-                    <label className="form-label fw-bold">ආරම්භ දිනය</label>
+                    <label className="form-label fw-bold">{tr('Start Date', 'ආරම්භ දිනය')}</label>
                     <input
                       type="date"
                       className="form-control"
@@ -196,7 +197,7 @@ const GrnSaleReportModal = ({ isOpen, onClose }) => {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label fw-bold">අවසන් දිනය</label>
+                    <label className="form-label fw-bold">{tr('End Date', 'අවසන් දිනය')}</label>
                     <input
                       type="date"
                       className="form-control"
@@ -212,7 +213,7 @@ const GrnSaleReportModal = ({ isOpen, onClose }) => {
 
             <div className="modal-footer">
               <button type="submit" className="btn btn-primary w-100" disabled={loading || !filters.grn_code}>
-                {loading ? "Generating Report..." : "වාර්තාව ලබාගන්න"}
+                {loading ? "Generating Report..." : tr('Get Report', 'වාර්තාව ලබාගන්න')}
               </button>
             </div>
           </form>

@@ -1,6 +1,7 @@
 // src/components/ImagePreviewModal.jsx
 import React from 'react';
 import { STORAGE_URL } from '../config/paths';
+import { tr } from '../i18n/language';
 
 const ImagePreviewModal = ({ isOpen, onClose, data }) => {
     if (!isOpen || !data) return null;
@@ -18,7 +19,7 @@ const ImagePreviewModal = ({ isOpen, onClose, data }) => {
                 {/* Header Area */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #374151', paddingBottom: '15px' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white', margin: 0 }}>
-                        {data.title} -({data.type === 'customer' ? 'ගනුදෙනුකරු' : 'සැපයුම්කරු'})
+                        {data.title} -({data.type === 'customer' ? tr('Customer', 'ගනුදෙනුකරු') : tr('Supplier', 'සැපයුම්කරු')})
                     </h2>
                     <button
                         onClick={onClose}
@@ -32,36 +33,36 @@ const ImagePreviewModal = ({ isOpen, onClose, data }) => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1.5fr', gap: '20px', overflowY: 'auto', padding: '5px' }}>
                     {/* Profile Picture */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <span style={{ color: '#60a5fa', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>ප්‍රධාන රූපය</span>
+                        <span style={{ color: '#60a5fa', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>{tr('Main Photo', 'ප්‍රධාන රූපය')}</span>
                         <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', border: '2px solid #3b82f6', backgroundColor: '#111827', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
                             {data.profile ? (
                                 <img src={data.profile} style={{ width: '100%', height: 'auto', display: 'block' }} alt="Profile" />
                             ) : (
-                                <div style={{ height: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>ඡායාරූපයක් නොමැත</div>
+                                <div style={{ height: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>{tr('No photo', 'ඡායාරූපයක් නොමැත')}</div>
                             )}
                         </div>
                     </div>
 
                     {/* NIC Front */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>NIC ඉදිරිපස</span>
+                        <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>{tr('NIC Front', 'NIC ඉදිරිපස')}</span>
                         <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', border: '2px solid #4b5563', backgroundColor: '#111827', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
                             {data.nic_front ? (
                                 <img src={formatUrl(data.nic_front)} style={{ width: '100%', height: 'auto', maxHeight: '500px', display: 'block', objectFit: 'contain' }} alt="NIC Front" />
                             ) : (
-                                <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>ඡායාරූපයක් නොමැත</div>
+                                <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>{tr('No photo', 'ඡායාරූපයක් නොමැත')}</div>
                             )}
                         </div>
                     </div>
 
                     {/* NIC Back */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>NIC පසුපස</span>
+                        <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>{tr('NIC Back', 'NIC පසුපස')}</span>
                         <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', border: '2px solid #4b5563', backgroundColor: '#111827', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
                             {data.nic_back ? (
                                 <img src={formatUrl(data.nic_back)} style={{ width: '100%', height: 'auto', maxHeight: '500px', display: 'block', objectFit: 'contain' }} alt="NIC Back" />
                             ) : (
-                                <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>ඡායාරූපයක් නොමැත</div>
+                                <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>{tr('No photo', 'ඡායාරූපයක් නොමැත')}</div>
                             )}
                         </div>
                     </div>

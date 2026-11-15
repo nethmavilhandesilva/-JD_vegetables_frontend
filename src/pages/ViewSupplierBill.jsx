@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import api from "../api";
 import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/shop';
 import { API_BASE_URL } from '../config/paths';
+import { tr } from '../i18n/language';
 
 const ViewSupplierBill = () => {
     const { token } = useParams();
@@ -165,15 +166,15 @@ const ViewSupplierBill = () => {
         <div style="font-size:24px;">${SHOP_NAME}</div>
         <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;">
             <span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">${SHOP_STALL_NO}</span>
-            <div style="font-size:18px;">ගොවියා: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${bill.supplier_code}</span></div>
+            <div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${bill.supplier_code}</span></div>
         </div>
       <div style="font-size:16px; white-space: nowrap;">${SHOP_ADDRESS}</div>
     </div>
     <div style="font-size:19px; margin-top:10px; padding:0 5px;">
-        <div style="font-weight: bold; white-space: normal;">දුර: ${mobile}</div>
+        <div style="font-weight: bold; white-space: normal;">${tr('Tel', 'දුර')}: ${mobile}</div>
         <div style="display:flex; justify-content:space-between; margin-top:3px;">
-            <span>බිල් අංකය:${bill.bill_no}</span>
-            <span>දිනය:${date}</span>
+            <span>${tr('Bill No', 'බිල් අංකය')}:${bill.bill_no}</span>
+            <span>${tr('Date', 'දිනය')}:${date}</span>
         </div>
     </div>
     <hr style="border:none; border-top:2.5px solid #000; margin:10px 0;">
@@ -181,10 +182,10 @@ const ViewSupplierBill = () => {
         ${colGroups}
         <thead>
             <tr style="border-bottom:2.5px solid #000; font-weight:bold;">
-                <th style="text-align:left; padding-bottom:8px; font-size:${fontSizeHeader};">වර්ගය<br>මලු</th>
-                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -50px; top: 24px;"> කිලෝ </th>
-                 <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -45px; top: 24px;">මිල</th>
-                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};">කේතය<br>අගය</th>
+                <th style="text-align:left; padding-bottom:8px; font-size:${fontSizeHeader};">${tr('Type', 'වර්ගය')}<br>${tr('Bags', 'මලු')}</th>
+                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -50px; top: 24px;"> ${tr('Kg', 'කිලෝ')} </th>
+                 <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -45px; top: 24px;">${tr('Price', 'මිල')}</th>
+                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};">${tr('Code', 'කේතය')}<br>${tr('Value', 'අගය')}</th>
                </tr>
         </thead>
         <tbody>${detailedItemsHtml}</tbody>
@@ -198,23 +199,23 @@ const ViewSupplierBill = () => {
 
     <table style="width:100%; margin-top:20px; font-weight:bold; font-size:22px; padding:0 5px;">
         <tr>
-            <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">මෙම බිලට මුළු අගය:</td>
+            <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">${tr('Total value of this bill', 'මෙම බිලට මුළු අගය')}:</td>
             <td style="text-align:right;"><span style="border-bottom:2px solid #000; font-size:${fontSizeTotal}; padding:5px 10px;">${(totalsupplierSales.toFixed(2))}</span></td>
         </tr>
         <tr>
-            <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">මලු වියදම:</td>
+            <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">${tr('Bag Cost', 'මලු වියදම')}:</td>
             <td style="text-align:right;"><span style="font-size:${fontSizeTotal}; padding:5px 10px;">${totalCustomerPackCost.toFixed(2)}</span></td>
         </tr>
 
         <tr style="font-size:18px;">
-            <td style="font-size:15px; padding-top:5px;">අත්තිකාරම්</td>
+            <td style="font-size:15px; padding-top:5px;">${tr('Advance', 'අත්තිකාරම්')}</td>
             <td style="text-align:right; padding-top:5px; color:#000;">
                 - ${advanceAmount.toFixed(2)}
             </td>
         </tr>
 
         <tr style="font-weight:900;">
-            <td style="font-size:18px; padding-top:10px;">ශුද්ධ ඉතිරි ශේෂය:</td>
+            <td style="font-size:18px; padding-top:10px;">${tr('Net Remaining Balance', 'ශුද්ධ ඉතිරි ශේෂය')}:</td>
             <td style="text-align:right; padding-top:10px;">
                 <span style="color:#000; font-size:${fontSizeTotal}; border-bottom:5px double #000; border-top:2px solid #000;">
                     ${netPayable.toFixed(2)}
@@ -245,7 +246,7 @@ const ViewSupplierBill = () => {
                         boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                     }}
                 >
-                    බිල්පත් ප්‍රමාණය: {billSize}
+                    {tr('Bill Size:', 'බිල්පත් ප්‍රමාණය:')} {billSize}
                 </button>
                 <button 
                     onClick={handlePrint} 

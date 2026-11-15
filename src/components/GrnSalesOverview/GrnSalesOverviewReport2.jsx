@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { SHOP_NAME } from '../../config/shop';
 import { API_BASE_URL } from '../../config/paths';
+import { tr } from '../../i18n/language';
 
 const BACKEND_URL = API_BASE_URL;
 
@@ -166,25 +167,25 @@ const GrnSalesOverviewReport2 = ({ isOpen, onClose }) => {
       <body>
           <div class="header">
               <div class="company-name">${companyName}</div>
-              <div class="report-title">📦 ඉතිරි වාර්තාව</div>
+              <div class="report-title">${tr('📦 Remaining Stock Report', '📦 ඉතිරි වාර්තාව')}</div>
               <div>Report Date: ${settingDate}</div>
           </div>
 
           <table>
               <thead>
                   <tr>
-                      <th rowspan="2">වර්ගය</th>
-                      <th colspan="2">මිලදී ගැනීම</th>
-                      <th colspan="2">විකුණුම්</th>
-                      <th colspan="2">ඉතිරි</th>
+                      <th rowspan="2">${tr('Type', 'වර්ගය')}</th>
+                      <th colspan="2">${tr('Purchased', 'මිලදී ගැනීම')}</th>
+                      <th colspan="2">${tr('Sales', 'විකුණුම්')}</th>
+                      <th colspan="2">${tr('Remaining', 'ඉතිරි')}</th>
                   </tr>
                   <tr>
-                      <th>බර</th>
-                      <th>මලු</th>
-                      <th>බර</th>
-                      <th>මලු</th>
-                      <th>බර</th>
-                      <th>මලු</th>
+                      <th>${tr('Weight', 'බර')}</th>
+                      <th>${tr('Bags', 'මලු')}</th>
+                      <th>${tr('Weight', 'බර')}</th>
+                      <th>${tr('Bags', 'මලු')}</th>
+                      <th>${tr('Weight', 'බර')}</th>
+                      <th>${tr('Bags', 'මලු')}</th>
                   </tr>
               </thead>
               <tbody>
@@ -200,13 +201,13 @@ const GrnSalesOverviewReport2 = ({ isOpen, onClose }) => {
                       </tr>
                   `).join('') : `
                       <tr>
-                          <td colspan="7" class="no-data">දත්ත නොමැත.</td>
+                          <td colspan="7" class="no-data">${tr('No data.', 'දත්ත නොමැත.')}</td>
                       </tr>
                   `}
                   
                   ${reportData.length > 0 ? `
                       <tr class="total-row">
-                          <td style="text-align: right;"><strong>සමස්ත එකතුව:</strong></td>
+                          <td style="text-align: right;"><strong>${tr('Grand Total:', 'සමස්ත එකතුව:')}</strong></td>
                           <td><strong>${Number(grandTotals.grandTotalOriginalWeight).toFixed(2)}</strong></td>
                           <td><strong>${Number(grandTotals.grandTotalOriginalPacks).toFixed(0)}</strong></td>
                           <td><strong>${Number(grandTotals.grandTotalSoldWeight).toFixed(2)}</strong></td>
@@ -238,13 +239,13 @@ const GrnSalesOverviewReport2 = ({ isOpen, onClose }) => {
     
     // Add headers
     const headers = [
-      'වර්ගය', 
-      'මිලදී ගැනීම - බර', 
-      'මිලදී ගැනීම - මලු', 
-      'විකුණුම් - බර', 
-      'විකුණුම් - මලු', 
-      'ඉතිරි - බර', 
-      'ඉතිරි - මලු'
+      tr('Type', 'වර්ගය'), 
+      tr('Purchased - Weight', 'මිලදී ගැනීම - බර'), 
+      tr('Purchased - Bags', 'මිලදී ගැනීම - මලු'), 
+      tr('Sales - Weight', 'විකුණුම් - බර'), 
+      tr('Sales - Bags', 'විකුණුම් - මලු'), 
+      tr('Remaining - Weight', 'ඉතිරි - බර'), 
+      tr('Remaining - Bags', 'ඉතිරි - මලු')
     ];
     excelData.push(headers);
     
@@ -267,7 +268,7 @@ const GrnSalesOverviewReport2 = ({ isOpen, onClose }) => {
       
       // Add totals row
       excelData.push([
-        'සමස්ත එකතුව:',
+        tr('Grand Total:', 'සමස්ත එකතුව:'),
         Number(grandTotals.grandTotalOriginalWeight).toFixed(2),
         Number(grandTotals.grandTotalOriginalPacks).toFixed(0),
         Number(grandTotals.grandTotalSoldWeight).toFixed(2),
@@ -340,7 +341,7 @@ const GrnSalesOverviewReport2 = ({ isOpen, onClose }) => {
                   <div className="card-header text-center" style={{ backgroundColor: '#004d00' }}>
                     <div className="report-title-bar">
                       <h2 className="company-name text-white">{companyName}</h2>
-                      <h4 className="fw-bold text-white">📦 ඉතිරි වාර්තාව</h4>
+                      <h4 className="fw-bold text-white">{tr('📦 Remaining Stock Report', '📦 ඉතිරි වාර්තාව')}</h4>
                       <span className="right-info text-white">
                         {settingDate}
                       </span>
@@ -352,18 +353,18 @@ const GrnSalesOverviewReport2 = ({ isOpen, onClose }) => {
                       <table className="table table-striped table-hover table-bordered">
                         <thead>
                           <tr>
-                            <th rowSpan="2">වර්ගය</th>
-                            <th colSpan="2">මිලදී ගැනීම</th>
-                            <th colSpan="2">විකුණුම්</th>
-                            <th colSpan="2">ඉතිරි</th>
+                            <th rowSpan="2">{tr('Type', 'වර්ගය')}</th>
+                            <th colSpan="2">{tr('Purchased', 'මිලදී ගැනීම')}</th>
+                            <th colSpan="2">{tr('Sales', 'විකුණුම්')}</th>
+                            <th colSpan="2">{tr('Remaining', 'ඉතිරි')}</th>
                           </tr>
                           <tr>
-                            <th>බර</th>
-                            <th>මලු</th>
-                            <th>බර</th>
-                            <th>මලු</th>
-                            <th>බර</th>
-                            <th>මලු</th>
+                            <th>{tr('Weight', 'බර')}</th>
+                            <th>{tr('Bags', 'මලු')}</th>
+                            <th>{tr('Weight', 'බර')}</th>
+                            <th>{tr('Bags', 'මලු')}</th>
+                            <th>{tr('Weight', 'බර')}</th>
+                            <th>{tr('Bags', 'මලු')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -383,7 +384,7 @@ const GrnSalesOverviewReport2 = ({ isOpen, onClose }) => {
                               
                               {/* Totals Row */}
                               <tr className="total-row">
-                                <td className="text-end"><strong>සමස්ත එකතුව:</strong></td>
+                                <td className="text-end"><strong>{tr('Grand Total:', 'සමස්ත එකතුව:')}</strong></td>
                                 <td><strong>{Number(grandTotals.grandTotalOriginalWeight).toFixed(2)}</strong></td>
                                 <td><strong>{Number(grandTotals.grandTotalOriginalPacks).toFixed(0)}</strong></td>
                                 <td><strong>{Number(grandTotals.grandTotalSoldWeight).toFixed(2)}</strong></td>
@@ -394,7 +395,7 @@ const GrnSalesOverviewReport2 = ({ isOpen, onClose }) => {
                             </>
                           ) : (
                             <tr>
-                              <td colSpan="7" className="text-center text-muted py-4">දත්ත නොමැත.</td>
+                              <td colSpan="7" className="text-center text-muted py-4">{tr('No data.', 'දත්ත නොමැත.')}</td>
                             </tr>
                           )}
                         </tbody>

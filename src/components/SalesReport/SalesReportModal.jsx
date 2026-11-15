@@ -1,3 +1,4 @@
+import { tr } from '../../i18n/language';
 import React, { useState, useEffect } from 'react';
 import SalesReportView from './SalesReportView';
 import api from '../../api'; // ✅ Using your axios instance
@@ -188,7 +189,7 @@ const SalesReportModal = ({ isOpen, onClose }) => {
 
                 {/* Customer */}
                 <div className="col-md-6">
-                  <label className="form-label fw-bold">පාරිභෝගික කේතය</label>
+                  <label className="form-label fw-bold">{tr('Customer Code', 'පාරිභෝගික කේතය')}</label>
                   <select
                     name="customer_code"
                     className="form-select form-select-sm"
@@ -196,7 +197,7 @@ const SalesReportModal = ({ isOpen, onClose }) => {
                     onChange={handleFilterChange}
                     disabled={loading}
                   >
-                    <option value="">-- සියලුම පාරිභෝගිකයන් --</option>
+                    <option value="">{tr('-- All Customers --', '-- සියලුම පාරිභෝගිකයන් --')}</option>
                     {customers.map(c => (
                       <option key={c.customer_code} value={c.customer_code}>
                         {c.customer_code}

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import api from '../../api';
 import { SHOP_NAME } from '../../config/shop';
+import { tr } from '../../i18n/language';
 
 const WeightReportView = ({ reportData, onClose }) => {
     const printRef = useRef();
@@ -84,7 +85,7 @@ const WeightReportView = ({ reportData, onClose }) => {
 
     // ================= EXCEL EXPORT =================
     const handleExcel = () => {
-        const data = [['අයිතම', 'බර', 'මලු', 'මලු ගාස්තුව', 'එකතුව']];
+        const data = [[tr('Item', 'අයිතම'), tr('Weight', 'බර'), tr('Bags', 'මලු'), tr('Bag Charge', 'මලු ගාස්තුව'), tr('Total', 'එකතුව')]];
         sales.forEach(s => {
             const packs = Number(s.packs) || 0;
             const pack_cost = Number(s.pack_cost) || 0; // UPDATED
@@ -118,12 +119,12 @@ const WeightReportView = ({ reportData, onClose }) => {
             <div ref={printRef} className="p-2">
                 <div style={{ textAlign: 'center', marginBottom: '20px', borderBottom: '2px solid #333', paddingBottom: '10px' }}>
                     <h2 style={{ margin: 0 }}>{companyName}</h2>
-                    <h4 style={{ margin: '5px 0' }}>📦 බර අනුව වාර්තාව (Weight Based Report)</h4>
+                    <h4 style={{ margin: '5px 0' }}>{tr('📦 Weight Based Report', '📦 බර අනුව වාර්තාව (Weight Based Report)')}</h4>
                     <p style={{ margin: 0 }}>Date: {currentDate}</p>
                     {selectedGrnCode && <p style={{ margin: 0 }}><strong>GRN:</strong> {selectedGrnCode}</p>}
                     {(filters.start_date || filters.end_date) && (
                         <p style={{ margin: 0 }}>
-                            {filters.start_date} සිට {filters.end_date} දක්වා
+                            {filters.start_date} {tr('to', 'සිට')} {filters.end_date} {tr('', 'දක්වා')}
                         </p>
                     )}
                 </div>
@@ -132,11 +133,11 @@ const WeightReportView = ({ reportData, onClose }) => {
                     <table className="table table-bordered table-sm align-middle">
                         <thead className="table-light">
                             <tr>
-                                <th>අයිතම</th>
-                                <th className="text-end">බර (Weight)</th>
-                                <th className="text-end">මලු (Packs)</th>
-                                <th className="text-end">මලු ගාස්තුව</th>
-                                <th className="text-end">එකතුව (Net)</th>
+                                <th>{tr('Item', 'අයිතම')}</th>
+                                <th className="text-end">{tr('Weight', 'බර (Weight)')}</th>
+                                <th className="text-end">{tr('Packs', 'මලු (Packs)')}</th>
+                                <th className="text-end">{tr('Bag Charge', 'මලු ගාස්තුව')}</th>
+                                <th className="text-end">{tr('Net Total', 'එකතුව (Net)')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -161,14 +162,14 @@ const WeightReportView = ({ reportData, onClose }) => {
                         </tbody>
                         <tfoot className="fw-bold table-secondary">
                             <tr>
-                                <td>මුළු එකතුව (Total)</td>
+                                <td>{tr('Total', 'මුළු එකතුව (Total)')}</td>
                                 <td className="text-end">{Number(totals.total_weight).toFixed(2)}</td>
                                 <td className="text-end">{totals.total_packs}</td>
                                 <td className="text-end">{Number(totals.total_pack_cost).toFixed(2)}</td>
                                 <td className="text-end">{Number(totals.total_net_total).toFixed(2)}</td>
                             </tr>
                             <tr className="table-dark text-white">
-                                <td colSpan="4" className="text-end">අවසන් මුළු එකතුව (Grand Total)</td>
+                                <td colSpan="4" className="text-end">{tr('Grand Total', 'අවසන් මුළු එකතුව (Grand Total)')}</td>
                                 <td className="text-end">
                                     {Number(totals.total_net_total).toFixed(2)}
                                 </td>

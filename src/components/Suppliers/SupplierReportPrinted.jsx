@@ -3,6 +3,7 @@ import api from "../../api";
 import { useNavigate } from 'react-router-dom';
 import { SHOP_PHONE, SHOP_TAGLINE } from '../../config/shop';
 import { STORAGE_URL } from '../../config/paths';
+import { tr } from '../../i18n/language';
 
 const SupplierReport = () => {
     const navigate = useNavigate();
@@ -156,7 +157,7 @@ const SupplierReport = () => {
         const loan = contextMenu.target;
         if (!loan) return;
 
-        if (window.confirm(`${loan.supplier_code} සැපයුම්කරුගේ බිල් අංක ${loan.supplier_bill_no || 'Pending'} ට අදාල ණය වාර්තාව මකා දැමීමට ඔබට විශ්වාසද?`)) {
+        if (window.confirm(tr(`Are you sure you want to delete the loan record for supplier ${loan.supplier_code}, bill no ${loan.supplier_bill_no || 'Pending'}?`, `${loan.supplier_code} සැපයුම්කරුගේ බිල් අංක ${loan.supplier_bill_no || 'Pending'} ට අදාල ණය වාර්තාව මකා දැමීමට ඔබට විශ්වාසද?`))) {
             try {
                 setIsDetailsLoading(true);
                 await api.post('/suppliers/delete-loan-record', {
@@ -167,11 +168,11 @@ const SupplierReport = () => {
                 fetchLoanSummary();
                 fetchSummary();
                 resetDetails();
-                setLoanStatus('✅ මකා දමන ලදී');
+                setLoanStatus(tr('✅ Deleted', '✅ මකා දමන ලදී'));
                 setTimeout(() => setLoanStatus(''), 2000);
             } catch (error) {
                 console.error("Delete Error:", error);
-                alert("මකා දැමීම අසාර්ථක විය.");
+                alert(tr('Delete failed.', 'මකා දැමීම අසාර්ථක විය.'));
             } finally {
                 setIsDetailsLoading(false);
                 closeContextMenu();
@@ -182,7 +183,7 @@ const SupplierReport = () => {
     // 🚀 NEW: Farmer Report Logic
     const handleOpenFarmerReport = async () => {
         if (!selectedFarmerForReport) {
-            alert("කරුණාකර සැපයුම්කරුවෙකු තෝරන්න.");
+            alert(tr('Please select a supplier.', 'කරුණාකර සැපයුම්කරුවෙකු තෝරන්න.'));
             return;
         }
         try {
@@ -192,7 +193,7 @@ const SupplierReport = () => {
                 setIsFarmerModalOpen(false);
             }
         } catch (e) {
-            alert("වාර්තාව ලබාගැනීම අසාර්ථක විය.");
+            alert(tr('Failed to fetch the report.', 'වාර්තාව ලබාගැනීම අසාර්ථක විය.'));
         }
     };
 
@@ -215,14 +216,14 @@ const SupplierReport = () => {
 
         try {
             const response = await api.post('/suppliers/advance', advancePayload);
-            setAdvanceStatus({ type: 'success', text: `සාර්ථකයි! අත්තිකාරම් යාවත්කාලීන විය.` });
+            setAdvanceStatus({ type: 'success', text: tr('Success! Advance updated.', 'සාර්ථකයි! අත්තිකාරම් යාවත්කාලීන විය.') });
 
             // Immediately update the display advance amount
             setAdvanceAmount(parseFloat(response.data.data.advance_amount) || 0);
             setAdvancePayload({ ...advancePayload, advance_amount: '' });
         } catch (error) {
             console.error("Advance Update Error:", error);
-            setAdvanceStatus({ type: 'error', text: 'යාවත්කාලීන කිරීම අසාර්ථක විය.' });
+            setAdvanceStatus({ type: 'error', text: tr('Update failed.', 'යාවත්කාලීන කිරීම අසාර්ථක විය.') });
         } finally {
             setAdvanceLoading(false);
         }
@@ -591,15 +592,15 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
         <div style="font-size:24px;">xxxx</div>
         <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;">
             <span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">xx</span>
-            <div style="font-size:18px;">ගොවියා: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${selectedSupplier}</span></div>
+            <div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${selectedSupplier}</span></div>
         </div>
       <div style="font-size:14px;">${SHOP_TAGLINE}</div>
     </div>
     <div style="font-size:19px; margin-top:10px; padding:0 5px;">
-        <div style="font-weight: bold; white-space: normal;">දුර: ${mobile}</div>
+        <div style="font-weight: bold; white-space: normal;">${tr('Tel', 'දුර')}: ${mobile}</div>
         <div style="display:flex; justify-content:space-between; margin-top:3px;">
-            <span>බිල් අංකය:${currentBillNo}</span>
-            <span>දිනය:${date}</span>
+            <span>${tr('Bill No', 'බිල් අංකය')}:${currentBillNo}</span>
+            <span>${tr('Date', 'දිනය')}:${date}</span>
         </div>
     </div>
     <hr style="border:none; border-top:2.5px solid #000; margin:10px 0;">
@@ -607,10 +608,10 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
         ${colGroups}
         <thead>
             <tr style="border-bottom:2.5px solid #000; font-weight:bold;">
-                <th style="text-align:left; padding-bottom:8px; font-size:${fontSizeHeader};">වර්ගය<br>මලු</th>
-                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -50px; top: 24px;"> කිලෝ </th>
-                 <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -45px; top: 24px;">මිල</th>
-                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};">කේතය<br>අගය</th>
+                <th style="text-align:left; padding-bottom:8px; font-size:${fontSizeHeader};">${tr('Type', 'වර්ගය')}<br>${tr('Bags', 'මලු')}</th>
+                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -50px; top: 24px;"> ${tr('Kg', 'කිලෝ')} </th>
+                 <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -45px; top: 24px;">${tr('Price', 'මිල')}</th>
+                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};">${tr('Code', 'කේතය')}<br>${tr('Value', 'අගය')}</th>
             </tr>
         </thead>
         <tbody>${detailedItemsHtml}</tbody>
@@ -624,13 +625,13 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
 
     <table style="width:100%; margin-top:20px; font-weight:bold; font-size:22px; padding:0 5px;">
         <tr>
-          <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">මෙම බිලට මුළු අගය:</td>
+          <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">${tr('Total value of this bill', 'මෙම බිලට මුළු අගය')}:</td>
           <td style="text-align:right;"><span style="border-bottom:2px solid #000; font-size:${fontSizeTotal}; padding:5px 10px;">${(totalsupplierSales.toFixed(2))}</span></td>
         </tr>
         
         ${(parseFloat(paymentAmount) || 0) > 0 ? `
         <tr style="font-size:18px;">
-            <td style="font-size:15px; padding-top:10px;">ගෙවූ මුදල (${paymentType}):</td>
+            <td style="font-size:15px; padding-top:10px;">${tr('Paid Amount', 'ගෙවූ මුදල')} (${paymentType}):</td>
             <td style="text-align:right; padding-top:10px; color:#000;">
                 - ${(parseFloat(paymentAmount) || 0).toFixed(2)}
             </td>
@@ -638,14 +639,14 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
         ` : ''}
 
         <tr style="font-size:18px;">
-          <td style="font-size:15px; padding-top:5px;">අත්තිකාරම්</td>
+          <td style="font-size:15px; padding-top:5px;">${tr('Advance', 'අත්තිකාරම්')}</td>
           <td style="text-align:right; padding-top:5px; color:#000;">
             - ${advanceAmount.toFixed(2)}
           </td>
         </tr>
 
         <tr style="font-weight:900;">
-          <td style="font-size:18px; padding-top:10px;">ශුද්ධ ඉතිරි ශේෂය:</td>
+          <td style="font-size:18px; padding-top:10px;">${tr('Net Remaining Balance', 'ශුද්ධ ඉතිරි ශේෂය')}:</td>
           <td style="text-align:right; padding-top:10px;">
             <span style="color:#000; font-size:${fontSizeTotal}; border-bottom:5px double #000; border-top:2px solid #000;">
               ${netPayable.toFixed(2)}
@@ -743,7 +744,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
         if (e && e.key && e.key !== 'Enter') return;
 
         if (!paymentAmount || isNaN(paymentAmount)) {
-            alert("කරුණාකර නිවැරදි මුදලක් ඇතුළත් කරන්න.");
+            alert(tr('Please enter a valid amount.', 'කරුණාකර නිවැරදි මුදලක් ඇතුළත් කරන්න.'));
             return;
         }
 
@@ -767,7 +768,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
 
         } catch (error) {
             console.error("Payment Submission Error:", error);
-            alert("දත්ත සුරැකීම අසාර්ථක විය.");
+            alert(tr('Failed to save data.', 'දත්ත සුරැකීම අසාර්ථක විය.'));
         } finally {
             setIsDetailsLoading(false);
         }
@@ -812,7 +813,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                     {/* Header Area */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #374151', paddingBottom: '15px' }}>
                         <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white', margin: 0 }}>
-                            {supplierDocs.title} - ලේඛන පරීක්ෂාව
+                            {supplierDocs.title} {tr('- Document Check', '- ලේඛන පරීක්ෂාව')}
                         </h2>
                         <button
                             onClick={onClose}
@@ -824,7 +825,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1.5fr', gap: '20px', overflowY: 'auto', padding: '5px' }}>
                         {/* Profile Picture */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <span style={{ color: '#60a5fa', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>ප්‍රධාන රූපය</span>
+                            <span style={{ color: '#60a5fa', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>{tr('Main Photo', 'ප්‍රධාන රූපය')}</span>
                             <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', border: '2px solid #3b82f6', backgroundColor: '#111827', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
                                 <img src={formatUrl(supplierDocs.profile)} style={{ width: '100%', height: 'auto', display: 'block' }} alt="Profile" />
                             </div>
@@ -832,24 +833,24 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
 
                         {/* NIC Front */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>NIC ඉදිරිපස</span>
+                            <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>{tr('NIC Front', 'NIC ඉදිරිපස')}</span>
                             <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', border: '2px solid #4b5563', backgroundColor: '#111827', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
                                 {supplierDocs.nic_front ? (
                                     <img src={formatUrl(supplierDocs.nic_front)} style={{ width: '100%', height: 'auto', maxHeight: '500px', display: 'block', objectFit: 'contain' }} alt="NIC Front" />
                                 ) : (
-                                    <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>ඡායාරූපයක් නොමැත</div>
+                                    <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>{tr('No photo', 'ඡායාරූපයක් නොමැත')}</div>
                                 )}
                             </div>
                         </div>
 
                         {/* NIC Back */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>NIC පසුපස</span>
+                            <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>{tr('NIC Back', 'NIC පසුපස')}</span>
                             <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', border: '2px solid #4b5563', backgroundColor: '#111827', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
                                 {supplierDocs.nic_back ? (
                                     <img src={formatUrl(supplierDocs.nic_back)} style={{ width: '100%', height: 'auto', maxHeight: '500px', display: 'block', objectFit: 'contain' }} alt="NIC Back" />
                                 ) : (
-                                    <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>ඡායාරූපයක් නොමැත</div>
+                                    <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>{tr('No photo', 'ඡායාරූපයක් නොමැත')}</div>
                                 )}
                             </div>
                         </div>
@@ -873,16 +874,16 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
         return (
             <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }}>
                 <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', width: '400px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
-                    <h3 style={{ marginTop: 0, color: '#091d3d', borderBottom: '2px solid #007bff', paddingBottom: '10px' }}>ගනුදෙනුව වෙනස් කරන්න</h3>
+                    <h3 style={{ marginTop: 0, color: '#091d3d', borderBottom: '2px solid #007bff', paddingBottom: '10px' }}>{tr('Edit Transaction', 'ගනුදෙනුව වෙනස් කරන්න')}</h3>
 
                     <div style={{ margin: '15px 0', fontSize: '0.9rem', color: '#666', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
-                        <p style={{ margin: '2px 0' }}><strong>බිල් අං:</strong> {editingRecord.bill_no || selectedBillNo}</p>
-                        <p style={{ margin: '2px 0' }}><strong>අයිතමය:</strong> {editingRecord.item_name} | {editingRecord.weight} kg</p>
+                        <p style={{ margin: '2px 0' }}><strong>{tr('Bill No:', 'බිල් අං:')}</strong> {editingRecord.bill_no || selectedBillNo}</p>
+                        <p style={{ margin: '2px 0' }}><strong>{tr('Item:', 'අයිතමය:')}</strong> {editingRecord.item_name} | {editingRecord.weight} kg</p>
                     </div>
 
                     {/* Supplier Code Input */}
                     <div style={{ marginTop: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>නව ගොවි කේතය (Supplier - Optional):</label>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>{tr('New Supplier Code (Optional):', 'නව ගොවි කේතය (Supplier - Optional):')}</label>
                         <input
                             type="text"
                             placeholder={editingRecord.supplier_code} // Show current code as placeholder
@@ -895,7 +896,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
 
                     {/* Customer Code Input */}
                     <div style={{ marginTop: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>නව ගැනුම්කරු (Customer - Optional):</label>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>{tr('New Customer (Optional):', 'නව ගැනුම්කරු (Customer - Optional):')}</label>
                         <input
                             type="text"
                             placeholder={editingRecord.customer_code} // Show current code as placeholder
@@ -921,22 +922,22 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
         return (
             <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
                 <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '450px', textAlign: 'center' }}>
-                    <h2 style={{ color: '#091d3d', marginBottom: '20px' }}>ගෙවීම් තහවුරු කිරීම</h2>
+                    <h2 style={{ color: '#091d3d', marginBottom: '20px' }}>{tr('Payment Confirmation', 'ගෙවීම් තහවුරු කිරීම')}</h2>
                     
                     <div style={{ marginBottom: '15px', textAlign: 'left' }}>
-                        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>ගෙවීම් ක්‍රමය:</label>
+                        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>{tr('Payment Method:', 'ගෙවීම් ක්‍රමය:')}</label>
                         <select 
                             value={paymentType} 
                             onChange={(e) => setPaymentType(e.target.value)}
                             style={{ width: '100%', padding: '10px', fontSize: '1.1rem', borderRadius: '6px' }}
                         >
-                            <option value="Cash">මුදල් (Cash)</option>
-                            <option value="Cheque">චෙක්පත් (Cheque)</option>
+                            <option value="Cash">{tr('Cash', 'මුදල් (Cash)')}</option>
+                            <option value="Cheque">{tr('Cheque', 'චෙක්පත් (Cheque)')}</option>
                         </select>
                     </div>
 
                     <div style={{ marginBottom: '15px', textAlign: 'left' }}>
-                        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>මුදල (Amount):</label>
+                        <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>{tr('Amount:', 'මුදල (Amount):')}</label>
                         <input 
                             type="number" 
                             autoFocus
@@ -950,21 +951,21 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                     {/* 🚀 ADDED: Cheque Specific Section */}
                     {paymentType === 'Cheque' && (
                         <div style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px', backgroundColor: '#f9f9f9', marginBottom: '20px' }}>
-                            <h4 style={{ margin: '0 0 10px 0', color: '#1E88E5' }}>චෙක්පත් විස්තර</h4>
+                            <h4 style={{ margin: '0 0 10px 0', color: '#1E88E5' }}>{tr('Cheque Details', 'චෙක්පත් විස්තර')}</h4>
                             
                             <div style={{ marginBottom: '10px', textAlign: 'left' }}>
-                                <label style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>බැංකුවේ නම:</label>
+                                <label style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{tr('Bank Name:', 'බැංකුවේ නම:')}</label>
                                 <input 
                                     type="text" 
                                     value={bankName}
                                     onChange={(e) => setBankName(e.target.value)}
                                     style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-                                    placeholder="උදා: BOC, NSB..."
+                                    placeholder={tr('e.g. BOC, NSB...', 'උදා: BOC, NSB...')}
                                 />
                             </div>
 
                             <div style={{ marginBottom: '10px', textAlign: 'left' }}>
-                                <label style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>චෙක්පත් අංකය:</label>
+                                <label style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{tr('Cheque No:', 'චෙක්පත් අංකය:')}</label>
                                 <input 
                                     type="text" 
                                     value={chequeNo}
@@ -974,7 +975,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                             </div>
 
                             <div style={{ textAlign: 'left' }}>
-                                <label style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>මාරු කළ යුතු දිනය (Realized Date):</label>
+                                <label style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{tr('Realized Date:', 'මාරු කළ යුතු දිනය (Realized Date):')}</label>
                                 <input 
                                     type="date" 
                                     value={realizedDate}
@@ -989,11 +990,11 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                         <button 
                             onClick={handlePaymentSubmit}
                             style={{ flex: 1, padding: '15px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                        >තහවුරු කරන්න (Enter)</button>
+                        >{tr('Confirm (Enter)', 'තහවුරු කරන්න (Enter)')}</button>
                         <button 
                             onClick={() => setIsPaymentModalOpen(false)}
                             style={{ flex: 1, padding: '15px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                        >අවලංගු කරන්න</button>
+                        >{tr('Cancel', 'අවලංගු කරන්න')}</button>
                     </div>
                 </div>
             </div>
@@ -1006,21 +1007,21 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
         return (
             <div style={modalOverlayStyle}>
                 <div style={selectionModalContainer}>
-                    <h3 style={{ margin: '0 0 15px 0', color: '#1a2a6c' }}>සැපයුම්කරු වාර්තාව</h3>
-                    <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '15px' }}>වාර්තාව බැලීම සඳහා සැපයුම්කරු තෝරන්න</p>
+                    <h3 style={{ margin: '0 0 15px 0', color: '#1a2a6c' }}>{tr('Supplier Report', 'සැපයුම්කරු වාර්තාව')}</h3>
+                    <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '15px' }}>{tr('Select a supplier to view the report', 'වාර්තාව බැලීම සඳහා සැපයුම්කරු තෝරන්න')}</p>
                     <select 
                         style={modernSelect} 
                         value={selectedFarmerForReport} 
                         onChange={(e) => setSelectedFarmerForReport(e.target.value)}
                     >
-                        <option value="">ගොවි කේතය තෝරන්න...</option>
+                        <option value="">{tr('Select farmer code...', 'ගොවි කේතය තෝරන්න...')}</option>
                         {allSuppliers.map(s => (
                             <option key={s.id} value={s.code}>{s.code} - {s.name}</option>
                         ))}
                     </select>
                     <div style={{ display: 'flex', gap: '10px', marginTop: '25px' }}>
-                        <button onClick={handleOpenFarmerReport} style={reportSubmitBtn}>වාර්තාව බලන්න</button>
-                        <button onClick={() => setIsFarmerModalOpen(false)} style={reportCancelBtn}>වසන්න</button>
+                        <button onClick={handleOpenFarmerReport} style={reportSubmitBtn}>{tr('View Report', 'වාර්තාව බලන්න')}</button>
+                        <button onClick={() => setIsFarmerModalOpen(false)} style={reportCancelBtn}>{tr('Close', 'වසන්න')}</button>
                     </div>
                 </div>
             </div>
@@ -1036,7 +1037,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
         return (
             <div style={fullScreenReportOverlay}>
                 <div style={reportContainerPaper}>
-                    <button onClick={() => setFullReportData(null)} style={closeReportFloatingBtn}>✕ වසන්න</button>
+                    <button onClick={() => setFullReportData(null)} style={closeReportFloatingBtn}>{tr('✕ Close', '✕ වසන්න')}</button>
                     
                     <div style={reportProfileHeader}>
                         <img 
@@ -1046,22 +1047,22 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                         />
                         <div style={{ flex: 1 }}>
                             <h1 style={{ margin: 0, color: '#1a2a6c' }}>{profile.name}</h1>
-                            <p style={{ margin: '5px 0', fontSize: '1.2rem', color: '#555' }}>ගොවි කේතය: <strong>{profile.code}</strong></p>
+                            <p style={{ margin: '5px 0', fontSize: '1.2rem', color: '#555' }}>{tr('Farmer Code:', 'ගොවි කේතය:')} <strong>{profile.code}</strong></p>
                             <p style={{ margin: 0 }}>📍 {profile.address} | 📞 {profile.telephone_no}</p>
                         </div>
                         <div style={advanceReportBadge}>
-                            <small>පවතින අත්තිකාරම්</small>
-                            <h3>රු. {formatDecimal(profile.advance_amount)}</h3>
+                            <small>{tr('Current Advance', 'පවතින අත්තිකාරම්')}</small>
+                            <h3>{tr('Rs.', 'රු.')} {formatDecimal(profile.advance_amount)}</h3>
                         </div>
                     </div>
 
                     <div style={reportContentGrid}>
                         <div style={reportCard}>
-                            <h4 style={reportCardTitle}>විකුණුම් ඉතිහාසය (Sales)</h4>
+                            <h4 style={reportCardTitle}>{tr('Sales History', 'විකුණුම් ඉතිහාසය (Sales)')}</h4>
                             <div style={reportTableWrapper}>
                                 <table style={reportInteractiveTable}>
                                     <thead>
-                                        <tr><th>දිනය</th><th>අයිතමය</th><th>බර (Kg)</th><th>මුළු අගය</th></tr>
+                                        <tr><th>{tr('Date', 'දිනය')}</th><th>{tr('Item', 'අයිතමය')}</th><th>{tr('Weight (Kg)', 'බර (Kg)')}</th><th>{tr('Total Value', 'මුළු අගය')}</th></tr>
                                     </thead>
                                     <tbody>
                                         {sales.map(s => (
@@ -1078,11 +1079,11 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                         </div>
 
                         <div style={reportCard}>
-                            <h4 style={reportCardTitle}>ණය සහ ගෙවීම් වාර්තා (Loans/Payments)</h4>
+                            <h4 style={reportCardTitle}>{tr('Loans / Payments', 'ණය සහ ගෙවීම් වාර්තා (Loans/Payments)')}</h4>
                             <div style={reportTableWrapper}>
                                 <table style={reportInteractiveTable}>
                                     <thead>
-                                        <tr><th>බිල් අං</th><th>ගෙවූ මුදල</th><th>ඉතිරි මුදල</th><th>ක්‍රමය</th></tr>
+                                        <tr><th>{tr('Bill No', 'බිල් අං')}</th><th>{tr('Paid Amount', 'ගෙවූ මුදල')}</th><th>{tr('Remaining', 'ඉතිරි මුදල')}</th><th>{tr('Method', 'ක්‍රමය')}</th></tr>
                                     </thead>
                                     <tbody>
                                         {loans.map(l => (
@@ -1120,7 +1121,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
         const buttonBaseStyle = { width: '100%', display: 'block', textAlign: 'left', padding: '10px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', border: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', fontSize: '1rem', marginBottom: '4px', boxSizing: 'border-box' };
         const buttonStyle = type === 'printed' ? { ...buttonBaseStyle, backgroundColor: '#1E88E5', color: 'white' } : { ...buttonBaseStyle, backgroundColor: '#FF7043', color: 'white' };
 
-        if (items.length === 0) return <p style={{ color: '#6c757d', padding: '10px' }}>{searchTerm ? `No results found` : 'මෙම ප්‍රවර්ගයේ සැපයුම්කරු නොමැත'}</p>;
+        if (items.length === 0) return <p style={{ color: '#6c757d', padding: '10px' }}>{searchTerm ? `No results found` : tr('No suppliers in this category', 'මෙම ප්‍රවර්ගයේ සැපයුම්කරු නොමැත')}</p>;
 
         return (
             <div style={listContainerStyle}>
@@ -1177,7 +1178,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                 <div style={headerStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                         <h2 style={{ fontSize: "1.5rem", color: "white", margin: 0 }}>
-                            ගනුදෙනු විස්තර (බිල් අංකය: <strong>{selectedBillNo || 'N/A'}</strong>)
+                            {tr('Transaction Details (Bill No:', 'ගනුදෙනු විස්තර (බිල් අංකය:')} <strong>{selectedBillNo || 'N/A'}</strong>)
                         </h2>
                         {/* TELEPHONE INPUT - DISABLED FOR PRINTED BILLS */}
                         {selectedSupplier && (
@@ -1185,7 +1186,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                                 {/* 🚀 NEW: Paying Amount Input */}
                                 <input
                                     type="number"
-                                    placeholder="ගෙවන මුදල..."
+                                    placeholder={tr('Paying amount...', 'ගෙවන මුදල...')}
                                     value={payingAmount}
                                     onChange={(e) => setPayingAmount(e.target.value)}
                                     onKeyDown={handleLoanSubmit}
@@ -1214,7 +1215,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                                 {/* Optional: Show the current SupplierTotal value for reference */}
                                 {totalsupplierSales > 0 && (
                                     <span style={{ fontSize: '1rem', color: '#ffffff', fontWeight: 'bold', backgroundColor: 'rgba(0,0,0,0.3)', padding: '8px 15px', borderRadius: '8px', marginLeft: '10px' }}>
-                                        ගෙවිය යුතු: රු. {totalsupplierSales.toFixed(2)}
+                                        {tr('Payable: Rs.', 'ගෙවිය යුතු: රු.')} {totalsupplierSales.toFixed(2)}
                                     </span>
                                 )}
                             </div>
@@ -1247,7 +1248,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                     <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '250px', fontSize: '0.9rem', marginBottom: '30px' }}>
                         <thead>
                             <tr>
-                                <th style={thStyle}>බිල් අං:</th><th style={thStyle}>ගනුදෙ</th><th style={thStyle}>අයිත</th><th style={thStyle}>අසුරුම්</th><th style={thStyle}>බර</th><th style={thStyle}>ගනුදෙ මිල</th><th style={thStyle}>සැපයුම් මිල</th><th style={thStyle}>ගනුදෙ එක</th><th style={thStyle}>සැපයුම් එක</th><th style={thStyle}>කොමි</th>
+                                <th style={thStyle}>{tr('Bill No:', 'බිල් අං:')}</th><th style={thStyle}>{tr('Customer', 'ගනුදෙ')}</th><th style={thStyle}>{tr('Item', 'අයිත')}</th><th style={thStyle}>{tr('Packs', 'අසුරුම්')}</th><th style={thStyle}>{tr('Weight', 'බර')}</th><th style={thStyle}>{tr('Cust. Price', 'ගනුදෙ මිල')}</th><th style={thStyle}>{tr('Supp. Price', 'සැපයුම් මිල')}</th><th style={thStyle}>{tr('Cust. Total', 'ගනුදෙ එක')}</th><th style={thStyle}>{tr('Supp. Total', 'සැපයුම් එක')}</th><th style={thStyle}>{tr('Comm.', 'කොමි')}</th>
                             </tr>
                         </thead>
                         {selectedSupplier && supplierDetails.length > 0 ? renderDataRows() : <tbody><tr><td colSpan="11" style={{ textAlign: 'center', color: '#6c757d', fontStyle: 'italic', padding: '50px 0' }}>Select a bill to view details</td></tr></tbody>}
@@ -1258,7 +1259,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                     <>
                         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0px' }}>
                             <thead>
-                                <tr><th style={{ ...thStyle, backgroundColor: '#6c757d' }}>අයිතමය නම</th><th style={{ ...thStyle, backgroundColor: '#6c757d' }}>සම්පූර්ණ බර</th><th style={{ ...thStyle, backgroundColor: '#6c757d' }}>මුළු අසුරුම්</th></tr>
+                                <tr><th style={{ ...thStyle, backgroundColor: '#6c757d' }}>{tr('Item Name', 'අයිතමය නම')}</th><th style={{ ...thStyle, backgroundColor: '#6c757d' }}>{tr('Total Weight', 'සම්පූර්ණ බර')}</th><th style={{ ...thStyle, backgroundColor: '#6c757d' }}>{tr('Total Packs', 'මුළු අසුරුම්')}</th></tr>
                             </thead>
                             <tbody>
                                 {Object.keys(itemSummaryData).map((name, i) => (
@@ -1279,18 +1280,18 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div style={{ flex: 1, textAlign: 'center' }}>
-                                        <p style={{ color: '#aaa', margin: '0 0 5px 0', fontSize: '0.8rem' }}>ගෙවූ මුදල (Paid Amount)</p>
-                                        <h3 style={{ color: '#2ecc71', margin: 0 }}>රු. {formatDecimal(selectedLoanRecord.loan_amount)}</h3>
+                                        <p style={{ color: '#aaa', margin: '0 0 5px 0', fontSize: '0.8rem' }}>{tr('Paid Amount', 'ගෙවූ මුදල (Paid Amount)')}</p>
+                                        <h3 style={{ color: '#2ecc71', margin: 0 }}>{tr('Rs.', 'රු.')} {formatDecimal(selectedLoanRecord.loan_amount)}</h3>
                                     </div>
                                     <div style={{ height: '40px', width: '1px', backgroundColor: '#34495e' }}></div>
                                     <div style={{ flex: 1, textAlign: 'center' }}>
-                                        <p style={{ color: '#aaa', margin: '0 0 5px 0', fontSize: '0.8rem' }}>මුළු ශේෂය (Remaining Balance)</p>
-                                        <h3 style={{ color: '#e74c3c', margin: 0 }}>රු. {formatDecimal(selectedLoanRecord.total_amount)}</h3>
+                                        <p style={{ color: '#aaa', margin: '0 0 5px 0', fontSize: '0.8rem' }}>{tr('Remaining Balance', 'මුළු ශේෂය (Remaining Balance)')}</p>
+                                        <h3 style={{ color: '#e74c3c', margin: 0 }}>{tr('Rs.', 'රු.')} {formatDecimal(selectedLoanRecord.total_amount)}</h3>
                                     </div>
                                 </div>
                                 {selectedLoanRecord.type === 'Cheque' && (
                                     <div style={{ marginTop: '10px', fontSize: '0.8rem', color: '#17a2b8', textAlign: 'center', borderTop: '1px solid #1a3a6b', paddingTop: '5px' }}>
-                                        චෙක්පත්: {selectedLoanRecord.bank_name} - {selectedLoanRecord.cheque_no} ({selectedLoanRecord.realized_date})
+                                        {tr('Cheque', 'චෙක්පත්')}: {selectedLoanRecord.bank_name} - {selectedLoanRecord.cheque_no} ({selectedLoanRecord.realized_date})
                                     </div>
                                 )}
                             </div>
@@ -1345,13 +1346,13 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                         onMouseOver={(e) => e.target.style.backgroundColor = '#f5f5f5'}
                         onMouseOut={(e) => e.target.style.backgroundColor = 'white'}
                     >
-                        🗑️ මකා දමන්න (Delete)
+                        {tr('🗑️ Delete', '🗑️ මකා දමන්න (Delete)')}
                     </button>
                 </div>
             )}
 
             <nav className="sr-nav" style={navBarStyle}>
-                <h1 style={{ color: 'white', fontSize: '1.5rem', margin: 0 }}>සැපයුම්කරු වාර්තාව ණය ලබාගත්</h1>
+                <h1 style={{ color: 'white', fontSize: '1.5rem', margin: 0 }}>{tr('Supplier Report - Loans Taken', 'සැපයුම්කරු වාර්තාව ණය ලබාගත්')}</h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     <button 
                         style={{ 
@@ -1367,11 +1368,11 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                         }} 
                         onClick={() => setIsFarmerModalOpen(true)}
                     >
-                        📊 ගොවි වාර්තාව (Farmer Report)
+                        {tr('📊 Farmer Report', '📊 ගොවි වාර්තාව (Farmer Report)')}
                     </button>
-                     <button style={{ padding: '8px 15px', fontSize: '1rem', fontWeight: 'bold', backgroundColor: '#e83e8c', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }} onClick={() => navigate('/supplier-loan-report')}>ගොවි ණය වාර්තාව</button>
-                    <button style={{ padding: '8px 15px', fontSize: '1rem', fontWeight: 'bold', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }} onClick={() => setBillSize(billSize === '3mm' ? '4mm' : '3mm')}>බිල්පත් ප්‍රමාණය: {billSize}</button>
-                    <button style={{ padding: '10px 20px', fontSize: '1rem', fontWeight: 'bold', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }} onClick={goToSalesEntry}>මුල් පිටුව</button>
+                     <button style={{ padding: '8px 15px', fontSize: '1rem', fontWeight: 'bold', backgroundColor: '#e83e8c', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }} onClick={() => navigate('/supplier-loan-report')}>{tr('Farmer Loan Report', 'ගොවි ණය වාර්තාව')}</button>
+                    <button style={{ padding: '8px 15px', fontSize: '1rem', fontWeight: 'bold', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }} onClick={() => setBillSize(billSize === '3mm' ? '4mm' : '3mm')}>{tr('Bill Size', 'බිල්පත් ප්‍රමාණය')}: {billSize}</button>
+                    <button style={{ padding: '10px 20px', fontSize: '1rem', fontWeight: 'bold', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }} onClick={goToSalesEntry}>{tr('Home', 'මුල් පිටුව')}</button>
                 </div>
             </nav>
 
@@ -1379,15 +1380,15 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                 <div className="sr-sections" style={sectionsContainerStyle}>
                     <div className="sr-side" style={printedContainerStyle}>
                         <div className="sr-side-section" style={printedSectionStyle}>
-                            <h2 style={{ ...printedHeaderStyle, padding: '0 25px 10px 25px', marginBottom: '15px' }}> මුද්‍රණය කළ </h2>
-                            <input type="text" placeholder="🔍 මුද්‍රිත සෙවීම..." value={printedSearchTerm} onChange={(e) => setPrintedSearchTerm(e.target.value)} style={{ ...searchBarStyle, marginBottom: '20px', height: '22px', padding: '12px 25px' }} />
+                            <h2 style={{ ...printedHeaderStyle, padding: '0 25px 10px 25px', marginBottom: '15px' }}> {tr('Printed', 'මුද්‍රණය කළ')} </h2>
+                            <input type="text" placeholder={tr('🔍 Search printed...', '🔍 මුද්‍රිත සෙවීම...')} value={printedSearchTerm} onChange={(e) => setPrintedSearchTerm(e.target.value)} style={{ ...searchBarStyle, marginBottom: '20px', height: '22px', padding: '12px 25px' }} />
                             <SupplierCodeList items={filteredPrintedItems} type="printed" searchTerm={printedSearchTerm} />
                         </div>
                     </div>
                     <div className="sr-center" style={centerPanelContainerStyle}>{renderDetailsPanel()}</div>
                     <div className="sr-side" style={unprintedContainerStyle}>
                         <div className="sr-side-section" style={unprintedSectionStyle}>
-                       <h2 style={{ ...unprintedHeaderStyle, padding: '0 25px 10px 25px', marginBottom: '15px', whiteSpace: 'nowrap' }}>ණය ලබාගත්</h2>
+                       <h2 style={{ ...unprintedHeaderStyle, padding: '0 25px 10px 25px', marginBottom: '15px', whiteSpace: 'nowrap' }}>{tr('Loans Taken', 'ණය ලබාගත්')}</h2>
                             <div style={listContainerStyle}>
                                 {loanSummary.length > 0 ? (
                                     loanSummary.map((loan, index) => (
@@ -1408,11 +1409,11 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                                             }}
                                         >
                                             <div style={{ fontWeight: 'bold' }}>{loan.supplier_code}</div>
-                                            <div style={{ fontSize: '12px' }}>බිල්: {loan.supplier_bill_no || 'Pending'}</div>
+                                            <div style={{ fontSize: '12px' }}>{tr('Bill', 'බිල්')}: {loan.supplier_bill_no || 'Pending'}</div>
                                         </button>
                                     ))
                                 ) : (
-                                    <p style={{ color: 'white', padding: '10px' }}>ණය වාර්තා නොමැත</p>
+                                    <p style={{ color: 'white', padding: '10px' }}>{tr('No loan records', 'ණය වාර්තා නොමැත')}</p>
                                 )}
                             </div>
                         </div>

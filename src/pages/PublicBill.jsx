@@ -4,6 +4,7 @@ import axios from 'axios';
 import html2pdf from 'html2pdf.js';
 import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/shop';
 import { API_BASE_URL } from '../config/paths';
+import { tr } from '../i18n/language';
 
 // Copy the exact ThermalBillHTML function here
 const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAmount = 0, billSize = '3inch' }) => {
@@ -143,9 +144,9 @@ const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAm
             <div class="info-section">
                 <div style="font-weight: bold; font-size: 14px;">Tel: ${SHOP_PHONE}</div>
                 <div style="display:flex; justify-content:space-between; font-size: 13px; margin-top: 5px;">
-                    <span>බිල් අංකය: ${billNo}</span>
+                    <span>${tr('Bill No', 'බිල් අංකය')}: ${billNo}</span>
                     <div style="text-align:right;">
-                        <span style="white-space:nowrap;">දිනය: ${date}</span><br>
+                        <span style="white-space:nowrap;">${tr('Date', 'දිනය')}: ${date}</span><br>
                         <span>${time}</span>
                     </div>
                 </div>
@@ -162,10 +163,10 @@ const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAm
                 </colgroup>
                 <thead>
                     <tr style="border-bottom:2px solid #000; font-weight:bold; font-size:14px;">
-                        <th style="text-align:left;">වර්ගය<br>මලු</th>
-                        <th style="text-align:right;">කිලෝ</th>
-                        <th style="text-align:right;">මිල</th>
-                        <th style="text-align:right;">අගය</th>
+                        <th style="text-align:left;">${tr('Type', 'වර්ගය')}<br>${tr('Bags', 'මලු')}</th>
+                        <th style="text-align:right;">${tr('Kg', 'කිලෝ')}</th>
+                        <th style="text-align:right;">${tr('Price', 'මිල')}</th>
+                        <th style="text-align:right;">${tr('Value', 'අගය')}</th>
                     </tr>
                 </thead>
                 <tbody>${itemsHtml}</tbody>
@@ -182,10 +183,10 @@ const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAm
             </table>
 
             <table class="total-table">
-                ${totalPackCost > 0 ? `<tr><td style="padding-top:5px;">මලු:</td><td style="text-align:right;">${formatNumber(totalPackCost.toFixed(2))}</td></tr>` : ''}
-                <tr><td style="padding-top:5px;">කුලිය:</td><td style="text-align:right;">${formatNumber(totalKuliyaSum.toFixed(2))}</td></tr>
+                ${totalPackCost > 0 ? `<tr><td style="padding-top:5px;">${tr('Bags', 'මලු')}:</td><td style="text-align:right;">${formatNumber(totalPackCost.toFixed(2))}</td></tr>` : ''}
+                <tr><td style="padding-top:5px;">${tr('Kuliya', 'කුලිය')}:</td><td style="text-align:right;">${formatNumber(totalKuliyaSum.toFixed(2))}</td></tr>
                 <tr>
-                    <td style="padding-top:10px;">එකතුව:</td>
+                    <td style="padding-top:10px;">${tr('Total', 'එකතුව')}:</td>
                     <td style="text-align:right; padding-top:10px;">
                         <span style="border-bottom:4px double #000; border-top:1px solid #000; font-size:26px;">
                             ${Number(finalGrandTotal).toFixed(2)}
@@ -194,7 +195,7 @@ const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAm
                 </tr>
                 ${globalLoanAmount !== 0 ? `
                 <tr>
-                    <td style="font-size:18px; padding-top:10px;">පෙර ණය:</td>
+                    <td style="font-size:18px; padding-top:10px;">${tr('Previous Loan', 'පෙර ණය')}:</td>
                     <td style="text-align:right; font-size:20px; padding-top:10px;">
                         Rs. ${formatNumber(Math.abs(globalLoanAmount).toFixed(2))}
                     </td>
@@ -258,7 +259,7 @@ const PublicBill = () => {
                     margin: '0 auto 24px auto' 
                 }}
             >
-                Download PDF (බාගත කරන්න)
+                {tr('Download PDF', 'Download PDF (බාගත කරන්න)')}
             </button>
 
             <div id="bill-content" className="bg-white shadow-2xl p-2 rounded-sm">

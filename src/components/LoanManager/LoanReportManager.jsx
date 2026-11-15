@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api'; // Your centralized axios instance
 import Sidebar from '../Sidebar'; // Adjust path if necessary
 import { SHOP_NAME } from '../../config/shop';
+import { tr } from '../../i18n/language';
 
 const LoanReportManager = () => {
     const [showModal, setShowModal] = useState(false);
@@ -34,7 +35,7 @@ const LoanReportManager = () => {
 
     const handleFetchReport = async (e) => {
         e.preventDefault();
-        if (!filters.customer_short_name) return alert("කරුණාකර ගැනුම්කරු තෝරන්න");
+        if (!filters.customer_short_name) return alert(tr('Please select a customer', 'කරුණාකර ගැනුම්කරු තෝරන්න'));
 
         setLoading(true);
         try {
@@ -43,7 +44,7 @@ const LoanReportManager = () => {
             setShowModal(false); 
         } catch (error) {
             console.error("Report fetch error:", error);
-            alert("දත්ත ලබා ගැනීමේදී දෝෂයක් සිදු විය");
+            alert(tr('An error occurred while fetching data', 'දත්ත ලබා ගැනීමේදී දෝෂයක් සිදු විය'));
         } finally {
             setLoading(false);
         }
@@ -81,7 +82,7 @@ const LoanReportManager = () => {
                             onClick={() => setShowModal(true)}
                         >
                             <i className="material-icons me-2">assessment</i>
-                            ණය වාර්තාව ලබාගන්න (Get Loan Report)
+                            {tr('Get Loan Report', 'ණය වාර්තාව ලබාගන්න (Get Loan Report)')}
                         </button>
                     </div>
 
@@ -91,13 +92,13 @@ const LoanReportManager = () => {
                             <div className="modal-dialog modal-dialog-centered">
                                 <div className="modal-content border-0 shadow-lg" style={{ backgroundColor: '#f0fff0' }}>
                                     <div className="modal-header border-0">
-                                        <h5 className="modal-title fw-bold text-dark">📄 පාරිභෝගික ණය වාර්තාව</h5>
+                                        <h5 className="modal-title fw-bold text-dark">{tr('📄 Customer Loan Report', '📄 පාරිභෝගික ණය වාර්තාව')}</h5>
                                         <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
                                     </div>
                                     <form onSubmit={handleFetchReport}>
                                         <div className="modal-body">
                                             <div className="mb-3">
-                                                <label className="form-label fw-bold">මුරපදය (Password)</label>
+                                                <label className="form-label fw-bold">{tr('Password', 'මුරපදය (Password)')}</label>
                                                 <input 
                                                     type="password" 
                                                     className="form-control" 
@@ -107,13 +108,13 @@ const LoanReportManager = () => {
                                             </div>
 
                                             <div className="mb-3">
-                                                <label className="form-label fw-bold">ගැනුම්කරු තෝරන්න</label>
+                                                <label className="form-label fw-bold">{tr('Select Customer', 'ගැනුම්කරු තෝරන්න')}</label>
                                                 <select 
                                                     className="form-select"
                                                     value={filters.customer_short_name}
                                                     onChange={(e) => setFilters({...filters, customer_short_name: e.target.value})}
                                                 >
-                                                    <option value="">-- තෝරන්න --</option>
+                                                    <option value="">{tr('-- Select --', '-- තෝරන්න --')}</option>
                                                     {customers.map(c => (
                                                         <option key={c.id} value={c.short_name}>{c.short_name}</option>
                                                     ))}
@@ -123,11 +124,11 @@ const LoanReportManager = () => {
                                             {password === correctPassword && (
                                                 <div className="bg-light p-3 rounded shadow-sm border animate-in fade-in transition-all">
                                                     <div className="mb-3">
-                                                        <label className="form-label small fw-bold text-muted">ආරම්භ දිනය</label>
+                                                        <label className="form-label small fw-bold text-muted">{tr('Start Date', 'ආරම්භ දිනය')}</label>
                                                         <input type="date" className="form-control" onChange={(e) => setFilters({...filters, start_date: e.target.value})} />
                                                     </div>
                                                     <div className="mb-2">
-                                                        <label className="form-label small fw-bold text-muted">අවසන් දිනය</label>
+                                                        <label className="form-label small fw-bold text-muted">{tr('End Date', 'අවසන් දිනය')}</label>
                                                         <input type="date" className="form-control" onChange={(e) => setFilters({...filters, end_date: e.target.value})} />
                                                     </div>
                                                 </div>
@@ -135,7 +136,7 @@ const LoanReportManager = () => {
                                         </div>
                                         <div className="modal-footer border-0">
                                             <button type="submit" className="btn btn-primary w-100 fw-bold py-2 shadow" disabled={loading}>
-                                                {loading ? "දත්ත ලබාගනිමින්..." : "වාර්තාව පෙන්වන්න"}
+                                                {loading ? tr('Fetching data...', 'දත්ත ලබාගනිමින්...') : tr('Show Report', 'වාර්තාව පෙන්වන්න')}
                                             </button>
                                         </div>
                                     </form>
@@ -152,7 +153,7 @@ const LoanReportManager = () => {
                                     className="btn btn-danger btn-sm rounded-pill px-4 shadow-sm fw-bold" 
                                     onClick={() => setReportData(null)}
                                 >
-                                    X වසන්න (Close)
+                                    {tr('X Close', 'X වසන්න (Close)')}
                                 </button>
                             </div>
                             <ReportContent data={reportData} />
@@ -181,7 +182,7 @@ const ReportContent = ({ data }) => {
                     </div>
                     <div className="text-end">
                         <button className="btn btn-light btn-sm fw-bold d-print-none mb-2 shadow-sm" onClick={() => window.print()}>
-                            🖨️ මුද්‍රණය (Print)
+                            {tr('🖨️ Print', '🖨️ මුද්‍රණය (Print)')}
                         </button>
                         <p className="mb-0 fw-bold">{data.reportDate}</p>
                     </div>
@@ -193,11 +194,11 @@ const ReportContent = ({ data }) => {
                 <table className="table table-dark table-striped table-hover mb-0 align-middle w-100">
                     <thead>
                         <tr className="text-uppercase small">
-                            <th className="bg-transparent border-bottom border-success py-3 px-4" style={{ width: '15%' }}>දිනය</th>
-                            <th className="bg-transparent border-bottom border-success" style={{ width: '40%' }}>විස්තරය</th>
-                            <th className="bg-transparent border-bottom border-success text-end px-3" style={{ width: '15%' }}>ලබීම්</th>
-                            <th className="bg-transparent border-bottom border-success text-end px-3" style={{ width: '15%' }}>ගැනීම</th>
-                            <th className="bg-transparent border-bottom border-success text-end text-warning px-4" style={{ width: '15%' }}>ශේෂය</th>
+                            <th className="bg-transparent border-bottom border-success py-3 px-4" style={{ width: '15%' }}>{tr('Date', 'දිනය')}</th>
+                            <th className="bg-transparent border-bottom border-success" style={{ width: '40%' }}>{tr('Description', 'විස්තරය')}</th>
+                            <th className="bg-transparent border-bottom border-success text-end px-3" style={{ width: '15%' }}>{tr('Received', 'ලබීම්')}</th>
+                            <th className="bg-transparent border-bottom border-success text-end px-3" style={{ width: '15%' }}>{tr('Taken', 'ගැනීම')}</th>
+                            <th className="bg-transparent border-bottom border-success text-end text-warning px-4" style={{ width: '15%' }}>{tr('Balance', 'ශේෂය')}</th>
                         </tr>
                     </thead>
                     <tbody className="border-0">
@@ -228,7 +229,7 @@ const ReportContent = ({ data }) => {
                     </tbody>
                     <tfoot className="fw-bold" style={{ backgroundColor: '#004d00' }}>
                         <tr>
-                            <td colSpan="2" className="text-end py-3 px-4">එකතුව (Totals):</td>
+                            <td colSpan="2" className="text-end py-3 px-4">{tr('Totals:', 'එකතුව (Totals):')}</td>
                             <td className="text-end px-3">{receivedTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                             <td className="text-end px-3">{paidTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                             <td className="text-end px-4 text-warning">
@@ -237,7 +238,7 @@ const ReportContent = ({ data }) => {
                             </td>
                         </tr>
                         <tr style={{ borderTop: '2px solid rgba(255,255,255,0.3)' }}>
-                            <td colSpan="4" className="text-end py-3 px-4 text-uppercase">Net Balance (ශුද්ධ ශේෂය):</td>
+                            <td colSpan="4" className="text-end py-3 px-4 text-uppercase">{tr('Net Balance:', 'Net Balance (ශුද්ධ ශේෂය):')}</td>
                             <td className="text-end px-4 text-warning" style={{ fontSize: '1.25rem' }}>
                                 {/* Show absolute value of net balance */}
                                 {Math.abs(paidTotal - receivedTotal).toLocaleString(undefined, {minimumFractionDigits: 2})}

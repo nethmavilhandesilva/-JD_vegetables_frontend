@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import api from "../../api"; 
 import { SHOP_NAME } from '../../config/shop';
 import { APP_BASE } from '../../config/paths';
+import { tr } from '../../i18n/language';
 
 const LoanReportView = () => {
     const [loans, setLoans] = useState([]);
@@ -48,7 +49,7 @@ const LoanReportView = () => {
 
     const handleExportExcel = () => {
         const grandTotal = loans.reduce((total, loan) => total + parseFloat(loan.total_amount || 0), 0);
-        const excelData = [['පාරිභෝගික නම', 'මුදල (Rs)', 'Status']];
+        const excelData = [[tr('Customer Name', 'පාරිභෝගික නම'), tr('Amount (Rs)', 'මුදල (Rs)'), 'Status']];
 
         loans.forEach(loan => {
             const status = getStatusFromColor(loan.highlight_color);
@@ -81,10 +82,10 @@ const LoanReportView = () => {
             </head>
             <body>
                 <h2>${companyName}</h2>
-                <h3>ණය වාර්තාව - Loan Report</h3>
+                <h3>{tr('Loan Report', 'ණය වාර්තාව - Loan Report')}</h3>
                 <p>Date: ${new Date(settingDate).toLocaleDateString()}</p>
                 <table>
-                    <thead><tr><th>පාරිභෝගික නම</th><th>මුදල (Rs)</th></tr></thead>
+                    <thead><tr><th>{tr('Customer Name', 'පාරිභෝගික නම')}</th><th>{tr('Amount (Rs)', 'මුදල (Rs)')}</th></tr></thead>
                     <tbody>
                         ${loans.map(loan => `<tr><td>${loan.customer_short_name}</td><td class="text-end">${Number(loan.total_amount).toFixed(2)}</td></tr>`).join('')}
                     </tbody>
@@ -161,7 +162,7 @@ const LoanReportView = () => {
                 <div className="card shadow-lg border-0 rounded-4" style={{ backgroundColor: '#006400', color: '#fff', overflow: 'hidden' }}>
                     <div className="card-header border-0 py-4 text-center">
                         <h2 className="fw-bold mb-0">{companyName}</h2>
-                        <h4 className="opacity-75">ණය වාර්තාව (Loan Report)</h4>
+                        <h4 className="opacity-75">{tr('Loan Report', 'ණය වාර්තාව (Loan Report)')}</h4>
                     </div>
 
                     <div className="card-body bg-light text-dark">
@@ -183,8 +184,8 @@ const LoanReportView = () => {
                             <table className="table table-hover table-bordered align-middle bg-white shadow-sm">
                                 <thead style={{ backgroundColor: '#004d00', color: 'white' }}>
                                     <tr className="text-center">
-                                        <th>පාරිභෝගික නම (Customer Name)</th>
-                                        <th className="text-end">මුදල (Amount Rs.)</th>
+                                        <th>{tr('Customer Name', 'පාරිභෝගික නම (Customer Name)')}</th>
+                                        <th className="text-end">{tr('Amount (Rs.)', 'මුදල (Amount Rs.)')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>

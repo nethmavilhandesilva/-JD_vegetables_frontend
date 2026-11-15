@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import api from "../../api"; // your axios instance
 import Sidebar from '../Sidebar'; 
 import { SHOP_NAME } from '../../config/shop';
+import { tr } from '../../i18n/language';
 
 export default function SupplierProfitReport() {
     const [profitReport, setProfitReport] = useState([]);
@@ -155,7 +156,7 @@ export default function SupplierProfitReport() {
                         </tbody>
                         <tfoot>
                             <tr style={{ background: "#004d00", color: "#fff", fontWeight: "bold" }}>
-                                <td style={{ padding: "12px 10px" }}>මුළු එකතුව (Total)</td>
+                                <td style={{ padding: "12px 10px" }}>{tr('Total', 'මුළු එකතුව (Total)')}</td>
                                 <td style={{ padding: "12px 10px" }}>
                                     Rs. {filteredProfitReport.reduce((sum, item) => sum + item.total_profit, 0).toFixed(2)}
                                 </td>

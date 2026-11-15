@@ -41,6 +41,7 @@ import { APP_BASE } from './config/paths';
 
 // Import Layout
 import Layout from './components/Layout/Layout';
+import { useLang } from './i18n/language';
 
 // Helper function to get basename
 const getBasename = () => APP_BASE || '/';
@@ -67,6 +68,8 @@ export default function App() {
     };
 
     const basename = getBasename();
+    // Re-render the whole app when the language (EN / සිං) changes
+    useLang();
 
     return (
         <BrowserRouter basename={basename}>

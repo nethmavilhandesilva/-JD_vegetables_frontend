@@ -4,6 +4,7 @@ import api from "../../api"; // ✅ USE CENTRALIZED AXIOS INSTANCE
 import { SHOP_NAME, SHOP_PHONE, SHOP_PHONE_PRIMARY } from "../../config/shop";
 import { APP_BASE } from "../../config/paths";
 import "./LoginPage.css";
+import { tr, LanguageToggle } from '../../i18n/language';
 
 // 0-4 score used for the strength bar under each password
 const passwordStrength = (value) => {
@@ -123,19 +124,19 @@ const RegisterPage = () => {
             <div className="lp-logo-badge" aria-hidden="true">🧺</div>
             <div>
               <h1 className="lp-shop-name">{SHOP_NAME}</h1>
-              <p className="lp-tagline">එළවළු හා පළතුරු තොග වෙළෙන්දෝ</p>
+              <p className="lp-tagline">{tr('Wholesale Vegetable & Fruit Traders', 'එළවළු හා පළතුරු තොග වෙළෙන්දෝ')}</p>
             </div>
           </div>
 
-          <p className="lp-headline">නව ගිණුමක් සාදන්න<br />Create a new account</p>
+          <p className="lp-headline">{tr('Create a new account', 'නව ගිණුමක් සාදන්න')}</p>
           <p className="lp-sub">
-            ගිණුම ආරක්ෂිත කිරීමට මුරපද දෙකක් ඇතුලත් කරන්න. පිවිසීමේදී මුරපද දෙකම අවශ්‍ය වේ.
+            {tr('Enter two passwords to secure the account. Both passwords are required to sign in.', 'ගිණුම ආරක්ෂිත කිරීමට මුරපද දෙකක් ඇතුලත් කරන්න. පිවිසීමේදී මුරපද දෙකම අවශ්‍ය වේ.')}
           </p>
 
           <div className="lp-stats">
-            <div className="lp-stat"><strong>🔒</strong>පළමු මුරපදය</div>
-            <div className="lp-stat"><strong>🔐</strong>දෙවන මුරපදය</div>
-            <div className="lp-stat"><strong>✅</strong>ආරක්ෂිත පිවිසුම</div>
+            <div className="lp-stat"><strong>🔒</strong>{tr('First Password', 'පළමු මුරපදය')}</div>
+            <div className="lp-stat"><strong>🔐</strong>{tr('Second Password', 'දෙවන මුරපදය')}</div>
+            <div className="lp-stat"><strong>✅</strong>{tr('Secure Login', 'ආරක්ෂිත පිවිසුම')}</div>
           </div>
 
           <div className="lp-contact">
@@ -147,8 +148,9 @@ const RegisterPage = () => {
         {/* Form side */}
         <div className="lp-form-side">
           <div className="lp-form-head">
-            <h2>ලියාපදිංචි වන්න</h2>
-            <p>Register a new user with two passwords</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}><LanguageToggle /></div>
+            <h2>{tr('Register', 'ලියාපදිංචි වන්න')}</h2>
+            <p>{tr('Register a new user with two passwords', 'මුරපද දෙකක් සමඟ නව පරිශීලකයෙකු ලියාපදිංචි කරන්න')}</p>
           </div>
 
           {error && (
@@ -166,7 +168,7 @@ const RegisterPage = () => {
 
           <form onSubmit={handleRegister}>
             <div className="lp-field">
-              <label className="lp-label" htmlFor="rp-name">සම්පූර්ණ නම / Full Name</label>
+              <label className="lp-label" htmlFor="rp-name">{tr('Full Name', 'සම්පූර්ණ නම / Full Name')}</label>
               <div className="lp-input-wrap">
                 <span className="lp-input-icon" aria-hidden="true">🧑</span>
                 <input id="rp-name" type="text" className="lp-input" value={form.name} onChange={setField("name")}
@@ -176,7 +178,7 @@ const RegisterPage = () => {
 
             <div className="lp-row">
               <div className="lp-field">
-                <label className="lp-label" htmlFor="rp-user">පරිශීලක නාමය / User ID</label>
+                <label className="lp-label" htmlFor="rp-user">{tr('User ID', 'පරිශීලක නාමය / User ID')}</label>
                 <div className="lp-input-wrap">
                   <span className="lp-input-icon" aria-hidden="true">👤</span>
                   <input id="rp-user" type="text" className="lp-input" value={form.user_id} onChange={setField("user_id")}
@@ -185,7 +187,7 @@ const RegisterPage = () => {
               </div>
 
               <div className="lp-field">
-                <label className="lp-label" htmlFor="rp-email">ඊමේල් / Email</label>
+                <label className="lp-label" htmlFor="rp-email">{tr('Email', 'ඊමේල් / Email')}</label>
                 <div className="lp-input-wrap">
                   <span className="lp-input-icon" aria-hidden="true">✉️</span>
                   <input id="rp-email" type="email" className="lp-input" value={form.email} onChange={setField("email")}
@@ -194,23 +196,23 @@ const RegisterPage = () => {
               </div>
             </div>
 
-            <div className="lp-section-title">🔒 පළමු මුරපදය / First Password</div>
+            <div className="lp-section-title">{tr('🔒 First Password', '🔒 පළමු මුරපදය / First Password')}</div>
             <div className="lp-row">
-              <PasswordField id="rp-pass" label="මුරපදය / Password" icon="🔒" value={form.password}
+              <PasswordField id="rp-pass" label={tr('Password', 'මුරපදය / Password')} icon="🔒" value={form.password}
                 onChange={setField("password")} placeholder="At least 6 characters" show={show.password}
                 onToggle={toggle("password")} disabled={isLoading} strength={passwordStrength(form.password)} />
-              <PasswordField id="rp-pass-confirm" label="තහවුරු කරන්න / Confirm" icon="🔒" value={form.confirmPassword}
+              <PasswordField id="rp-pass-confirm" label={tr('Confirm', 'තහවුරු කරන්න / Confirm')} icon="🔒" value={form.confirmPassword}
                 onChange={setField("confirmPassword")} placeholder="Re-enter password" show={show.confirmPassword}
                 onToggle={toggle("confirmPassword")} disabled={isLoading}
                 matchNote={matchNote(form.password, form.confirmPassword)} />
             </div>
 
-            <div className="lp-section-title">🔐 දෙවන මුරපදය / Second Password</div>
+            <div className="lp-section-title">{tr('🔐 Second Password', '🔐 දෙවන මුරපදය / Second Password')}</div>
             <div className="lp-row">
-              <PasswordField id="rp-pass2" label="මුරපදය / Password" icon="🔐" value={form.password2}
+              <PasswordField id="rp-pass2" label={tr('Password', 'මුරපදය / Password')} icon="🔐" value={form.password2}
                 onChange={setField("password2")} placeholder="At least 6 characters" show={show.password2}
                 onToggle={toggle("password2")} disabled={isLoading} strength={passwordStrength(form.password2)} />
-              <PasswordField id="rp-pass2-confirm" label="තහවුරු කරන්න / Confirm" icon="🔐" value={form.confirmPassword2}
+              <PasswordField id="rp-pass2-confirm" label={tr('Confirm', 'තහවුරු කරන්න / Confirm')} icon="🔐" value={form.confirmPassword2}
                 onChange={setField("confirmPassword2")} placeholder="Re-enter password" show={show.confirmPassword2}
                 onToggle={toggle("confirmPassword2")} disabled={isLoading}
                 matchNote={matchNote(form.password2, form.confirmPassword2)} />
@@ -220,10 +222,10 @@ const RegisterPage = () => {
               {isLoading ? (
                 <>
                   <span className="lp-spinner" aria-hidden="true"></span>
-                  Registering...
+                  {tr('Registering...', 'ලියාපදිංචි වෙමින්...')}
                 </>
               ) : (
-                "ලියාපදිංචි වන්න · Register →"
+                tr('Register →', 'ලියාපදිංචි වන්න · Register →')
               )}
             </button>
 

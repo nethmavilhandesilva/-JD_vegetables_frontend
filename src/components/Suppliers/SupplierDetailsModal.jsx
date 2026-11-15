@@ -1,3 +1,4 @@
+import { tr } from '../../i18n/language';
 // src/components/SupplierDetailsModal.jsx
 
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
@@ -266,15 +267,15 @@ const SupplierDetailsModal = ({ isOpen, onClose, supplierCode, billNo: initialBi
     </div>
     <div style="text-align:left;margin-bottom:5px;">
         <table style="width:100%;font-size:9px;border-collapse:collapse;">
-            <tr><td style="width:50%;">දිනය : ${date}</td><td style="width:50%;text-align:right;">${time}</td></tr>
-            <tr><td colspan="2">දුර : ${mobile || ''}</td></tr>
-            <tr><td>බිල් අංකය : <strong>${currentBillNo || 'N/A'}</strong></td><td style="text-align:right;"><strong style="font-size:2.0em;">${supplierCode.toUpperCase()}</strong></td></tr>
+            <tr><td style="width:50%;">${tr('Date', 'දිනය')} : ${date}</td><td style="width:50%;text-align:right;">${time}</td></tr>
+            <tr><td colspan="2">${tr('Tel', 'දුර')} : ${mobile || ''}</td></tr>
+            <tr><td>${tr('Bill No', 'බිල් අංකය')} : <strong>${currentBillNo || 'N/A'}</strong></td><td style="text-align:right;"><strong style="font-size:2.0em;">${supplierCode.toUpperCase()}</strong></td></tr>
         </table>
     </div>
     <hr style="border:1px solid #000;margin:5px 0;opacity:1;">
     <table style="width:100%;font-size:9px;border-collapse:collapse;">
         <thead style="font-size:1.8em;">
-            <tr><th style="text-align:left;padding:2px;">වර්ගය<br>මලු</th><th style="padding:2px;">කිලෝ</th><th style="padding:2px;">මිල</th><th style="text-align:right;padding:2px;">අගය</th></tr>
+            <tr><th style="text-align:left;padding:2px;">${tr('Type', 'වර්ගය')}<br>${tr('Bags', 'මලු')}</th><th style="padding:2px;">${tr('Kg', 'කිලෝ')}</th><th style="padding:2px;">${tr('Price', 'මිල')}</th><th style="text-align:right;padding:2px;">${tr('Value', 'අගය')}</th></tr>
         </thead>
         <tbody>
             <tr><td colspan="4"><hr style="border:1px solid #000;margin:5px 0;opacity:1;"></td></tr>
@@ -284,8 +285,8 @@ const SupplierDetailsModal = ({ isOpen, onClose, supplierCode, billNo: initialBi
         </tbody>
     </table>
     <table style="width:100%;font-size:15px;border-collapse:collapse;">
-        <tr><td>කුලිය:</td><td style="text-align:right;font-weight:bold;">${totalPackDueCost.toFixed(2)}</td></tr>
-        <tr><td>අගය:</td><td style="text-align:right;font-weight:bold;"><span style="display:inline-block; border-top:1px solid #000; border-bottom:3px double #000; padding:2px 4px; min-width:80px; text-align:right; font-size:1.5em;">${(finaltotal).toFixed(2)}</span></td></tr>
+        <tr><td>${tr('Kuliya', 'කුලිය')}:</td><td style="text-align:right;font-weight:bold;">${totalPackDueCost.toFixed(2)}</td></tr>
+        <tr><td>${tr('Value', 'අගය')}:</td><td style="text-align:right;font-weight:bold;"><span style="display:inline-block; border-top:1px solid #000; border-bottom:3px double #000; padding:2px 4px; min-width:80px; text-align:right; font-size:1.5em;">${(finaltotal).toFixed(2)}</span></td></tr>
     </table>
     <div style="font-size:10px;">
         <table style="width:100%;font-size:10px;border-collapse:collapse;margin-top:10px;">
@@ -294,7 +295,7 @@ const SupplierDetailsModal = ({ isOpen, onClose, supplierCode, billNo: initialBi
     </div>
     <tr><td colspan="4"><hr style="border:1px solid #000;margin:5px 0;opacity:1;"></td></tr>
     <div style="text-align:center;margin-top:10px;font-size:10px;">
-        <p style="margin:0;">භාණ්ඩ පරීක්ෂාකර බලා රැගෙන යන්න</p><p style="margin:0;">නැවත භාර ගනු නොලැබේ</p>
+        <p style="margin:0;">${tr('Please check goods before taking them', 'භාණ්ඩ පරීක්ෂාකර බලා රැගෙන යන්න')}</p><p style="margin:0;">${tr('Goods will not be taken back', 'නැවත භාර ගනු නොලැබේ')}</p>
     </div>
 </div>`;
     }, [supplierCode, detailedItemsHtml, totalPacksSum, totalsupplierSales, totalSupplierPackCost, itemSummaryData]);

@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import api from '../../api'; // axios instance
 import { SHOP_NAME } from '../../config/shop';
+import { tr } from '../../i18n/language';
 
 const ItemReportView = ({ reportData, onClose }) => {
 
@@ -60,7 +61,7 @@ const ItemReportView = ({ reportData, onClose }) => {
 
     const handleExportExcel = () => {
         const excelData = [];
-        excelData.push(['බිල් අංකය', 'මලු', 'බර (kg)', 'මිල (Rs/kg)', 'එකතුව (Rs)', 'ගෙණුම්කරු', 'කේතය']);
+        excelData.push([tr('Bill No', 'බිල් අංකය'), tr('Bags', 'මලු'), tr('Weight (kg)', 'බර (kg)'), tr('Price (Rs/kg)', 'මිල (Rs/kg)'), tr('Total (Rs)', 'එකතුව (Rs)'), tr('Customer', 'ගෙණුම්කරු'), tr('Code', 'කේතය')]);
 
         sales.forEach(sale => {
             excelData.push([
@@ -75,7 +76,7 @@ const ItemReportView = ({ reportData, onClose }) => {
         });
 
         excelData.push([
-            'මුළු එකතුව:',
+            tr('Grand Total:', 'මුළු එකතුව:'),
             totals.total_packs,
             totals.total_weight.toFixed(2),
             '',
@@ -106,22 +107,22 @@ const ItemReportView = ({ reportData, onClose }) => {
                 boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
             }}>
                 <h2 style={{ fontWeight: '700', margin: 0 }}>{companyName}</h2>
-                <h3 style={{ margin: 0 }}>📦 අයිතමය අනුව වාර්තාව</h3>
+                <h3 style={{ margin: 0 }}>{tr('📦 Report by Item', '📦 අයිතමය අනුව වාර්තාව')}</h3>
                 <p style={{ fontSize: '0.9rem', margin: 0 }}>{reportDate}</p>
             </div>
 
             {/* Item Info */}
             {sales.length > 0 && (
                 <div className="meta-info" style={{ marginBottom: '10px', fontSize: '0.95rem' }}>
-                    <strong>අයිතමය:</strong> {sales[0].item_name || 'N/A'} (<strong>කේතය:</strong> {sales[0].item_code})
+                    <strong>{tr('Item:', 'අයිතමය:')}</strong> {sales[0].item_name || 'N/A'} (<strong>{tr('Code:', 'කේතය:')}</strong> {sales[0].item_code})
                 </div>
             )}
 
             {(filters.start_date || filters.end_date) && (
                 <div className="filters" style={{ marginBottom: '15px', fontSize: '0.95rem' }}>
-                    <strong>දින පරාසය:</strong>
+                    <strong>{tr('Date Range:', 'දින පරාසය:')}</strong>
                     {filters.start_date && ` ${filters.start_date}`}
-                    {filters.end_date && ` සිට ${filters.end_date} දක්වා`}
+                    {filters.end_date && ` ${tr('to', 'සිට')} ${filters.end_date}${tr('', ' දක්වා')}`}
                 </div>
             )}
 
@@ -140,13 +141,13 @@ const ItemReportView = ({ reportData, onClose }) => {
                 <table className="table table-bordered table-striped table-sm text-center align-middle">
                     <thead className="table-dark">
                         <tr>
-                            <th>බිල් අංකය</th>
-                            <th>මලු</th>
-                            <th>බර (kg)</th>
-                            <th>මිල (Rs/kg)</th>
-                            <th>එකතුව (Rs)</th>
-                            <th>ගෙණුම්කරු</th>
-                            <th>කේතය</th>
+                            <th>{tr('Bill No', 'බිල් අංකය')}</th>
+                            <th>{tr('Bags', 'මලු')}</th>
+                            <th>{tr('Weight (kg)', 'බර (kg)')}</th>
+                            <th>{tr('Price (Rs/kg)', 'මිල (Rs/kg)')}</th>
+                            <th>{tr('Total (Rs)', 'එකතුව (Rs)')}</th>
+                            <th>{tr('Customer', 'ගෙණුම්කරු')}</th>
+                            <th>{tr('Code', 'කේතය')}</th>
                         </tr>
                     </thead>
 
@@ -167,7 +168,7 @@ const ItemReportView = ({ reportData, onClose }) => {
                     {/* ✅ FIXED TOTALS SECTION */}
                     <tfoot>
                         <tr className="totals-row" style={{ fontWeight: 'bold', backgroundColor: '#e6ffe6' }}>
-                            <td className="text-end">මුළු එකතුව:</td>
+                            <td className="text-end">{tr('Grand Total:', 'මුළු එකතුව:')}</td>
                             <td className="text-end">{totals.total_packs}</td>
                             <td className="text-end">{totals.total_weight.toFixed(2)}</td>
                             <td></td>

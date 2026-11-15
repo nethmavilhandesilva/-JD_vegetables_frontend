@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { customerLoanService } from '../../services/customerLoanService';
+import { tr } from '../../i18n/language';
 
 const CreateCustomerLoan = ({ customers, grnCodes, onLoanCreated, editingLoan, onCancelEdit }) => {
     const [formData, setFormData] = useState({
@@ -228,7 +229,7 @@ const CreateCustomerLoan = ({ customers, grnCodes, onLoanCreated, editingLoan, o
                                 value="old" 
                                 checked={formData.loan_type === 'old'}
                                 onChange={handleChange}
-                            /> වෙළෙන්දාගේ ලාද පරණ නය
+                            /> {tr("Trader's old loan", 'වෙළෙන්දාගේ ලාද පරණ නය')}
                         </label>
                         <label className="me-3 text-white">
                             <input 
@@ -237,7 +238,7 @@ const CreateCustomerLoan = ({ customers, grnCodes, onLoanCreated, editingLoan, o
                                 value="today" 
                                 checked={formData.loan_type === 'today'}
                                 onChange={handleChange}
-                            /> වෙළෙන්දාගේ අද දින නය ගැනීම
+                            /> {tr("Trader's loan taken today", 'වෙළෙන්දාගේ අද දින නය ගැනීම')}
                         </label>
                         <label className="me-3 text-white">
                             <input 
@@ -246,7 +247,7 @@ const CreateCustomerLoan = ({ customers, grnCodes, onLoanCreated, editingLoan, o
                                 value="ingoing" 
                                 checked={formData.loan_type === 'ingoing'}
                                 onChange={handleChange}
-                            /> වෙනත් ලාභීම/ආදායම්
+                            /> {tr('Other income', 'වෙනත් ලාභීම/ආදායම්')}
                         </label>
                         <label className="me-3 text-white">
                             <input 
@@ -255,7 +256,7 @@ const CreateCustomerLoan = ({ customers, grnCodes, onLoanCreated, editingLoan, o
                                 value="outgoing" 
                                 checked={formData.loan_type === 'outgoing'}
                                 onChange={handleChange}
-                            /> වියදම්
+                            /> {tr('Expenses', 'වියදම්')}
                         </label>
                         <label className="me-3 text-white">
                             <input 

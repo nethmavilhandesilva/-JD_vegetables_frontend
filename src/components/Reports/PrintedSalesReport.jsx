@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api";
 import Sidebar from '../Sidebar'; 
+import { tr } from '../../i18n/language';
 
 const PrintedSalesReport = () => {
     const [reportData, setReportData] = useState({});
@@ -57,8 +58,8 @@ const PrintedSalesReport = () => {
             return (
                 <div key={customerCode} className="mb-5 shadow card border-0 overflow-hidden">
                     <div className="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
-                        <h6 className="mb-0 fw-bold">පාරිභෝගිකයා: <span className="text-warning">{customerCode}</span></h6>
-                        <span className="badge bg-light text-dark">බිල්පත් සංඛ්‍යාව: {sales.length}</span>
+                        <h6 className="mb-0 fw-bold">{tr('Customer:', 'පාරිභෝගිකයා:')} <span className="text-warning">{customerCode}</span></h6>
+                        <span className="badge bg-light text-dark">{tr('Bills:', 'බිල්පත් සංඛ්‍යාව:')} {sales.length}</span>
                     </div>
 
                     <div className="card-body p-0">
@@ -66,13 +67,13 @@ const PrintedSalesReport = () => {
                             <table className="table table-bordered table-striped table-hover mb-0" style={{ tableLayout: 'fixed', width: '100%' }}>
                                 <thead className="table-primary text-center">
                                     <tr>
-                                        <th style={{ width: '15%' }}>බිල් අංකය</th>
-                                        <th style={{ width: '20%' }}>දිනය</th>
-                                        <th style={{ width: '25%' }} className="text-end">මුළු එකතුව (Rs.)</th>
+                                        <th style={{ width: '15%' }}>{tr('Bill No', 'බිල් අංකය')}</th>
+                                        <th style={{ width: '20%' }}>{tr('Date', 'දිනය')}</th>
+                                        <th style={{ width: '25%' }} className="text-end">{tr('Grand Total (Rs.)', 'මුළු එකතුව (Rs.)')}</th>
                                         {transactionType === 'Y' && (
                                             <>
-                                                <th style={{ width: '20%' }} className="text-end text-success">ගෙවූ මුදල</th>
-                                                <th style={{ width: '20%' }} className="text-end text-danger">ශේෂය</th>
+                                                <th style={{ width: '20%' }} className="text-end text-success">{tr('Paid Amount', 'ගෙවූ මුදල')}</th>
+                                                <th style={{ width: '20%' }} className="text-end text-danger">{tr('Balance', 'ශේෂය')}</th>
                                             </>
                                         )}
                                     </tr>
@@ -96,7 +97,7 @@ const PrintedSalesReport = () => {
                                 </tbody>
                                 <tfoot className="table-light border-top-2">
                                     <tr className="fw-bold">
-                                        <td colSpan="2" className="text-end">පාරිභෝගික එකතුව:</td>
+                                        <td colSpan="2" className="text-end">{tr('Customer Total:', 'පාරිභෝගික එකතුව:')}</td>
                                         <td className="text-end text-primary font-monospace">{formatCurrency(totalAmount)}</td>
                                         {transactionType === 'Y' && (
                                             <>
@@ -123,23 +124,23 @@ const PrintedSalesReport = () => {
                 <div className="card shadow-sm mb-4 border-0 p-3">
                     <div className="row g-3 align-items-end">
                         <div className="col-md-3">
-                            <label className="fw-bold mb-1 small text-uppercase">ගනුදෙනු වර්ගය</label>
+                            <label className="fw-bold mb-1 small text-uppercase">{tr('Transaction Type', 'ගනුදෙනු වර්ගය')}</label>
                             <select value={transactionType} onChange={(e) => setTransactionType(e.target.value)} className="form-select form-select-sm">
-                                <option value="N">අත්පිට මුදල් (Cash)</option>
-                                <option value="Y">ණය (Credit)</option>
+                                <option value="N">{tr('Cash', 'අත්පිට මුදල් (Cash)')}</option>
+                                <option value="Y">{tr('Credit', 'ණය (Credit)')}</option>
                             </select>
                         </div>
                         <div className="col-md-3">
-                            <label className="fw-bold mb-1 small text-uppercase">ආරම්භ දිනය</label>
+                            <label className="fw-bold mb-1 small text-uppercase">{tr('Start Date', 'ආරම්භ දිනය')}</label>
                             <input type="date" className="form-control form-control-sm" value={startDate} onChange={e => setStartDate(e.target.value)} />
                         </div>
                         <div className="col-md-3">
-                            <label className="fw-bold mb-1 small text-uppercase">අවසන් දිනය</label>
+                            <label className="fw-bold mb-1 small text-uppercase">{tr('End Date', 'අවසන් දිනය')}</label>
                             <input type="date" className="form-control form-control-sm" value={endDate} onChange={e => setEndDate(e.target.value)} />
                         </div>
                         <div className="col-md-3 d-flex gap-2">
                             <button className="btn btn-primary btn-sm flex-grow-1" onClick={fetchReport} disabled={loading}>
-                                {loading ? <span className="spinner-border spinner-border-sm"></span> : 'සෙවීම (Search)'}
+                                {loading ? <span className="spinner-border spinner-border-sm"></span> : tr('Search', 'සෙවීම (Search)')}
                             </button>
                             <button className="btn btn-outline-secondary btn-sm" onClick={handleReset}>Reset</button>
                         </div>
@@ -148,9 +149,9 @@ const PrintedSalesReport = () => {
 
                 {/* HEADER */}
                 <div className="d-flex justify-content-between align-items-center mb-4">
-                    <h4 className="fw-bold mb-0">මුද්‍රිත විකුණුම් වාර්තාව <small className="text-muted">| {transactionType === 'Y' ? 'ණය (Credit)' : 'අත්පිට මුදල් (Cash)'}</small></h4>
+                    <h4 className="fw-bold mb-0">{tr('Printed Sales Report', 'මුද්‍රිත විකුණුම් වාර්තාව')} <small className="text-muted">| {transactionType === 'Y' ? tr('Credit', 'ණය (Credit)') : tr('Cash', 'අත්පිට මුදල් (Cash)')}</small></h4>
                     <button className="btn btn-dark btn-sm px-4" onClick={() => window.print()}>
-                        <i className="bi bi-printer me-2"></i>මුද්‍රණය (Print)
+                        <i className="bi bi-printer me-2"></i>{tr('Print', 'මුද්‍රණය (Print)')}
                     </button>
                 </div>
 
@@ -158,11 +159,11 @@ const PrintedSalesReport = () => {
                 {loading ? (
                     <div className="text-center py-5">
                         <div className="spinner-border text-primary mb-2"></div>
-                        <p className="text-muted small">දත්ත පූරණය වෙමින් පවතී...</p>
+                        <p className="text-muted small">{tr('Loading data...', 'දත්ත පූරණය වෙමින් පවතී...')}</p>
                     </div>
                 ) : (
                     <>
-                        {Object.keys(reportData).length > 0 ? renderTableBlock(reportData) : <div className="alert alert-warning text-center border-0 shadow-sm">තෝරාගත් කාල සීමාව සඳහා වාර්තා කිසිවක් හමු නොවීය.</div>}
+                        {Object.keys(reportData).length > 0 ? renderTableBlock(reportData) : <div className="alert alert-warning text-center border-0 shadow-sm">{tr('No records found for the selected period.', 'තෝරාගත් කාල සීමාව සඳහා වාර්තා කිසිවක් හමු නොවීය.')}</div>}
                     </>
                 )}
 
@@ -172,7 +173,7 @@ const PrintedSalesReport = () => {
                         <div className="card-body p-0">
                             <div className="row g-0 text-center">
                                 <div className={`p-4 border-end ${transactionType === 'Y' ? 'col-md-4' : 'col-md-12'}`}>
-                                    <span className="text-uppercase small fw-bold text-muted d-block mb-1">මුළු විකුණුම් එකතුව (Grand Total)</span>
+                                    <span className="text-uppercase small fw-bold text-muted d-block mb-1">{tr('Grand Total', 'මුළු විකුණුම් එකතුව (Grand Total)')}</span>
                                     <h3 className="fw-bold text-primary font-monospace mb-0">
                                         Rs. {formatCurrency(Object.values(reportData).reduce((grandTotal, sales) => grandTotal + sales.reduce((sum, s) => sum + parseFloat(s.total || 0), 0), 0))}
                                     </h3>
@@ -180,13 +181,13 @@ const PrintedSalesReport = () => {
                                 {transactionType === 'Y' && (
                                     <>
                                         <div className="col-md-4 p-4 border-end">
-                                            <span className="text-uppercase small fw-bold text-muted d-block mb-1">මුළු ගෙවූ මුදල (Total Paid)</span>
+                                            <span className="text-uppercase small fw-bold text-muted d-block mb-1">{tr('Total Paid', 'මුළු ගෙවූ මුදල (Total Paid)')}</span>
                                             <h3 className="fw-bold text-success font-monospace mb-0">
                                                 Rs. {formatCurrency(Object.values(reportData).reduce((grandTotal, sales) => grandTotal + sales.reduce((sum, s) => sum + parseFloat(s.given_amount || 0), 0), 0))}
                                             </h3>
                                         </div>
                                         <div className="col-md-4 p-4">
-                                            <span className="text-uppercase small fw-bold text-muted d-block mb-1">මුළු ලැබිය යුතු ශේෂය (Due Balance)</span>
+                                            <span className="text-uppercase small fw-bold text-muted d-block mb-1">{tr('Due Balance', 'මුළු ලැබිය යුතු ශේෂය (Due Balance)')}</span>
                                             <h3 className="fw-bold text-danger font-monospace mb-0">
                                                 Rs. {formatCurrency(Object.values(reportData).reduce((grandTotal, sales) => {
                                                     const tot = sales.reduce((sum, s) => sum + parseFloat(s.total || 0), 0);

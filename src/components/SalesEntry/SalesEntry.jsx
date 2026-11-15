@@ -10,6 +10,7 @@ import { SHOP_PHONE } from '../../config/shop';
 import { BACKEND_URL } from '../../config/paths';
 import { printHtml } from '../../utils/printHtml';
 import PrintPreviewDialog from '../PrintPreviewDialog';
+import { tr } from '../../i18n/language';
 
 const routes = {
     markPrinted: "/sales/mark-printed",
@@ -111,9 +112,9 @@ const BreakdownDisplay = ({ sale, formatDecimal }) => {
                 <table className="w-full text-xs text-black" style={{ marginTop: "-6px" }}>
                     <thead>
                         <tr className="text-gray-500 border-b">
-                            <th className="text-left py-1">(වේලාව)</th>
-                            <th className="text-right py-1">(බර)</th>
-                            <th className="text-right py-1">(මලු)</th>
+                            <th className="text-left py-1">{tr('(Time)', '(වේලාව)')}</th>
+                            <th className="text-right py-1">{tr('(Weight)', '(බර)')}</th>
+                            <th className="text-right py-1">{tr('(Bags)', '(මලු)')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -200,7 +201,7 @@ const CustomerList = React.memo(({ customers, type, searchQuery, onSearchChange,
             <div style={{ backgroundColor: "#006400" }} className="p-1 rounded-t-xl">
                 <div className="flex items-center justify-center gap-2 mb-1">
                     <h2 className="font-bold text-white whitespace-nowrap" style={{ fontSize: '14px' }}>
-                        {type === "printed" ? "මුද්‍රණය කළ" : "මුද්‍රණය නොකළ"}
+                        {type === "printed" ? tr('Printed', 'මුද්‍රණය කළ') : tr('Unprinted', 'මුද්‍රණය නොකළ')}
                     </h2>
 
                     {/* Only show the checkbox for the "printed" column */}
@@ -213,7 +214,7 @@ const CustomerList = React.memo(({ customers, type, searchQuery, onSearchChange,
 
                 <input
                     type="text"
-                    placeholder={`සෙවීම ${type === "printed" ? "බිල්පත් අංකය/කේතය..." : "ගනුදෙනු කේතය..."}`}
+                    placeholder={type === "printed" ? tr('Search bill no / code...', 'සෙවීම බිල්පත් අංකය/කේතය...') : tr('Search customer code...', 'සෙවීම ගනුදෙනු කේතය...')}
                     value={searchQuery}
                     onChange={(e) => onSearchChange(e.target.value.toUpperCase())}
                     className="px-4 py-0.5 border rounded-xl focus:ring-2 focus:ring-blue-300 uppercase block mx-auto"
@@ -221,7 +222,7 @@ const CustomerList = React.memo(({ customers, type, searchQuery, onSearchChange,
                 />
             </div>
             <div className="py-1">
-                {displayItems.length === 0 ? (<p className="text-gray-700 p-2 text-center text-xs">වාර්තා නොමැත.</p>) : (
+                {displayItems.length === 0 ? (<p className="text-gray-700 p-2 text-center text-xs">{tr('No records.', 'වාර්තා නොමැත.')}</p>) : (
                     <ul className="flex flex-col px-1">
                         {displayItems.map((item) => {
                             let customerCode, displayText, totalAmount, billSales;
@@ -375,24 +376,24 @@ const SalesSummaryFooter = ({ sales, formatDecimal }) => {
     return (
         <div className="sales-totals-bar flex flex-row flex-nowrap items-center justify-between w-full p-2 mt-2 rounded-xl border-2 border-blue-500 bg-gray-900 text-white font-bold shadow-lg overflow-hidden">
             <div className="flex items-center gap-4 px-3 border-r border-gray-700 flex-1 justify-center">
-                <span className="text-gray-400 uppercase text-[10px] whitespace-nowrap">එකතුව:</span>
+                <span className="text-gray-400 uppercase text-[10px] whitespace-nowrap">{tr('Total:', 'එකතුව:')}</span>
                 <span className="text-white text-sm whitespace-nowrap" style={{ marginLeft: '6px' }}>
                     {formatDecimal(totals.billTotal)}
                 </span>
 
             </div>
             <div className="flex items-center gap-2 px-3 border-r border-gray-700 flex-1 justify-center" style={{ marginLeft: '20px', transform: 'translateY(-24px)' }}>
-                <span className="text-gray-400 uppercase text-[10px] whitespace-nowrap" style={{ marginLeft: '140px' }}>බෑග් මිල:</span>
+                <span className="text-gray-400 uppercase text-[10px] whitespace-nowrap" style={{ marginLeft: '140px' }}>{tr('Bag Price:', 'බෑග් මිල:')}</span>
                 <span className="text-white text-sm whitespace-nowrap" style={{ marginLeft: '6px' }}>{formatDecimal(totals.totalBagPrice)}</span>
             </div>
             <div className="flex flex-row items-center whitespace-nowrap px-4 border-r border-gray-700 h-full ml-auto" style={{ transform: 'translateY(-48px)' }}>
-                <span className="text-gray-400 uppercase text-[10px] mr-2" style={{ marginLeft: '310px' }}>කාම්කරු:</span>
+                <span className="text-gray-400 uppercase text-[10px] mr-2" style={{ marginLeft: '310px' }}>{tr('Laborer:', 'කාම්කරු:')}</span>
                 <span className="font-bold text-sm" style={{ marginLeft: '6px' }}>0</span>
             </div>
             <div className="flex flex-row items-center whitespace-nowrap px-4 border-r border-gray-700 h-full ml-auto" style={{ transform: 'translateY(-72px)' }}>
-                <span className="text-gray-400 uppercase text-[10px] mr-2" style={{ marginLeft: '480px' }}>ගෙවිය:</span>
+                <span className="text-gray-400 uppercase text-[10px] mr-2" style={{ marginLeft: '480px' }}>{tr('Payable:', 'ගෙවිය:')}</span>
                 <span className="font-bold text-sm text-yellow-400" style={{ marginLeft: '6px' }}>{formatDecimal(finalPayable)}</span>
-                <span className="text-gray-400 text-[10px]" style={{ marginLeft: '6px' }}>(කුලිය: {formatDecimal(totals.totalKuliya)})</span>
+                <span className="text-gray-400 text-[10px]" style={{ marginLeft: '6px' }}>{tr('(Kuliya:', '(කුලිය:')} {formatDecimal(totals.totalKuliya)})</span>
             </div>
         </div>
     );
@@ -1469,7 +1470,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
                 // STOP RIGHT HERE: If weight is completely blank, enforce input
                 if (!weightValue) {
-                    updateState({ errors: { form: "කරුණාකර බර ඇතුළත් කරන්න" } });
+                    updateState({ errors: { form: tr('Please enter the weight', 'කරුණාකර බර ඇතුළත් කරන්න') } });
                     refs.weight.current?.focus();
                     refs.weight.current?.select();
                     return; // Enforces the hold at the weight field
@@ -1478,7 +1479,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 // Enforce correct value formatting
                 const weightNum = parseFloat(weightValue);
                 if (isNaN(weightNum) || weightNum <= 0) {
-                    updateState({ errors: { form: "කරුණාකර වලංගු බරක් ඇතුළත් කරන්න" } });
+                    updateState({ errors: { form: tr('Please enter a valid weight', 'කරුණාකර වලංගු බරක් ඇතුළත් කරන්න') } });
                     refs.weight.current?.focus();
                     refs.weight.current?.select();
                     return;
@@ -1900,7 +1901,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         for (const field of requiredFields) {
             const value = formData[field.key];
             if (value === null || value === undefined || value.toString().trim() === "") {
-                updateState({ errors: { form: `කරුණාකර ${field.label} ඇතුළත් කරන්න` } });
+                updateState({ errors: { form: tr(`Please enter ${field.label}`, `කරුණාකර ${field.label} ඇතුළත් කරන්න`) } });
                 const targetRef = refs[field.ref];
                 if (targetRef?.current) {
                     targetRef.current.focus();
@@ -1916,7 +1917,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
         // Printed bills are closed: existing records can still be edited, but no new ones added
         if (!isEditing && selectedPrintedCustomer) {
-            updateState({ errors: { form: "මුද්‍රණය කළ බිලට නව වාර්තා එක් කළ නොහැක" } });
+            updateState({ errors: { form: tr('Cannot add new records to a printed bill', 'මුද්‍රණය කළ බිලට නව වාර්තා එක් කළ නොහැක') } });
             return;
         }
         const customerCode = (formData.customer_code || autoCustomerCode).toUpperCase();
@@ -2163,7 +2164,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: '#111439' }}>
                         <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
-                            බිල් පෙරදසුන (F2) — {customerName}
+                            {tr('Bill Preview (F2)', 'බිල් පෙරදසුන (F2)')} — {customerName}
                         </span>
                         <button
                             onClick={onClose}
@@ -2234,7 +2235,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         });
 
         if (!salesData.length) {
-            alert("මුද්‍රණය කිරීමට දත්ත නොමැත!");
+            alert(tr('No data to print!', 'මුද්‍රණය කිරීමට දත්ත නොමැත!'));
             return;
         }
 
@@ -2260,7 +2261,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         // --- ZERO PRICE VALIDATION ---
         const hasZeroPrice = printData.some(s => parseFloat(s.price_per_kg) === 0);
         if (hasZeroPrice) {
-            alert("මිල 0 ලෙස ඇති අයිතම මුද්‍රණය කළ නොහැක.");
+            alert(tr('Items with a price of 0 cannot be printed.', 'මිල 0 ලෙස ඇති අයිතම මුද්‍රණය කළ නොහැක.'));
             return;
         }
 
@@ -2337,7 +2338,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             });
 
             if (printResponse.data.status !== "success") {
-                throw new Error("මුද්‍රණය අසාර්ථකයි");
+                throw new Error(tr('Printing failed', 'මුද්‍රණය අසාර්ථකයි'));
             }
 
             let billNo = printResponse.data.bill_no
@@ -2398,7 +2399,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
         } catch (error) {
             console.error("Printing error:", error);
-            setPrintJob(prev => (prev ? { ...prev, busy: false, error: 'මුද්‍රණය කිරීමේදී දෝෂයක් ඇති විය. / Printing failed, please try again.' } : prev));
+            setPrintJob(prev => (prev ? { ...prev, busy: false, error: tr('Printing failed, please try again.', 'මුද්‍රණය කිරීමේදී දෝෂයක් ඇති විය.') } : prev));
             updateState({ isPrinting: false });
         }
     };
@@ -2494,11 +2495,11 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                         <div className="w-full shadow-xl rounded-xl overflow-y-auto border border-black p-4 text-center" style={{ backgroundColor: "#1ec139ff", maxHeight: "80.5vh" }}>
                             <div style={{ backgroundColor: "#006400" }} className="p-1 rounded-t-xl">
                                 <h2 className="font-bold text-white mb-1 whitespace-nowrap text-center" style={{ fontSize: '14px' }}>
-                                    මුද්‍රණය කළ
+                                    {tr('Printed', 'මුද්‍රණය කළ')}
                                 </h2>
                             </div>
                             <div className="py-4">
-                                <p className="text-gray-700">මුද්‍රණය කළ ගනුදෙනු දත්ත නොමැත.</p>
+                                <p className="text-gray-700">{tr('No printed transactions.', 'මුද්‍රණය කළ ගනුදෙනු දත්ත නොමැත.')}</p>
                             </div>
                         </div>
                     )}
@@ -2520,11 +2521,11 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                     <div className="w-full flex justify-between items-center">
                                         <div style={{ position: 'relative', top: '-20px', display: 'flex', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0, zIndex: 20 }}>
                                             <div className="font-bold text-lg whitespace-nowrap" style={{ color: 'red', fontSize: '1.35rem' }}>
-                                                බිල් අං: {currentBillNo}
+                                                {tr('Bill No:', 'බිල් අං:')} {currentBillNo}
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginLeft: '100px' }}>
                                                 <div className="font-bold text-xl whitespace-nowrap" style={{ color: 'red', fontSize: '1.15rem' }}>
-                                                    මුළු විකුණුම්: Rs. {formatDecimal(totalSalesValue)}
+                                                    {tr('Total Sales:', 'මුළු විකුණුම්:')} Rs. {formatDecimal(totalSalesValue)}
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <input
@@ -2539,7 +2540,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                     </label>
                                                     {lastPrintedBill && (
                                                         <div className="font-bold text-xl whitespace-nowrap" style={{ color: '#4ade80', fontSize: '1.15rem', marginLeft: '15px' }}>
-                                                            අවසන් බිල් එකතුව: Rs. {formatDecimal(lastPrintedBill.total)} (#{lastPrintedBill.billNo})
+                                                            {tr('Last Bill Total:', 'අවසන් බිල් එකතුව:')} Rs. {formatDecimal(lastPrintedBill.total)} (#{lastPrintedBill.billNo})
                                                         </div>
                                                     )}
                                                 </div>
@@ -2548,7 +2549,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                         <div className="flex gap-10 items-center justify-start mt-4 mb-4 relative" style={{ minHeight: '150px' }}>
                                             {state.customerProfilePic && (
                                                 <div onClick={() => handleImageClick('customer')} className="cursor-pointer hover:scale-105 transition-transform" style={{ position: 'absolute', left: '805px', top: '100px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', zIndex: 10 }}>
-                                                    <span className="text-xs text-gray-400">ගැ</span>
+                                                    <span className="text-xs text-gray-400">{tr('Cust', 'ගැ')}</span>
                                                     <div style={{ width: '100px', height: '100px', backgroundColor: 'white', border: '5px solid #1ec139', borderRadius: '15px', overflow: 'hidden', boxShadow: '0 10px 20px rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                                         <img src={state.customerProfilePic} alt="Customer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     </div>
@@ -2556,7 +2557,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                             )}
                                             {state.supplierProfilePic && (
                                                 <div onClick={() => handleImageClick('supplier')} className="cursor-pointer hover:scale-105 transition-transform" style={{ position: 'absolute', left: '940px', top: '100px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
-                                                    <span className="text-xs text-gray-400">සැ</span>
+                                                    <span className="text-xs text-gray-400">{tr('Supp', 'සැ')}</span>
                                                     <div style={{ width: '100px', height: '100px', backgroundColor: 'white', border: '5px solid #3b82f6', borderRadius: '15px', overflow: 'hidden', boxShadow: '0 10px 20px rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                                         <img src={state.supplierProfilePic} alt="Supplier Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     </div>
@@ -2570,7 +2571,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                         <div className="flex flex-col gap-2 w-full">
                                             <div className="flex-1 min-w-0" style={{ position: 'relative', top: '-50px' }}>
                                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                    <input id="telephone_no" ref={refs.telephone_no} name="telephone_no" value={formData.telephone_no || ""} onChange={(e) => handleInputChange("telephone_no", e.target.value)} onKeyDown={(e) => handleKeyDown(e, "telephone_no")} type="tel" maxLength="10" pattern="\d*" placeholder="දුරකථන අංකය (10 ඉලක්කම්)" disabled={!!selectedPrintedCustomer} className="px-2 py-1 font-bold text-sm w-full border rounded text-black placeholder-gray-500" style={{ backgroundColor: selectedPrintedCustomer ? '#4a5568' : '#f6f6ff', border: '1px solid #4a5568', color: 'white', height: '36px', fontSize: '1rem', padding: '0 0.75rem', borderRadius: '0.5rem', boxSizing: 'border-box', cursor: selectedPrintedCustomer ? 'not-allowed' : 'text', opacity: selectedPrintedCustomer ? 0.7 : 1, flex: 1 }} />
+                                                    <input id="telephone_no" ref={refs.telephone_no} name="telephone_no" value={formData.telephone_no || ""} onChange={(e) => handleInputChange("telephone_no", e.target.value)} onKeyDown={(e) => handleKeyDown(e, "telephone_no")} type="tel" maxLength="10" pattern="\d*" placeholder={tr('Phone number (10 digits)', 'දුරකථන අංකය (10 ඉලක්කම්)')} disabled={!!selectedPrintedCustomer} className="px-2 py-1 font-bold text-sm w-full border rounded text-black placeholder-gray-500" style={{ backgroundColor: selectedPrintedCustomer ? '#4a5568' : '#f6f6ff', border: '1px solid #4a5568', color: 'white', height: '36px', fontSize: '1rem', padding: '0 0.75rem', borderRadius: '0.5rem', boxSizing: 'border-box', cursor: selectedPrintedCustomer ? 'not-allowed' : 'text', opacity: selectedPrintedCustomer ? 0.7 : 1, flex: 1 }} />
                                                     {state.showSavePhoneButton && (
                                                         <button onClick={savePhoneNumber} style={{ backgroundColor: '#4CAF50', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem', whiteSpace: 'nowrap', height: '36px' }}>
                                                             Save
@@ -2579,14 +2580,14 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                 </div>
                                             </div>
                                             <div className="flex-1 min-w-0" style={{ marginTop: '-40px' }}>
-                                                <input id="customer_code_input" ref={refs.customer_code_input} name="customer_code" value={formData.customer_code || autoCustomerCode} onChange={(e) => handleInputChange("customer_code", e.target.value.toUpperCase())} onKeyDown={(e) => handleKeyDown(e, "customer_code_input")} type="text" placeholder="පාරිභෝගික කේතය" className="px-2 py-1 uppercase font-bold text-sm w-full border rounded bg-white text-black placeholder-gray-500" style={{ backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: '36px', fontSize: '1rem', padding: '0 0.75rem', borderRadius: '0.5rem', boxSizing: 'border-box' }} />
+                                                <input id="customer_code_input" ref={refs.customer_code_input} name="customer_code" value={formData.customer_code || autoCustomerCode} onChange={(e) => handleInputChange("customer_code", e.target.value.toUpperCase())} onKeyDown={(e) => handleKeyDown(e, "customer_code_input")} type="text" placeholder={tr('Customer code', 'පාරිභෝගික කේතය')} className="px-2 py-1 uppercase font-bold text-sm w-full border rounded bg-white text-black placeholder-gray-500" style={{ backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: '36px', fontSize: '1rem', padding: '0 0.75rem', borderRadius: '0.5rem', boxSizing: 'border-box' }} />
                                             </div>
                                         </div>
                                         <div style={{ flex: '0 0 150px', minWidth: '120px', marginLeft: '-100px' }}>
-                                            <Select id="customer_code_select" ref={refs.customer_code_select} value={formData.customer_code ? { value: formData.customer_code, label: `${formData.customer_code}` } : null} onChange={handleCustomerSelect} options={customers.filter(c => !customerSearchInput || c.short_name.charAt(0).toUpperCase() === customerSearchInput.charAt(0).toUpperCase()).map(c => ({ value: c.short_name, label: `${c.short_name}` }))} onInputChange={(v, { action }) => action === "input-change" && updateState({ customerSearchInput: v.toUpperCase() })} inputValue={customerSearchInput} placeholder="පාරිභෝගිකයා තෝරන්න" isClearable isSearchable styles={{ control: b => ({ ...b, minHeight: "36px", height: "36px", fontSize: "25px", backgroundColor: "white", borderColor: "#4a5568", borderRadius: "0.5rem" }), valueContainer: b => ({ ...b, padding: "0 6px", height: "36px" }), placeholder: b => ({ ...b, fontSize: "12px", color: "#a0aec0" }), input: b => ({ ...b, fontSize: "12px", color: "black", fontWeight: "bold" }), singleValue: b => ({ ...b, color: "black", fontSize: "12px", fontWeight: "bold" }), option: (b, s) => ({ ...b, color: "black", fontWeight: "bold", fontSize: "12px", backgroundColor: s.isFocused ? "#e5e7eb" : "white", cursor: "pointer" }) }} />
+                                            <Select id="customer_code_select" ref={refs.customer_code_select} value={formData.customer_code ? { value: formData.customer_code, label: `${formData.customer_code}` } : null} onChange={handleCustomerSelect} options={customers.filter(c => !customerSearchInput || c.short_name.charAt(0).toUpperCase() === customerSearchInput.charAt(0).toUpperCase()).map(c => ({ value: c.short_name, label: `${c.short_name}` }))} onInputChange={(v, { action }) => action === "input-change" && updateState({ customerSearchInput: v.toUpperCase() })} inputValue={customerSearchInput} placeholder={tr('Select customer', 'පාරිභෝගිකයා තෝරන්න')} isClearable isSearchable styles={{ control: b => ({ ...b, minHeight: "36px", height: "36px", fontSize: "25px", backgroundColor: "white", borderColor: "#4a5568", borderRadius: "0.5rem" }), valueContainer: b => ({ ...b, padding: "0 6px", height: "36px" }), placeholder: b => ({ ...b, fontSize: "12px", color: "#a0aec0" }), input: b => ({ ...b, fontSize: "12px", color: "black", fontWeight: "bold" }), singleValue: b => ({ ...b, color: "black", fontSize: "12px", fontWeight: "bold" }), option: (b, s) => ({ ...b, color: "black", fontWeight: "bold", fontSize: "12px", backgroundColor: s.isFocused ? "#e5e7eb" : "white", cursor: "pointer" }) }} />
                                         </div>
                                         <div style={{ flex: '0 0 60px', minWidth: '120px' }}>
-                                            <input id="price_per_kg" ref={refs.price_per_kg} name="price_per_kg" type="text" value={formData.price_per_kg} onChange={(e) => /^\d*\.?\d*$/.test(e.target.value) && handleInputChange('price_per_kg', e.target.value)} onKeyDown={(e) => handleKeyDown(e, "price_per_kg")} placeholder="එකවර මිල" className="px-2 py-1 uppercase font-bold text-sm w-full border rounded bg-white text-black placeholder-gray-500" style={{ backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: '36px', fontSize: '1rem', padding: '0 0.75rem', borderRadius: '0.5rem', boxSizing: 'border-box' }} />
+                                            <input id="price_per_kg" ref={refs.price_per_kg} name="price_per_kg" type="text" value={formData.price_per_kg} onChange={(e) => /^\d*\.?\d*$/.test(e.target.value) && handleInputChange('price_per_kg', e.target.value)} onKeyDown={(e) => handleKeyDown(e, "price_per_kg")} placeholder={tr('Bulk price', 'එකවර මිල')} className="px-2 py-1 uppercase font-bold text-sm w-full border rounded bg-white text-black placeholder-gray-500" style={{ backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: '36px', fontSize: '1rem', padding: '0 0.75rem', borderRadius: '0.5rem', boxSizing: 'border-box' }} />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="rounded-lg border relative bg-white flex items-center justify-start pl-2 pt-2.5" style={{ flex: "0 0 100px", marginLeft: "5px", height: "36px" }}>
@@ -2598,7 +2599,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
                                     <div className="w-full" style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", columnGap: "8px", alignItems: "end", marginTop: "8px" }}>
                                         <div style={{ gridColumnStart: 1, gridColumnEnd: 3 }}>
-                                            <input id="supplier_code" ref={refs.supplier_code} name="supplier_code" value={formData.supplier_code} onChange={(e) => handleInputChange("supplier_code", e.target.value.toUpperCase())} onKeyDown={(e) => handleKeyDown(e, "supplier_code")} type="text" placeholder="සැපයුම්කරු" className="px-2 py-1 uppercase font-bold text-xs border rounded bg-white text-black placeholder-gray-500 w-full" style={{ width: "150px", backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: '44px', fontSize: '1.25rem', padding: '0 1rem', borderRadius: '0.5rem', boxSizing: 'border-box' }} />
+                                            <input id="supplier_code" ref={refs.supplier_code} name="supplier_code" value={formData.supplier_code} onChange={(e) => handleInputChange("supplier_code", e.target.value.toUpperCase())} onKeyDown={(e) => handleKeyDown(e, "supplier_code")} type="text" placeholder={tr('Supplier', 'සැපයුම්කරු')} className="px-2 py-1 uppercase font-bold text-xs border rounded bg-white text-black placeholder-gray-500 w-full" style={{ width: "150px", backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: '44px', fontSize: '1.25rem', padding: '0 1rem', borderRadius: '0.5rem', boxSizing: 'border-box' }} />
                                         </div>
                                         <div style={{ gridColumnStart: 5, gridColumnEnd: 7, marginLeft: "-120px", marginRight: "-2px", position: "relative", zIndex: 10000 }}>
                                             {(() => {
@@ -2628,7 +2629,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                         blurInputOnSelect={true}
                                                         inputValue={state.itemSearchInput}
                                                         options={currentFilteredOptions}
-                                                        placeholder="භාණ්ඩය"
+                                                        placeholder={tr('Item', 'භාණ්ඩය')}
                                                         defaultMenuIsOpen={false}
                                                         value={formData.item_code ? { value: formData.item_code, label: `${formData.item_code} - ${formData.item_name}` } : null}
                                                         onInputChange={(value, meta) => { if (meta.action === "input-change") { updateState({ itemSearchInput: value.toUpperCase() }); } }}
@@ -2738,10 +2739,10 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                             })()}
                                         </div>
                                         {[
-                                            { id: 'weight', placeholder: "බර", fieldRef: refs.weight },
-                                            { id: 'price_per_kg_grid_item', placeholder: "මිල", fieldRef: refs.price_per_kg_grid_item },
-                                            { id: 'packs', placeholder: "අසුරුම්", fieldRef: refs.packs },
-                                            { id: 'kuliya', placeholder: "කුලිය", fieldRef: refs.kuliya, isReadOnly: false }
+                                            { id: 'weight', placeholder: tr('Weight', 'බර'), fieldRef: refs.weight },
+                                            { id: 'price_per_kg_grid_item', placeholder: tr('Price', 'මිල'), fieldRef: refs.price_per_kg_grid_item },
+                                            { id: 'packs', placeholder: tr('Packs', 'අසුරුම්'), fieldRef: refs.packs },
+                                            { id: 'kuliya', placeholder: tr('Kuliya', 'කුලිය'), fieldRef: refs.kuliya, isReadOnly: false }
                                         ].map(({ id, placeholder, fieldRef, isReadOnly = false }) => (
                                             <div key={id} style={{
                                                 ...(id === 'weight' && { gridColumnStart: 8, gridColumnEnd: 9, marginLeft: "-70px", width: "100px" }),
@@ -2829,7 +2830,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                     <th className="px-2 py-2 border text-center" style={{ backgroundColor: '#f5fafb', color: '#000000', width: '40px' }}>
                                                         <input type="checkbox" checked={allDisplayedSelected} onChange={toggleSelectAllSales} disabled={displayedSales.length === 0} title="Select all" style={{ cursor: 'pointer' }} />
                                                     </th>
-                                                    {['Sup code', 'කේතය', 'අයිතමය', 'බර(kg)', 'මිල', 'අගය', 'මලු', 'Actions'].map((header, index) => (
+                                                    {[tr('Sup code', 'Sup code'), tr('Code', 'කේතය'), tr('Item', 'අයිතමය'), tr('Weight(kg)', 'බර(kg)'), tr('Price', 'මිල'), tr('Value', 'අගය'), tr('Bags', 'මලු'), tr('Actions', 'Actions')].map((header, index) => (
                                                         <th key={index} className="px-4 py-2 border" style={{ backgroundColor: '#f5fafb', color: '#000000' }}>{header}</th>
                                                     ))}
                                                 </tr>
@@ -2872,7 +2873,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                         <div className="flex items-center justify-between mb-4" style={{ marginTop: "35px" }}>
                                             {displayedSales.length > 0 && (
                                                 <div className="text-2xl font-bold" style={{ color: 'red' }}>
-                                                    (විකුණුම්: Rs. {formatDecimal(salesTotal)} + මල්ලක අගය: Rs. {formatDecimal(packCostTotal)} + කුලිය: Rs. {formatDecimal(kuliyaTotal)} )
+                                                    {tr('(Sales:', '(විකුණුම්:')} Rs. {formatDecimal(salesTotal)} + {tr('Bag Value:', 'මල්ලක අගය:')} Rs. {formatDecimal(packCostTotal)} + {tr('Kuliya:', 'කුලිය:')} Rs. {formatDecimal(kuliyaTotal)} )
                                                 </div>
                                             )}
                                         </div>
@@ -3150,10 +3151,10 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                     ) : (
                         <div className="w-full shadow-xl rounded-xl overflow-y-auto border border-black p-4 text-center" style={{ backgroundColor: "#1ec139ff", maxHeight: "80.5vh" }}>
                             <div style={{ backgroundColor: "#006400" }} className="p-1 rounded-t-xl">
-                                <h2 className="font-bold text-white mb-1 whitespace-nowrap text-center" style={{ fontSize: '14px' }}>මුද්‍රණය නොකළ</h2>
+                                <h2 className="font-bold text-white mb-1 whitespace-nowrap text-center" style={{ fontSize: '14px' }}>{tr('Unprinted', 'මුද්‍රණය නොකළ')}</h2>
                             </div>
                             <div className="py-4">
-                                <p className="text-gray-700">මුද්‍රණය නොකළ විකුණුම් කිසිවක් සොයාගත නොහැක</p>
+                                <p className="text-gray-700">{tr('No unprinted sales found', 'මුද්‍රණය නොකළ විකුණුම් කිසිවක් සොයාගත නොහැක')}</p>
                             </div>
                         </div>
                     )}
@@ -3163,7 +3164,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             {printJob && (
                 <PrintPreviewDialog
                     html={printJob.previewHtml}
-                    title={`බිල මුද්‍රණය / Print bill — ${printJob.customerName}`}
+                    title={`${tr('Print bill', 'බිල මුද්‍රණය')} — ${printJob.customerName}`}
                     onPrint={executePrintJob}
                     onCancel={handleCancelPrintJob}
                     busy={printJob.busy}

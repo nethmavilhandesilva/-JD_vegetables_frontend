@@ -3,6 +3,7 @@ import * as faceapi from "face-api.js";
 import { supplierService } from '../../services/supplierService';
 import { useNavigate, Link } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
+import { tr } from '../../i18n/language';
 
 const CreateSupplier = () => {
   const [formData, setFormData] = useState({
@@ -71,7 +72,7 @@ const CreateSupplier = () => {
         const isDuplicate = await checkDuplicateCode(upperCode);
         setErrors(prev => ({
           ...prev,
-          code: isDuplicate ? 'මෙම කේතය දැනටමත් පවතිනවා' : null
+          code: isDuplicate ? tr('This code already exists', 'මෙම කේතය දැනටමත් පවතිනවා') : null
         }));
       } else {
         setErrors(prev => ({ ...prev, code: null }));
@@ -91,7 +92,7 @@ const CreateSupplier = () => {
     if (name === "profile_pic") {
       const hasFace = await detectFace(file);
       if (!hasFace) {
-        alert("මුහුණක් හමු නොවීය. කරුණාකර නිවැරදි ඡායාරූපයක් තෝරන්න.");
+        alert(tr('No face detected. Please choose a valid photo.', 'මුහුණක් හමු නොවීය. කරුණාකර නිවැරදි ඡායාරූපයක් තෝරන්න.'));
         return;
       }
     }
@@ -112,7 +113,7 @@ const CreateSupplier = () => {
     e.preventDefault();
 
     if (errors.code) {
-      alert("මෙම කේතය දැනටමත් පවතිනවා. වෙනත් කේතයක් තෝරන්න.");
+      alert(tr('This code already exists. Please choose another code.', 'මෙම කේතය දැනටමත් පවතිනවා. වෙනත් කේතයක් තෝරන්න.'));
       return;
     }
 
@@ -166,7 +167,7 @@ const CreateSupplier = () => {
         <div className="col-12">
           <div className="p-5 rounded-4 shadow-lg text-light" style={{ backgroundColor: '#004d00' }}>
             <h2 className="text-center mb-5 fw-bold" style={{ fontSize: '2.5rem' }}>
-              + නව සැපයුම්කරු
+              {tr('+ New Supplier', '+ නව සැපයුම්කරු')}
             </h2>
 
             <form onSubmit={handleSubmit}>
@@ -174,7 +175,7 @@ const CreateSupplier = () => {
 
                 {/* Code */}
                 <div className="col-md-6 mb-4">
-                  <label className="form-label fs-5 text-light">කේතය (Code)</label>
+                  <label className="form-label fs-5 text-light">{tr('Code', 'කේතය (Code)')}</label>
                   <input
                     type="text"
                     name="code"
@@ -188,7 +189,7 @@ const CreateSupplier = () => {
 
                 {/* Name */}
                 <div className="col-md-6 mb-4">
-                  <label className="form-label fs-5 text-light">නම (Name)</label>
+                  <label className="form-label fs-5 text-light">{tr('Name', 'නම (Name)')}</label>
                   <input
                     type="text"
                     name="name"
@@ -201,7 +202,7 @@ const CreateSupplier = () => {
 
                 {/* Telephone Number ✅ NEW FIELD */}
                 <div className="col-md-6 mb-4">
-                  <label className="form-label fs-5 text-light">දුරකථන අංකය (Telephone No)</label>
+                  <label className="form-label fs-5 text-light">{tr('Telephone No', 'දුරකථන අංකය (Telephone No)')}</label>
                   <input
                     type="text"
                     name="telephone_no"
@@ -214,7 +215,7 @@ const CreateSupplier = () => {
 
                 {/* Date of Birth */}
                 <div className="col-md-6 mb-4">
-                  <label className="form-label fs-5 text-light">උපන් දිනය (Date of Birth)</label>
+                  <label className="form-label fs-5 text-light">{tr('Date of Birth', 'උපන් දිනය (Date of Birth)')}</label>
                   <input
                     type="date"
                     name="dob"
@@ -227,7 +228,7 @@ const CreateSupplier = () => {
 
                 {/* Address */}
                 <div className="col-12 mb-4">
-                  <label className="form-label fs-5 text-light">ලිපිනය (Address)</label>
+                  <label className="form-label fs-5 text-light">{tr('Address', 'ලිපිනය (Address)')}</label>
                   <textarea
                     name="address"
                     value={formData.address}
@@ -240,7 +241,7 @@ const CreateSupplier = () => {
 
                 {/* File Uploads */}
                 <div className="col-md-4 mb-4">
-                  <label className="form-label text-light">ඡායාරූපය (Photo)</label>
+                  <label className="form-label text-light">{tr('Photo', 'ඡායාරූපය (Photo)')}</label>
                   <input type="file" name="profile_pic" onChange={handleFileChange} className="form-control" accept="image/*" />
                   {previews.profile_pic && (
                     <div style={previewBoxStyle}>

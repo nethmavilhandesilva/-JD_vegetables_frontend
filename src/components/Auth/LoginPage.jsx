@@ -3,6 +3,7 @@ import api from "../../api";
 import { SHOP_NAME, SHOP_PHONE, SHOP_PHONE_PRIMARY } from "../../config/shop";
 import "./LoginPage.css";
 import { APP_BASE } from "../../config/paths";
+import { tr, LanguageToggle } from '../../i18n/language';
 
 const LoginPage = () => {
   const [user_id, setUserId] = useState("");
@@ -86,44 +87,44 @@ const LoginPage = () => {
             <div className="lp-logo-badge" aria-hidden="true">🧺</div>
             <div>
               <h1 className="lp-shop-name">{SHOP_NAME}</h1>
-              <p className="lp-tagline">එළවළු හා පළතුරු තොග වෙළෙන්දෝ</p>
+              <p className="lp-tagline">{tr('Wholesale Vegetable & Fruit Traders', 'එළවළු හා පළතුරු තොග වෙළෙන්දෝ')}</p>
             </div>
           </div>
 
-          <p className="lp-headline">තොග කළමනාකරණ පද්ධතිය<br />Vegetable &amp; Fruit Stock System</p>
-          <p className="lp-sub">GRN, විකුණුම්, ගොවි ණය සහ දෛනික වාර්තා — සියල්ල එකම තැනකින්.</p>
+          <p className="lp-headline">{tr('Vegetable & Fruit Stock System', 'තොග කළමනාකරණ පද්ධතිය')}</p>
+          <p className="lp-sub">{tr('GRN, sales, farmer loans and daily reports — all in one place.', 'GRN, විකුණුම්, ගොවි ණය සහ දෛනික වාර්තා — සියල්ල එකම තැනකින්.')}</p>
 
           <div className="lp-stall" aria-hidden="true">
             <div className="lp-crate">
               <div className="lp-crate-items">🥕🥕🥕</div>
-              <div className="lp-crate-label">කැරට්</div>
+              <div className="lp-crate-label">{tr('Carrot', 'කැරට්')}</div>
             </div>
             <div className="lp-crate">
               <div className="lp-crate-items">🍅🍅🍅</div>
-              <div className="lp-crate-label">තක්කාලි</div>
+              <div className="lp-crate-label">{tr('Tomato', 'තක්කාලි')}</div>
             </div>
             <div className="lp-crate">
               <div className="lp-crate-items">🥬🥬🥬</div>
-              <div className="lp-crate-label">ගෝවා</div>
+              <div className="lp-crate-label">{tr('Cabbage', 'ගෝවා')}</div>
             </div>
             <div className="lp-crate">
               <div className="lp-crate-items">🍌🍌🍌</div>
-              <div className="lp-crate-label">කෙසෙල්</div>
+              <div className="lp-crate-label">{tr('Banana', 'කෙසෙල්')}</div>
             </div>
             <div className="lp-crate">
               <div className="lp-crate-items">🥔🥔🥔</div>
-              <div className="lp-crate-label">අර්තාපල්</div>
+              <div className="lp-crate-label">{tr('Potato', 'අර්තාපල්')}</div>
             </div>
             <div className="lp-crate">
               <div className="lp-crate-items">🍍🍍🍍</div>
-              <div className="lp-crate-label">අන්නාසි</div>
+              <div className="lp-crate-label">{tr('Pineapple', 'අන්නාසි')}</div>
             </div>
           </div>
 
           <div className="lp-stats">
-            <div className="lp-stat"><strong>📦</strong>තොග පාලනය</div>
-            <div className="lp-stat"><strong>⚖️</strong>බර හා මිල</div>
-            <div className="lp-stat"><strong>📊</strong>දෛනික වාර්තා</div>
+            <div className="lp-stat"><strong>📦</strong>{tr('Stock Control', 'තොග පාලනය')}</div>
+            <div className="lp-stat"><strong>⚖️</strong>{tr('Weight & Price', 'බර හා මිල')}</div>
+            <div className="lp-stat"><strong>📊</strong>{tr('Daily Reports', 'දෛනික වාර්තා')}</div>
           </div>
 
           <div className="lp-contact">
@@ -135,8 +136,9 @@ const LoginPage = () => {
         {/* Form side */}
         <div className="lp-form-side">
           <div className="lp-form-head">
-            <h2>පිවිසෙන්න</h2>
-            <p>Sign in to manage today&apos;s stock and sales</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}><LanguageToggle /></div>
+            <h2>{tr('Sign In', 'පිවිසෙන්න')}</h2>
+            <p>{tr("Sign in to manage today's stock and sales", 'අද තොග සහ විකුණුම් කළමනාකරණයට පිවිසෙන්න')}</p>
           </div>
 
           {error && (
@@ -148,7 +150,7 @@ const LoginPage = () => {
 
           <form onSubmit={handleLogin}>
             <div className="lp-field">
-              <label className="lp-label" htmlFor="lp-user">පරිශීලක නාමය / User ID</label>
+              <label className="lp-label" htmlFor="lp-user">{tr('User ID', 'පරිශීලක නාමය / User ID')}</label>
               <div className="lp-input-wrap">
                 <span className="lp-input-icon" aria-hidden="true">👤</span>
                 <input
@@ -166,7 +168,7 @@ const LoginPage = () => {
             </div>
 
             <div className="lp-field">
-              <label className="lp-label" htmlFor="lp-pass">මුරපදය / Password</label>
+              <label className="lp-label" htmlFor="lp-pass">{tr('Password', 'මුරපදය / Password')}</label>
               <div className="lp-input-wrap">
                 <span className="lp-input-icon" aria-hidden="true">🔒</span>
                 <input
@@ -191,7 +193,7 @@ const LoginPage = () => {
             </div>
 
             <div className="lp-field">
-              <label className="lp-label" htmlFor="lp-pass2">දෙවන මුරපදය / Second Password</label>
+              <label className="lp-label" htmlFor="lp-pass2">{tr('Second Password', 'දෙවන මුරපදය / Second Password')}</label>
               <div className="lp-input-wrap">
                 <span className="lp-input-icon" aria-hidden="true">🔐</span>
                 <input
@@ -221,7 +223,7 @@ const LoginPage = () => {
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                 />
-                <span>මතක තබා ගන්න</span>
+                <span>{tr('Remember me', 'මතක තබා ගන්න')}</span>
               </label>
               <a href={`${APP_BASE}/forgot-password`} className="lp-link">
                 Forgot password?
@@ -232,10 +234,10 @@ const LoginPage = () => {
               {isLoading ? (
                 <>
                   <span className="lp-spinner" aria-hidden="true"></span>
-                  Authenticating...
+                  {tr('Authenticating...', 'සත්‍යාපනය වෙමින්...')}
                 </>
               ) : (
-                "පිවිසෙන්න · Sign In →"
+                tr('Sign In →', 'පිවිසෙන්න · Sign In →')
               )}
             </button>
 

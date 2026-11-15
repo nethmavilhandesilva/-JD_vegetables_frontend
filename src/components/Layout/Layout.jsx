@@ -13,6 +13,7 @@ import DayProcessModal from '../Modals/DayProcessModal';
 import TodaysKuliyaModal from '../Kuliya/TodaysKuliyaModal';
 import { SHOP_NAME } from '../../config/shop';
 import { APP_BASE } from '../../config/paths';
+import { tr, LanguageToggle } from '../../i18n/language';
 
 const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintMode }) => {
     const location = useLocation();
@@ -191,23 +192,23 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
                             <div className="navbar-nav d-flex flex-row flex-wrap align-items-center gap-2 gap-lg-0">
                                 <div className="nav-item dropdown mx-1">
                                     <button className="btn btn-outline-light btn-sm dropdown-toggle" id="masterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i className="material-icons align-middle me-1">menu_book</i> ප්‍රධාන ගොනුව
+                                        <i className="material-icons align-middle me-1">menu_book</i> {tr('Master Files', 'ප්‍රධාන ගොනුව')}
                                     </button>
                                     <ul className="dropdown-menu dropdown-menu-dark" aria-labelledby="masterDropdown">
-                                        <li><Link to="/customers" className="dropdown-item"><i className="material-icons align-middle me-1">people</i> පාරිභෝගිකයින්</Link></li>
-                                        <li><Link to="/items" className="dropdown-item"><i className="material-icons align-middle me-1">inventory_2</i> භාණ්ඩ</Link></li>
-                                        <li><Link to="/suppliers" className="dropdown-item"><i className="material-icons align-middle me-1">local_shipping</i> සැපයුම්කරුවන්</Link></li>
-                                        <li><Link to="/commissions" className="dropdown-item"><i className="material-icons align-middle me-1">attach_money</i>කොමිස් මුදල්</Link></li>
+                                        <li><Link to="/customers" className="dropdown-item"><i className="material-icons align-middle me-1">people</i> {tr('Customers', 'පාරිභෝගිකයින්')}</Link></li>
+                                        <li><Link to="/items" className="dropdown-item"><i className="material-icons align-middle me-1">inventory_2</i> {tr('Items', 'භාණ්ඩ')}</Link></li>
+                                        <li><Link to="/suppliers" className="dropdown-item"><i className="material-icons align-middle me-1">local_shipping</i> {tr('Suppliers', 'සැපයුම්කරුවන්')}</Link></li>
+                                        <li><Link to="/commissions" className="dropdown-item"><i className="material-icons align-middle me-1">attach_money</i> {tr('Commissions', 'කොමිස් මුදල්')}</Link></li>
                                         <li><hr className="dropdown-divider" /></li>
                                         <li>
                                             <button type="button" className="dropdown-item text-warning" onClick={() => navigateTo('/customers-loans/report')}>
-                                                <i className="material-icons align-middle me-1 text-warning">account_balance</i> ණය වාර්තාව
+                                                <i className="material-icons align-middle me-1 text-warning">account_balance</i> {tr('Loan Report', 'ණය වාර්තාව')}
                                             </button>
                                         </li>
                                         <li><hr className="dropdown-divider" /></li>
                                         <li>
                                             <button type="button" className="dropdown-item text-success" onClick={openTodaysKuliyaModal}>
-                                                <i className="material-icons align-middle me-1 text-success">account_balance_wallet</i> අද කුලිය (Today's Kuliya)
+                                                <i className="material-icons align-middle me-1 text-success">account_balance_wallet</i> {tr("Today's Kuliya", 'අද කුලිය')}
                                             </button>
                                         </li>
                                     </ul>
@@ -215,9 +216,9 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
 
                                 {user?.role !== 'Admin' && (
                                     <>
-                                        <Link to="/customers-loans" className="btn btn-outline-success btn-sm mx-1" style={{ fontWeight: 'bold', color: '#fff' }}>ණය දීම/ගැනීම</Link>
-                                        <Link to="/supplierreport" className="btn btn-outline-success btn-sm mx-1" style={{ fontWeight: 'bold', color: '#fff' }}>සැපයුම්කරු බිල්පත්</Link>
-                                        <button type="button" className="btn btn-outline-success btn-sm mx-1" style={{ fontWeight: 'bold', color: '#fff' }} onClick={openDayProcessModal}>දින අවසාන ක්‍රියාවලිය</button>
+                                        <Link to="/customers-loans" className="btn btn-outline-success btn-sm mx-1" style={{ fontWeight: 'bold', color: '#fff' }}>{tr('Give / Take Loans', 'ණය දීම/ගැනීම')}</Link>
+                                        <Link to="/supplierreport" className="btn btn-outline-success btn-sm mx-1" style={{ fontWeight: 'bold', color: '#fff' }}>{tr('Supplier Bills', 'සැපයුම්කරු බිල්පත්')}</Link>
+                                        <button type="button" className="btn btn-outline-success btn-sm mx-1" style={{ fontWeight: 'bold', color: '#fff' }} onClick={openDayProcessModal}>{tr('Day End Process', 'දින අවසාන ක්‍රියාවලිය')}</button>
                                     </>
                                 )}
                             </div>
@@ -225,7 +226,7 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
                             {/* Print Mode and Bill Size Controls - Only show on Sales Entry page */}
                             {isSalesEntryPage && user?.role !== 'Admin' && (
                                 <div className="d-flex align-items-center me-3 ms-lg-4">
-                                    <label className="text-white me-2" style={{ fontSize: '0.9rem', whiteSpace: 'nowrap' }}>Print Mode:</label>
+                                    <label className="text-white me-2" style={{ fontSize: '0.9rem', whiteSpace: 'nowrap' }}>{tr('Print Mode:', 'මුද්‍රණ ආකාරය:')}</label>
                                     <select
                                         value={localPrintMode}
                                         onChange={handlePrintModeChange}
@@ -233,7 +234,7 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
                                         style={{ width: '100px', backgroundColor: '#006400', color: 'white', border: '1px solid #4a5568' }}
                                     >
                                         <option value="thermal">Thermal</option>
-                                        <option value="a4">A4 Paper</option>
+                                        <option value="a4">{tr('A4 Paper', 'A4 කඩදාසි')}</option>
                                     </select>
 
                                     {/* Only show Bill Size selector when in Thermal mode */}
@@ -245,7 +246,8 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
                         {user && (
                             <div className="d-flex align-items-center text-white py-2 py-lg-0">
                                 <span className="me-3 fw-bold" style={{ color: '#ff4444', fontSize: '1.1rem' }}>{settingValue}</span>
-                                <button onClick={handleLogout} className="btn btn-sm btn-outline-light" style={{ fontWeight: 'bold' }}>Logout</button>
+                                <LanguageToggle className="me-3" />
+                                <button onClick={handleLogout} className="btn btn-sm btn-outline-light" style={{ fontWeight: 'bold' }}>{tr('Logout', 'ඉවත් වන්න')}</button>
                             </div>
                         )}
                         </div>
@@ -269,7 +271,7 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
                     <div className="container-fluid d-flex flex-nowrap justify-content-start align-items-center">
                         <input
                             type="password"
-                            placeholder="Enter password"
+                            placeholder={tr('Enter password', 'මුරපදය')}
                             value={bottomPassword}
                             onChange={handleBottomPasswordChange}
                             className="form-control form-control-sm me-3"
@@ -282,49 +284,49 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
                             onClick={openItemReportModal}
                             style={navTextBtn}
                         >
-                            එළවළු
+                            {tr('Vegetables', 'එළවළු')}
                         </button>
                         <button
                             type="button"
                             onClick={openWeightReportModal}
                             style={navTextBtn}
                         >
-                            බර මත
+                            {tr('By Weight', 'බර මත')}
                         </button>
                         <button
                             type="button"
                             onClick={openSalesAdjustmentReportModal}
                             style={navTextBtn}
                         >
-                            වෙනස් කිරීම
+                            {tr('Adjustments', 'වෙනස් කිරීම')}
                         </button>
                         <button
                             type="button"
                             onClick={() => window.location.href = `${BASE_URL}/financial-report`}
                             style={navTextBtn}
                         >
-                            ආදායම් / වියදම්
+                            {tr('Income / Expenses', 'ආදායම් / වියදම්')}
                         </button>
                         <button
                             type="button"
                             onClick={openSalesReportModal}
                             style={navTextBtn}
                         >
-                            විකුණුම් වාර්තාව
+                            {tr('Sales Report', 'විකුණුම් වාර්තාව')}
                         </button>
                         <button
                             type="button"
                             onClick={handleProfitReportClick}
                             style={navTextBtn}
                         >
-                            සැපයුම් ලාභ
+                            {tr('Supplier Profit', 'සැපයුම් ලාභ')}
                         </button>
                         <button
                             type="button"
                             onClick={handleSupplierReportClick}
                             style={navTextBtn}
                         >
-                            සැපයුම් වාර්තාව
+                            {tr('Supplier Report', 'සැපයුම් වාර්තාව')}
                         </button>
                     </div>
                 </nav>

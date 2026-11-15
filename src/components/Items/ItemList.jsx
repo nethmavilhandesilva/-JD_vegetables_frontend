@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api';
 import { Link, useNavigate } from 'react-router-dom';
 import { APP_BASE } from '../../config/paths';
+import { tr } from '../../i18n/language';
 
 const ItemList = () => {
     const [items, setItems] = useState([]);
@@ -62,7 +63,7 @@ const ItemList = () => {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('ඔබට මෙම භාණ්ඩය මකන්න අවශ්‍යද?')) {
+        if (window.confirm(tr('Do you want to delete this item?', 'ඔබට මෙම භාණ්ඩය මකන්න අවශ්‍යද?'))) {
             try {
                 await api.delete(`/items/${id}`);
                 setMessage('Item deleted successfully!');
@@ -99,29 +100,29 @@ const ItemList = () => {
             >
                 <Link className="navbar-brand fw-bold d-flex align-items-center mb-4 text-white text-decoration-none" to="/sales">
                     <i className="material-icons me-2">warehouse</i>
-                    මුල් පිටුව
+                    {tr('Home', 'මුල් පිටුව')}
                 </Link>
 
-                <h6 className="text-uppercase text-light opacity-50 small fw-bold mb-3">ප්‍රධාන දත්ත</h6>
+                <h6 className="text-uppercase text-light opacity-50 small fw-bold mb-3">{tr('Master Data', 'ප්‍රධාන දත්ත')}</h6>
                 <ul className="list-unstyled flex-grow-1">
                     <li className="mb-2">
                         <Link to="/customers" className="nav-link text-white d-flex align-items-center p-2 rounded">
-                            <i className="material-icons me-2">people</i> ගනුදෙනුකරුවන්
+                            <i className="material-icons me-2">people</i> {tr('Customers', 'ගනුදෙනුකරුවන්')}
                         </Link>
                     </li>
                     <li className="mb-2">
                         <Link to="/items" className="nav-link text-white d-flex align-items-center p-2 rounded" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
-                            <i className="material-icons me-2">inventory_2</i> අයිතමය
+                            <i className="material-icons me-2">inventory_2</i> {tr('Items', 'අයිතමය')}
                         </Link>
                     </li>
                     <li className="mb-2">
                         <Link to="/suppliers" className="nav-link text-white d-flex align-items-center p-2 rounded">
-                            <i className="material-icons me-2">local_shipping</i> සැපයුම්කරුවන්
+                            <i className="material-icons me-2">local_shipping</i> {tr('Suppliers', 'සැපයුම්කරුවන්')}
                         </Link>
                     </li>
                     <li className="mb-2">
                         <Link to="/commissions" className="nav-link text-white d-flex align-items-center p-2 rounded">
-                            <i className="material-icons me-2">attach_money</i> කොමිෂන්
+                            <i className="material-icons me-2">attach_money</i> {tr('Commission', 'කොමිෂන්')}
                         </Link>
                     </li>
                 </ul>
@@ -131,7 +132,7 @@ const ItemList = () => {
                         onClick={handleLogout}
                         className="btn btn-outline-light w-100 fw-bold d-flex align-items-center justify-content-center"
                     >
-                        <i className="material-icons me-2">logout</i> ඉවත් වන්න
+                        <i className="material-icons me-2">logout</i> {tr('Logout', 'ඉවත් වන්න')}
                     </button>
                 </div>
             </div>
@@ -146,11 +147,11 @@ const ItemList = () => {
                         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                     }}
                 >
-                    <h2 className="mb-4 text-center text-white">භාණ්ඩ ලැයිස්තුව (Items List)</h2>
+                    <h2 className="mb-4 text-center text-white">{tr('Items List', 'භාණ්ඩ ලැයිස්තුව (Items List)')}</h2>
 
                     <div className="d-flex justify-content-between mb-3">
                         <Link to="/items/create" className="btn btn-success fw-bold">
-                            + නව භාණ්ඩයක් එකතු කරන්න
+                            {tr('+ Add New Item', '+ නව භාණ්ඩයක් එකතු කරන්න')}
                         </Link>
 
                         {/* 🔹 SEARCH INPUT (AUTO CAPS) */}
@@ -159,7 +160,7 @@ const ItemList = () => {
                             value={searchTerm}
                             onChange={handleSearch}
                             className="form-control form-control-sm"
-                            placeholder="අංකය හෝ වර්ගය අනුව සොයන්න"
+                            placeholder={tr('Search by number or type', 'අංකය හෝ වර්ගය අනුව සොයන්න')}
                             style={{
                                 maxWidth: '300px',
                                 textTransform: 'uppercase'
@@ -177,17 +178,17 @@ const ItemList = () => {
                         <table className="table table-bordered table-striped table-hover align-middle bg-white">
                             <thead>
                                 <tr style={{ backgroundColor: '#e6f0ff', color: '#003366', textAlign: 'center' }}>
-                                    <th>අංකය</th>
-                                    <th>වර්ගය</th>
-                                    <th>මල්ලක අගය</th>
-                                    <th>මල්ලක කුලිය</th>
-                                    <th>මෙහෙයුම්</th>
+                                    <th>{tr('No', 'අංකය')}</th>
+                                    <th>{tr('Type', 'වර්ගය')}</th>
+                                    <th>{tr('Bag Value', 'මල්ලක අගය')}</th>
+                                    <th>{tr('Bag Kuliya', 'මල්ලක කුලිය')}</th>
+                                    <th>{tr('Actions', 'මෙහෙයුම්')}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {items.length === 0 ? (
                                     <tr>
-                                        <td colSpan="5" className="text-center text-muted">භාණ්ඩ නොමැත</td>
+                                        <td colSpan="5" className="text-center text-muted">{tr('No items', 'භාණ්ඩ නොමැත')}</td>
                                     </tr>
                                 ) : (
                                     items.map((item) => (
@@ -198,10 +199,10 @@ const ItemList = () => {
                                             <td>Rs. {Number(item.pack_due).toFixed(2)}</td>
                                             <td>
                                                 <Link to={`/items/edit/${item.id}`} className="btn btn-primary btn-sm me-1">
-                                                    යාවත්කාලීන
+                                                    {tr('Update', 'යාවත්කාලීන')}
                                                 </Link>
                                                 <button onClick={() => handleDelete(item.id)} className="btn btn-danger btn-sm">
-                                                    මකන්න
+                                                    {tr('Delete', 'මකන්න')}
                                                 </button>
                                             </td>
                                         </tr>

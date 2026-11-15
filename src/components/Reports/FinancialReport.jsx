@@ -3,6 +3,7 @@ import api from '../../api';
 import Layout from '../Layout/Layout';
 import './FinancialReport.css';
 import { SHOP_NAME } from '../../config/shop';
+import { tr } from '../../i18n/language';
 
 const FinancialReport = () => {
     const [loanRows, setLoanRows] = useState([]);
@@ -158,26 +159,26 @@ const FinancialReport = () => {
                         marginBottom: '20px'
                     }}>
                         <h2 style={{ margin: 0, fontWeight: '700' }}>{financialData.companyName}</h2>
-                        <h4 style={{ margin: 0 }}>📄 විකුණුම් වාර්තාව</h4>
+                        <h4 style={{ margin: 0 }}>{tr('📄 Sales Report', '📄 විකුණුම් වාර්තාව')}</h4>
                         <div>
                             <span>{financialData.reportDate}</span>
-                            <button className="btn btn-light btn-sm ms-2" onClick={handlePrint}>🖨️ මුද්‍රණය</button>
+                            <button className="btn btn-light btn-sm ms-2" onClick={handlePrint}>{tr('🖨️ Print', '🖨️ මුද්‍රණය')}</button>
                         </div>
                     </div>
 
                     {/* Summary: sales, commission profit, farmers' payout */}
                     <div className="fr-summary">
                         <div className="fr-summary-row">
-                            <span className="fr-summary-label">මුළු වෙළදාමේ එකතුව :</span>
+                            <span className="fr-summary-label">{tr('Total Sales :', 'මුළු වෙළදාමේ එකතුව :')}</span>
                             <span className="fr-summary-value">{formatNumber(salesTotal)}</span>
                         </div>
                         <div className="fr-summary-row">
-                            <span className="fr-summary-label">ලොරි වලින් ලද ආදායම :</span>
+                            <span className="fr-summary-label">{tr('Income from Lorries :', 'ලොරි වලින් ලද ආදායම :')}</span>
                             <span className="fr-summary-value">{formatNumber(0)}</span>
                             <span className="fr-summary-value">{formatNumber(0)}</span>
-                            <span className="fr-summary-label ms-auto">ගොවියන්ගෙන් ලද ආදායම :</span>
-                            <span className="fr-summary-value" title="ගනුදෙ මිල - සැපයුම් මිල (ලාභය)">{formatNumber(commissionProfit)}</span>
-                            <span className="fr-summary-value" title="කොමිස් අඩු කළ සැපයුම්කරු එකතුව">{formatNumber(supplierTotal)}</span>
+                            <span className="fr-summary-label ms-auto">{tr('Income from Farmers :', 'ගොවියන්ගෙන් ලද ආදායම :')}</span>
+                            <span className="fr-summary-value" title={tr('Customer price - Supplier price (Profit)', 'ගනුදෙ මිල - සැපයුම් මිල (ලාභය)')}>{formatNumber(commissionProfit)}</span>
+                            <span className="fr-summary-value" title={tr('Supplier total after commission', 'කොමිස් අඩු කළ සැපයුම්කරු එකතුව')}>{formatNumber(supplierTotal)}</span>
                         </div>
                     </div>
 
@@ -185,34 +186,34 @@ const FinancialReport = () => {
                     <table className="fr-ledger">
                         <thead>
                             <tr>
-                                <th>විස්තරය</th>
-                                <th>ලැබීම</th>
-                                <th>ගෙවීම</th>
+                                <th>{tr('Description', 'විස්තරය')}</th>
+                                <th>{tr('Received', 'ලැබීම')}</th>
+                                <th>{tr('Paid', 'ගෙවීම')}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr className="fr-row-a">
-                                <td>මුළු වෙළදාමේ එකතුව</td>
+                                <td>{tr('Total Sales', 'මුළු වෙළදාමේ එකතුව')}</td>
                                 <td className="text-end">{formatNumber(salesTotal)}</td>
                                 <td></td>
                             </tr>
                             <tr className="fr-row-b">
-                                <td>කොමිස් අඩු කර ලොරි වලට ගෙවූ මුදල</td>
+                                <td>{tr('Paid to Lorries (after commission)', 'කොමිස් අඩු කර ලොරි වලට ගෙවූ මුදල')}</td>
                                 <td></td>
                                 <td className="text-end">{formatNumber(0)}</td>
                             </tr>
                             <tr className="fr-row-a">
-                                <td>කොමිස් අඩු කර ගොවියන්ට ගෙවූ මුදල</td>
+                                <td>{tr('Paid to Farmers (after commission)', 'කොමිස් අඩු කර ගොවියන්ට ගෙවූ මුදල')}</td>
                                 <td></td>
                                 <td className="text-end">{formatNumber(supplierTotal)}</td>
                             </tr>
                             <tr className="fr-row-b">
-                                <td>බෙදා හරිනු ලැබූ මුළු කුලී එකතුව</td>
+                                <td>{tr('Total Kuliya Distributed', 'බෙදා හරිනු ලැබූ මුළු කුලී එකතුව')}</td>
                                 <td></td>
                                 <td className="text-end">{formatNumber(kuliyaTotal)}</td>
                             </tr>
                             <tr className="fr-row-a">
-                                <td>දවස ආරම්භයේ ලාච්චුවේ තිබූ මුදල</td>
+                                <td>{tr('Opening Drawer Cash', 'දවස ආරම්භයේ ලාච්චුවේ තිබූ මුදල')}</td>
                                 <td className="text-end">
                                     <input
                                         type="number"
@@ -226,7 +227,7 @@ const FinancialReport = () => {
                                 <td></td>
                             </tr>
                             <tr className="fr-row-b">
-                                <td>වෙනත් ලැබීම්/ආදායම</td>
+                                <td>{tr('Other Receipts / Income', 'වෙනත් ලැබීම්/ආදායම')}</td>
                                 <td className="text-end">{formatNumber(0)}</td>
                                 <td></td>
                             </tr>
@@ -238,14 +239,14 @@ const FinancialReport = () => {
                         <table>
                             <thead>
                                 <tr>
-                                    <th>විස්තරය</th>
-                                    <th>ලැබීම</th>
-                                    <th>ගෙවීම</th>
+                                    <th>{tr('Description', 'විස්තරය')}</th>
+                                    <th>{tr('Received', 'ලැබීම')}</th>
+                                    <th>{tr('Paid', 'ගෙවීම')}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loanRows.length === 0 ? (
-                                    <tr><td colSpan="3" className="text-center">ණය වාර්තා නැත</td></tr>
+                                    <tr><td colSpan="3" className="text-center">{tr('No loan records', 'ණය වාර්තා නැත')}</td></tr>
                                 ) : loanRows.map((row, index) => (
                                     <tr key={index}>
                                         <td>{row.description}</td>
@@ -260,19 +261,19 @@ const FinancialReport = () => {
                     {/* Cash in hand */}
                     <div className="fr-summary">
                         <div className="fr-summary-row">
-                            <span className="fr-summary-label">වෙළදාමේ එකතුව - ලාච්චුවේ තිබූ මුදල :</span>
+                            <span className="fr-summary-label">{tr('Sales Total - Opening Drawer Cash :', 'වෙළදාමේ එකතුව - ලාච්චුවේ තිබූ මුදල :')}</span>
                             <span className="fr-summary-value">
                                 {formatNumber(salesTotal)} - {formatNumber(appliedOpeningCash)} = {formatNumber(salesAfterOpeningCash)}
                             </span>
                         </div>
                         <div className="fr-summary-row">
-                            <span className="fr-summary-label">ඇතැති මුදල</span>
+                            <span className="fr-summary-label">{tr('Cash in Hand', 'ඇතැති මුදල')}</span>
                             <span className="fr-summary-value">{formatNumber(cashInHand)}</span>
-                            <span className="fr-summary-label ms-auto">කුලී මුදල අඩු නොකර ඇතැති මුදල :</span>
+                            <span className="fr-summary-label ms-auto">{tr('Cash in Hand (before Kuliya) :', 'කුලී මුදල අඩු නොකර ඇතැති මුදල :')}</span>
                             <span className="fr-summary-value">{formatNumber(cashInHand + kuliyaTotal)}</span>
                         </div>
                         <div className="fr-summary-row">
-                            <span className="fr-summary-label">මුළු කොමිස් ආදායම</span>
+                            <span className="fr-summary-label">{tr('Total Commission Income', 'මුළු කොමිස් ආදායම')}</span>
                             <span className="fr-summary-value">{formatNumber(commissionProfit)}</span>
                         </div>
                     </div>
@@ -282,7 +283,7 @@ const FinancialReport = () => {
                         <table className="table table-bordered table-striped">
                             <tfoot>
                                 <tr className="fw-bold table-warning">
-                                    <td>මුළු හානිය</td>
+                                    <td>{tr('Total Damage', 'මුළු හානිය')}</td>
                                     <td colSpan="2" className="text-end text-danger">
                                         {formatNumber(financialData.totalDamages)}
                                     </td>
@@ -293,11 +294,11 @@ const FinancialReport = () => {
                                     <td colSpan="3">
                                         <div className="d-flex flex-wrap gap-3">
                                             <div className="loan-box">
-                                                <div>අද දින පරණ නය</div>
+                                                <div>{tr('Today\'s Old Loans', 'අද දින පරණ නය')}</div>
                                                 <div className="fw-bold">{formatNumber(financialData.totalOldLoans)}</div>
                                             </div>
                                             <div className="loan-box">
-                                                <div>අද දින නය ගැනීම</div>
+                                                <div>{tr('Today\'s Loans Taken', 'අද දින නය ගැනීම')}</div>
                                                 <div className="fw-bold">{formatNumber(Math.abs(financialData.totaltodayLoans))}</div>
                                             </div>
                                         </div>
@@ -309,11 +310,11 @@ const FinancialReport = () => {
                                     <td colSpan="3">
                                         <div className="d-flex flex-wrap gap-3">
                                             <div className="stat-box">
-                                                <div>මුළු විකිණුම් ප්‍රමාණය</div>
+                                                <div>{tr('Total Sales Quantity', 'මුළු විකිණුම් ප්‍රමාණය')}</div>
                                                 <div className="fw-bold">{formatNumber(financialData.totalQtySold)}</div>
                                             </div>
                                             <div className="stat-box">
-                                                <div>මුළු මුද්‍රිත බිල්පත්</div>
+                                                <div>{tr('Total Printed Bills', 'මුළු මුද්‍රිත බිල්පත්')}</div>
                                                 <div className="fw-bold">{financialData.totalBillsPrinted}</div>
                                             </div>
                                         </div>
@@ -325,14 +326,14 @@ const FinancialReport = () => {
                                     <td colSpan="3">
                                         <div className="d-flex flex-wrap gap-3">
                                             <div className="bill-time-box">
-                                                <div>පළමු බිල් මුද්‍රණ කාලය</div>
+                                                <div>{tr('First Bill Print Time', 'පළමු බිල් මුද්‍රණ කාලය')}</div>
                                                 <div className="fw-bold">{financialData.firstBillTime}</div>
-                                                <small>බිල් අංකය: {financialData.firstBillNo}</small>
+                                                <small>{tr('Bill No:', 'බිල් අංකය:')} {financialData.firstBillNo}</small>
                                             </div>
                                             <div className="bill-time-box">
-                                                <div>අවසන් බිල් මුද්‍රණ කාලය</div>
+                                                <div>{tr('Last Bill Print Time', 'අවසන් බිල් මුද්‍රණ කාලය')}</div>
                                                 <div className="fw-bold">{financialData.lastBillTime}</div>
-                                                <small>බිල් අංකය: {financialData.lastBillNo}</small>
+                                                <small>{tr('Bill No:', 'බිල් අංකය:')} {financialData.lastBillNo}</small>
                                             </div>
                                         </div>
                                     </td>

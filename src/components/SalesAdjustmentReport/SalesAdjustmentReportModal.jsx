@@ -1,3 +1,4 @@
+import { tr } from '../../i18n/language';
 import React, { useState, useEffect } from 'react';
 import SalesAdjustmentReportView from './SalesAdjustmentReportView';
 import api from "../../api";  // <<<<<< IMPORT AXIOS API WRAPPER
@@ -91,7 +92,7 @@ const SalesAdjustmentReportModal = ({ isOpen, onClose }) => {
         <div className="modal-dialog modal-xl">
           <div className="modal-content">
             <div className="modal-header">
-              <h5 className="modal-title">වෙනස්කිරීම් වාර්තාව</h5>
+              <h5 className="modal-title">{tr('Adjustments Report', 'වෙනස්කිරීම් වාර්තාව')}</h5>
               <button type="button" className="btn-close" onClick={handleCloseReport}></button>
             </div>
             <div className="modal-body">
@@ -113,7 +114,7 @@ const SalesAdjustmentReportModal = ({ isOpen, onClose }) => {
       <div className="modal-dialog">
         <div className="modal-content" style={{ backgroundColor: '#99ff99' }}>
           <div className="modal-header">
-            <h5 className="modal-title">📦 වෙනස් කිරීම</h5>
+            <h5 className="modal-title">{tr('📦 Adjustments', '📦 වෙනස් කිරීම')}</h5>
             <button type="button" className="btn-close" onClick={onClose} disabled={loading}></button>
           </div>
 
@@ -122,12 +123,12 @@ const SalesAdjustmentReportModal = ({ isOpen, onClose }) => {
 
               <div className="mb-3">
                 <label className="form-label" style={{ fontWeight: 'bold', color: 'black' }}>
-                  පස්වර්ඩ් ඇතුල් කරන්න
+                  {tr('Enter password', 'පස්වර්ඩ් ඇතුල් කරන්න')}
                 </label>
                 <input
                   type="password"
                   className="form-control"
-                  placeholder="පස්වර්ඩ්"
+                  placeholder={tr('Password', 'පස්වර්ඩ්')}
                   value={password}
                   onChange={handlePasswordChange}
                   disabled={loading}
@@ -138,7 +139,7 @@ const SalesAdjustmentReportModal = ({ isOpen, onClose }) => {
                 <>
                   <div className="mb-3">
                     <label className="form-label" style={{ fontWeight: 'bold', color: 'black' }}>
-                      ආරම්භ දිනය
+                      {tr('Start Date', 'ආරම්භ දිනය')}
                     </label>
                     <input
                       type="date"
@@ -151,7 +152,7 @@ const SalesAdjustmentReportModal = ({ isOpen, onClose }) => {
 
                   <div className="mb-3">
                     <label className="form-label" style={{ fontWeight: 'bold', color: 'black' }}>
-                      අවසන් දිනය
+                      {tr('End Date', 'අවසන් දිනය')}
                     </label>
                     <input
                       type="date"
@@ -174,7 +175,7 @@ const SalesAdjustmentReportModal = ({ isOpen, onClose }) => {
                     Generating Report...
                   </>
                 ) : (
-                  'වාර්තාව ලබාගන්න'
+                  tr('Get Report', 'වාර්තාව ලබාගන්න')
                 )}
               </button>
             </div>

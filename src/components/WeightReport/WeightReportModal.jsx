@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import WeightReportView from './WeightReportView';
 import api from "../../api";
+import { tr } from '../../i18n/language';
 
 const WeightReportModal = ({ isOpen, onClose }) => {
   const [filters, setFilters] = useState({
@@ -78,7 +79,7 @@ const WeightReportModal = ({ isOpen, onClose }) => {
           
           <div className="modal-header" style={{ backgroundColor: showReport ? '#f8f9fa' : '#99ff99' }}>
             <h5 className="modal-title fw-bold">
-              {showReport ? '📊 Weight Based Report' : '⚖️ බර අනුව වාර්තාව'}
+              {showReport ? '📊 Weight Based Report' : tr('⚖️ Weight Based Report', '⚖️ බර අනුව වාර්තාව')}
             </h5>
             <button type="button" className="btn-close" onClick={onClose} disabled={loading}></button>
           </div>
@@ -89,7 +90,7 @@ const WeightReportModal = ({ isOpen, onClose }) => {
             ) : (
               <form onSubmit={handleSubmit}>
                 <div className="mb-4">
-                  <label className="form-label fw-bold">මුරපදය ඇතුලත් කරන්න (Password)</label>
+                  <label className="form-label fw-bold">{tr('Password', 'මුරපදය ඇතුලත් කරන්න (Password)')}</label>
                   <input
                     type="password"
                     className="form-control form-control-lg"
@@ -103,7 +104,7 @@ const WeightReportModal = ({ isOpen, onClose }) => {
                 {/* TEMPORARILY: Always show date range without password requirement */}
                 <div className="row g-3 mb-4">
                   <div className="col-md-6">
-                    <label className="form-label fw-bold">ආරම්භ දිනය</label>
+                    <label className="form-label fw-bold">{tr('Start Date', 'ආරම්භ දිනය')}</label>
                     <input
                       type="date"
                       className="form-control"
@@ -112,7 +113,7 @@ const WeightReportModal = ({ isOpen, onClose }) => {
                     />
                   </div>
                   <div className="col-md-6">
-                    <label className="form-label fw-bold">අවසන් දිනය</label>
+                    <label className="form-label fw-bold">{tr('End Date', 'අවසන් දිනය')}</label>
                     <input
                       type="date"
                       className="form-control"
@@ -131,7 +132,7 @@ const WeightReportModal = ({ isOpen, onClose }) => {
                   {loading ? (
                     <><span className="spinner-border spinner-border-sm me-2"></span>Loading...</>
                   ) : (
-                    "වාර්තාව ලබාගන්න"
+                    tr('Get Report', 'වාර්තාව ලබාගන්න')
                   )}
                 </button>
               </form>

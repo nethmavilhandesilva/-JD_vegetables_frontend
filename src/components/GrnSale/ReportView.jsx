@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { SHOP_NAME } from '../../config/shop';
+import { tr } from '../../i18n/language';
 
 const GrnSaleReportView = ({ reportData, onClose }) => {
     const [isClient, setIsClient] = useState(false);
@@ -84,30 +85,30 @@ const GrnSaleReportView = ({ reportData, onClose }) => {
             <body>
                 <div class="header">
                     <h2>${SHOP_NAME}</h2>
-                    <h3>📄 GRN කේතය අනුව විකුණුම් වාර්තාව</h3>
+                    <h3>${tr('📄 Sales Report by GRN Code', '📄 GRN කේතය අනුව විකුණුම් වාර්තාව')}</h3>
                     <p>Report Date: ${new Date().toLocaleDateString('en-CA')}</p>
                 </div>
 
                 <div class="meta-info">
-                    <strong>තෝරාගත් GRN කේතය:</strong> ${selectedGrnCode || 'N/A'}
+                    <strong>${tr('Selected GRN Code:', 'තෝරාගත් GRN කේතය:')}</strong> ${selectedGrnCode || 'N/A'}
                     ${(filters.start_date || filters.end_date) ? `
                         <br>
-                        <strong>දිනයන්:</strong>
+                        <strong>${tr('Dates:', 'දිනයන්:')}</strong>
                         ${filters.start_date ? ` ${filters.start_date}` : ''}
-                        ${filters.end_date ? ` සිට ${filters.end_date} දක්වා` : ''}
+                        ${filters.end_date ? ` ${tr('to', 'සිට')} ${filters.end_date}${tr('', ' දක්වා')}` : ''}
                     ` : ''}
                 </div>
 
                 <table>
                     <thead>
                         <tr>
-                            <th>🗓️ දිනය</th>
-                            <th>බිල් අංකය</th>
-                            <th>ගෙණුම්කරු කේතය</th>
-                            <th>බර (kg)</th>
-                            <th>මිල (1kg)</th>
-                            <th>පැක්</th>
-                            <th>මුළු මුදල (Rs.)</th>
+                            <th>🗓️ ${tr('Date', 'දිනය')}</th>
+                            <th>${tr('Bill No', 'බිල් අංකය')}</th>
+                            <th>${tr('Customer Code', 'ගෙණුම්කරු කේතය')}</th>
+                            <th>${tr('Weight (kg)', 'බර (kg)')}</th>
+                            <th>${tr('Price (1kg)', 'මිල (1kg)')}</th>
+                            <th>${tr('Packs', 'පැක්')}</th>
+                            <th>${tr('Total Amount (Rs.)', 'මුළු මුදල (Rs.)')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -123,14 +124,14 @@ const GrnSaleReportView = ({ reportData, onClose }) => {
                             </tr>
                         `).join('') : `
                             <tr>
-                                <td colspan="7" class="no-data">🚫 වාර්තා නැත</td>
+                                <td colspan="7" class="no-data">${tr('🚫 No records', '🚫 වාර්තා නැත')}</td>
                             </tr>
                         `}
                     </tbody>
                     ${sales.length > 0 ? `
                         <tfoot>
                             <tr class="totals-row">
-                                <td colspan="3" class="text-end">මුළු එකතුව:</td>
+                                <td colspan="3" class="text-end">${tr('Grand Total:', 'මුළු එකතුව:')}</td>
                                 <td class="text-end">${Number(totals.total_weight).toFixed(2)}</td>
                                 <td></td>
                                 <td class="text-end">${Number(totals.total_packs).toFixed(0)}</td>
@@ -157,7 +158,7 @@ const GrnSaleReportView = ({ reportData, onClose }) => {
         const excelData = [];
         
         // Add headers
-        const headers = ['දිනය', 'බිල් අංකය', 'ගෙණුම්කරු කේතය', 'බර (kg)', 'මිල (1kg)', 'පැක්', 'මුළු මුදල (Rs.)'];
+        const headers = [tr('Date', 'දිනය'), tr('Bill No', 'බිල් අංකය'), tr('Customer Code', 'ගෙණුම්කරු කේතය'), tr('Weight (kg)', 'බර (kg)'), tr('Price (1kg)', 'මිල (1kg)'), tr('Packs', 'පැක්'), tr('Total Amount (Rs.)', 'මුළු මුදල (Rs.)')];
         excelData.push(headers);
         
         // Add data rows
@@ -176,7 +177,7 @@ const GrnSaleReportView = ({ reportData, onClose }) => {
         // Add totals row
         if (sales.length > 0) {
             excelData.push([
-                'මුළු එකතුව:',
+                tr('Grand Total:', 'මුළු එකතුව:'),
                 '',
                 '',
                 Number(totals.total_weight).toFixed(2),
@@ -221,7 +222,7 @@ const GrnSaleReportView = ({ reportData, onClose }) => {
             {/* Report Header */}
             <div className="report-title-bar">
                 <h2 className="company-name">{SHOP_NAME}</h2>
-                <h4 className="fw-bold text-white">📄 GRN කේතය අනුව විකුණුම් වාර්තාව</h4>
+                <h4 className="fw-bold text-white">{tr('📄 Sales Report by GRN Code', '📄 GRN කේතය අනුව විකුණුම් වාර්තාව')}</h4>
                 <span className="right-info">
                     {new Date().toLocaleDateString('en-CA')}
                 </span>
@@ -229,12 +230,12 @@ const GrnSaleReportView = ({ reportData, onClose }) => {
 
             {/* Filters Summary */}
             <div className="mb-3 text-white">
-                <strong>තෝරාගත් GRN කේතය:</strong> {selectedGrnCode}
+                <strong>{tr('Selected GRN Code:', 'තෝරාගත් GRN කේතය:')}</strong> {selectedGrnCode}
                 {(filters.start_date || filters.end_date) && (
                     <span className="ms-3">
-                        <strong>දිනයන්:</strong> 
+                        <strong>{tr('Dates:', 'දිනයන්:')}</strong> 
                         {filters.start_date && ` ${filters.start_date}`}
-                        {filters.end_date && ` සිට ${filters.end_date} දක්වා`}
+                        {filters.end_date && ` ${tr('to', 'සිට')} ${filters.end_date}${tr('', ' දක්වා')}`}
                     </span>
                 )}
             </div>
@@ -243,13 +244,13 @@ const GrnSaleReportView = ({ reportData, onClose }) => {
             <table className="table table-bordered table-striped table-sm text-center align-middle">
                 <thead className="table-dark">
                     <tr>
-                        <th>🗓️ දිනය</th>
-                        <th>බිල් අංකය</th>
-                        <th>ගෙණුම්කරු කේතය</th>
-                        <th>බර (kg)</th>
-                        <th>මිල (1kg)</th>
-                        <th>පැක්</th>
-                        <th>මුළු මුදල (Rs.)</th>
+                        <th>🗓️ {tr('Date', 'දිනය')}</th>
+                        <th>{tr('Bill No', 'බිල් අංකය')}</th>
+                        <th>{tr('Customer Code', 'ගෙණුම්කරු කේතය')}</th>
+                        <th>{tr('Weight (kg)', 'බර (kg)')}</th>
+                        <th>{tr('Price (1kg)', 'මිල (1kg)')}</th>
+                        <th>{tr('Packs', 'පැක්')}</th>
+                        <th>{tr('Total Amount (Rs.)', 'මුළු මුදල (Rs.)')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -267,7 +268,7 @@ const GrnSaleReportView = ({ reportData, onClose }) => {
                         ))
                     ) : (
                         <tr>
-                            <td colSpan="7" className="text-center text-muted py-3">🚫 වාර්තා නැත</td>
+                            <td colSpan="7" className="text-center text-muted py-3">{tr('🚫 No records', '🚫 වාර්තා නැත')}</td>
                         </tr>
                     )}
                 </tbody>
@@ -276,7 +277,7 @@ const GrnSaleReportView = ({ reportData, onClose }) => {
                 {sales.length > 0 && (
                     <tfoot>
                         <tr className="table-secondary fw-bold">
-                            <td colSpan="3" className="text-end">මුළු එකතුව:</td>
+                            <td colSpan="3" className="text-end">{tr('Grand Total:', 'මුළු එකතුව:')}</td>
                             <td className="text-end">{Number(totals.total_weight).toFixed(2)}</td>
                             <td></td>
                             <td className="text-end">{Number(totals.total_packs).toFixed(0)}</td>

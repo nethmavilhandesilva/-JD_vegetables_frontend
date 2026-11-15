@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Select from 'react-select';
 import api from '../../api';
 import Sidebar from '../Sidebar';
+import { tr } from '../../i18n/language';
 
 const getInitialFormState = () => ({
     loan_id: '',
@@ -56,9 +57,9 @@ const FarmerLoanManager = () => {
         if (code) {
             try {
                 const { data } = await api.get(`/farmer-loans/balance/${code}`);
-                setTotalLoanDisplay(`ශේෂය (Old - Today): ${data.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+                setTotalLoanDisplay(`${tr('Balance', 'ශේෂය')} (Old - Today): ${data.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
             } catch (error) {
-                setTotalLoanDisplay('ශේෂය ලබාගත නොහැක');
+                setTotalLoanDisplay(tr('Balance unavailable', 'ශේෂය ලබාගත නොහැක'));
             }
         } else {
             setTotalLoanDisplay('');
@@ -101,9 +102,9 @@ const FarmerLoanManager = () => {
             setForm(getInitialFormState());
             fetchLoans();
             fetchFarmerBalance(form.supplier_code);
-            alert('දත්ත සාර්ථකව ඇතුලත් කරන ලදී!');
+            alert(tr('Data saved successfully!', 'දත්ත සාර්ථකව ඇතුලත් කරන ලදී!'));
         } catch (error) {
-            alert('ඇතුලත් කිරීම අසාර්ථකයි');
+            alert(tr('Saving failed', 'ඇතුලත් කිරීම අසාර්ථකයි'));
         } finally {
             setLoading(false);
         }
@@ -123,7 +124,7 @@ const FarmerLoanManager = () => {
                 `}</style>
 
                 <div className="custom-card">
-                    <h3 className="mb-4">ගොවි ණය කළමනාකරණය (Farmer Loan)</h3>
+                    <h3 className="mb-4">{tr('Farmer Loan Management', 'ගොවි ණය කළමනාකරණය (Farmer Loan)')}</h3>
 
                     <form onSubmit={handleSubmit} className="p-3 border rounded bg-dark">
                         <div className="row gy-3">
@@ -132,19 +133,19 @@ const FarmerLoanManager = () => {
                                     <label key={type} className="me-4">
                                         <input type="radio" name="loan_type" value={type} checked={form.loan_type === type} onChange={handleInputChange} />
                                         {' '}
-                                        {type === 'old' && 'ගොවි ණයට එකතු කිරීම (Old)'}
-                                        {type === 'today' && 'ගොවියන්ගේ ණය ගෙවීම (Today)'}
+                                        {type === 'old' && tr('Add to farmer loan (Old)', 'ගොවි ණයට එකතු කිරීම (Old)')}
+                                        {type === 'today' && tr('Farmer loan payment (Today)', 'ගොවියන්ගේ ණය ගෙවීම (Today)')}
                                     </label>
                                 ))}
                             </div>
 
                             <div className="col-md-4">
-                                <label>ගොවියා තෝරන්න (Farmer)</label>
+                                <label>{tr('Select Farmer', 'ගොවියා තෝරන්න (Farmer)')}</label>
                                 <Select
                                     options={farmers}
                                     onChange={(opt) => setForm({...form, supplier_code: opt ? opt.value : null})}
                                     value={farmers.find(f => f.value === form.supplier_code)}
-                                    placeholder="සොයන්න..."
+                                    placeholder={tr('Search...', 'සොයන්න...')}
                                     className="text-dark"
                                 />
                                 {/* Changed: Wrapped in form.supplier_code check */}
@@ -156,17 +157,17 @@ const FarmerLoanManager = () => {
                             </div>
 
                             <div className="col-md-2">
-                                <label>මුදල</label>
+                                <label>{tr('Amount', 'මුදල')}</label>
                                 <input type="number" step="0.01" name="amount" className="form-control form-control-sm" value={form.amount} onChange={handleInputChange} required />
                             </div>
 
                             <div className="col-md-4">
-                                <label>විස්තරය</label>
+                                <label>{tr('Description', 'විස්තරය')}</label>
                                 <input type="text" name="description" className="form-control form-control-sm" value={form.description} onChange={handleInputChange} />
                             </div>
 
                             <div className="col-md-12">
-                                <label className="d-block">ගෙවීමේ ක්‍රමය:</label>
+                                <label className="d-block">{tr('Payment Method:', 'ගෙවීමේ ක්‍රමය:')}</label>
                                 {['cash', 'cheque'].map(way => (
                                     <label key={way} className="me-3">
                                         <input type="radio" name="settling_way" value={way} checked={form.settling_way === way} onChange={handleInputChange} />
@@ -178,35 +179,35 @@ const FarmerLoanManager = () => {
                             {isCheque && (
                                 <div className="col-md-12 row g-2 bg-secondary p-2 rounded ms-0">
                                     <div className="col-md-4">
-                                        <label>චෙක් අංකය</label>
+                                        <label>{tr('Cheque No', 'චෙක් අංකය')}</label>
                                         <input type="text" name="cheque_no" className="form-control form-control-sm" value={form.cheque_no} onChange={handleInputChange}/>
                                     </div>
                                     <div className="col-md-4">
-                                        <label>බැංකුව</label>
+                                        <label>{tr('Bank', 'බැංකුව')}</label>
                                         <input type="text" name="bank" className="form-control form-control-sm" value={form.bank} onChange={handleInputChange}/>
                                     </div>
                                     <div className="col-md-4">
-                                        <label>දිනය</label>
+                                        <label>{tr('Date', 'දිනය')}</label>
                                         <input type="date" name="cheque_date" className="form-control form-control-sm" value={form.cheque_date} onChange={handleInputChange}/>
                                     </div>
                                 </div>
                             )}
 
                             <div className="col-12">
-                                <button type="submit" className="btn btn-warning btn-sm fw-bold">දත්ත ඇතුලත් කරන්න</button>
+                                <button type="submit" className="btn btn-warning btn-sm fw-bold">{tr('Save Data', 'දත්ත ඇතුලත් කරන්න')}</button>
                             </div>
                         </div>
                     </form>
 
-                    <h4 className="mt-5">අද දින වාර්තාව</h4>
+                    <h4 className="mt-5">{tr('Today\'s Records', 'අද දින වාර්තාව')}</h4>
                     <div className="table-responsive">
                         <table className="table table-bordered table-sm mt-2 bg-white text-dark">
                             <thead className="table-secondary">
                                 <tr>
-                                    <th>ගොවියා</th>
-                                    <th>වර්ගය</th>
-                                    <th>විස්තරය</th>
-                                    <th className="text-end">මුදල</th>
+                                    <th>{tr('Farmer', 'ගොවියා')}</th>
+                                    <th>{tr('Type', 'වර්ගය')}</th>
+                                    <th>{tr('Description', 'විස්තරය')}</th>
+                                    <th className="text-end">{tr('Amount', 'මුදල')}</th>
                                 </tr>
                             </thead>
                             <tbody>

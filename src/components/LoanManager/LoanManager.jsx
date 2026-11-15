@@ -3,6 +3,7 @@ import CreatableSelect from 'react-select/creatable';
 import api from '../../api';
 import Sidebar from '../Sidebar';
 import { APP_BASE } from '../../config/paths';
+import { tr } from '../../i18n/language';
 
 const formatCustomerOptions = (customers) => customers.map(c => ({
     value: c.id,
@@ -20,7 +21,7 @@ const formatSupplierOptions = (suppliers) => suppliers.map(s => ({
 const expenseOptions = [
     { value: 'petro', label: 'Petrol' },
     { value: 'diesel', label: 'Diesel' },
-    { value: 'other', label: 'වෙනත් වියදම්' }
+    { value: 'other', label: tr('Other expenses', 'වෙනත් වියදම්') }
 ];
 
 const getInitialFormState = () => ({
@@ -358,7 +359,7 @@ const LoanManager = () => {
                 `}</style>
 
                 <div className="custom-card">
-                    <h3 className="mb-4">ණය කළමනාකරණ පුවරුව</h3>
+                    <h3 className="mb-4">{tr('Loan Management Board', 'ණය කළමනාකරණ පුවරුව')}</h3>
 
                     <form ref={formRef} onSubmit={e => handleSubmit(e, isReturns)} onKeyDown={handleFormKeyDown} className="p-3 border border-2 border-dark rounded bg-custom-dark">
                         <div className="row gy-2">
@@ -367,12 +368,12 @@ const LoanManager = () => {
                                     <label key={type} className="me-3">
                                         <input type="radio" name="loan_type" value={type} checked={form.loan_type === type} onChange={handleLoanTypeChange} />
                                         {' '}
-                                        {type === 'old' && 'වෙළෙන්දාගේ ලාද පරණ නය'}
-                                        {type === 'today' && 'වෙළෙන්දාගේ අද දින නය ගැනීම'}
-                                        {type === 'farmer_old' && 'ගොවියා ලාද පරණ නය'}
-                                        {type === 'farmer_today' && 'ගොවියා අද දින නය ගැනීම'}
-                                        {type === 'ingoing' && 'වෙනත් ලාභීම/ආදායම්'}
-                                        {type === 'outgoing' && 'වි‍යදම්'}
+                                        {type === 'old' && tr('Trader\'s old loan', 'වෙළෙන්දාගේ ලාද පරණ නය')}
+                                        {type === 'today' && tr('Trader\'s loan taken today', 'වෙළෙන්දාගේ අද දින නය ගැනීම')}
+                                        {type === 'farmer_old' && tr('Farmer\'s old loan', 'ගොවියා ලාද පරණ නය')}
+                                        {type === 'farmer_today' && tr('Farmer\'s loan taken today', 'ගොවියා අද දින නය ගැනීම')}
+                                        {type === 'ingoing' && tr('Other income', 'වෙනත් ලාභීම/ආදායම්')}
+                                        {type === 'outgoing' && tr('Expenses', 'වි‍යදම්')}
                                         {type === 'returns' && 'Returns'}
                                     </label>
                                 ))}
@@ -380,7 +381,7 @@ const LoanManager = () => {
 
                             {isSettlingWayVisible && (
                                 <div className="col-md-4">
-                                    <label className="text-form-label d-block"><strong>ගෙවීමේ ක්‍රමය:</strong></label>
+                                    <label className="text-form-label d-block"><strong>{tr('Payment Method:', 'ගෙවීමේ ක්‍රමය:')}</strong></label>
                                     {['cash', 'cheque'].map(way => (
                                         <label key={way} className="me-3">
                                             <input type="radio" name="settling_way" value={way} checked={form.settling_way === way} onChange={handleInputChange} />
@@ -392,7 +393,7 @@ const LoanManager = () => {
 
                             {isCustomerRelated && (
                                 <div className="col-md-4">
-                                    <label className="text-form-label">ගෙණුම්කරු</label>
+                                    <label className="text-form-label">{tr('Customer', 'ගෙණුම්කරු')}</label>
                                     <CreatableSelect
                                         options={customerOptions}
                                         onChange={handleCustomerChange}
@@ -400,7 +401,7 @@ const LoanManager = () => {
                                             customerOptions.find(opt => opt.value === form.customer_id) ||
                                             (form.customer_short_name ? { value: form.customer_short_name, label: form.customer_short_name } : null)
                                         }
-                                        formatCreateLabel={(inputValue) => `නව ගෙණුම්කරු: ${inputValue.toUpperCase()}`}
+                                        formatCreateLabel={(inputValue) => `${tr('New customer', 'නව ගෙණුම්කරු')}: ${inputValue.toUpperCase()}`}
                                         filterOption={customFilter}
                                         placeholder="-- Select Customer --"
                                         isClearable
@@ -415,7 +416,7 @@ const LoanManager = () => {
 
                             {isFarmerRelated && (
                                 <div className="col-md-4">
-                                    <label className="text-form-label">ගොවියා</label>
+                                    <label className="text-form-label">{tr('Farmer', 'ගොවියා')}</label>
                                     <CreatableSelect
                                         options={supplierOptions}
                                         onChange={handleFarmerChange}
@@ -423,7 +424,7 @@ const LoanManager = () => {
                                             supplierOptions.find(opt => opt.value === form.supplier_code) ||
                                             (form.supplier_code ? { value: form.supplier_code, label: form.supplier_code } : null)
                                         }
-                                        formatCreateLabel={(inputValue) => `නව ගොවියා: ${inputValue.toUpperCase()}`}
+                                        formatCreateLabel={(inputValue) => `${tr('New farmer', 'නව ගොවියා')}: ${inputValue.toUpperCase()}`}
                                         filterOption={customFilter}
                                         placeholder="-- Select Farmer --"
                                         isClearable
@@ -438,7 +439,7 @@ const LoanManager = () => {
 
                             {isLoanRelated && !isCheque && (
                                 <div className="col-md-3">
-                                    <label className="text-form-label">බිල් අං</label>
+                                    <label className="text-form-label">{tr('Bill No', 'බිල් අං')}</label>
                                     <input type="text" className="form-control form-control-sm" name="bill_no" value={form.bill_no} onChange={handleInputChange} />
                                 </div>
                             )}
@@ -446,12 +447,12 @@ const LoanManager = () => {
                             {!isReturns && (
                                 <div className="row gx-2 mt-2">
                                     <div className={`col-md-${isIncomeOrExpense ? 4 : 2}`}>
-                                        <label className="text-form-label">මුදල</label>
+                                        <label className="text-form-label">{tr('Amount', 'මුදල')}</label>
                                         <input type="number" step="0.01" className="form-control form-control-sm" name="amount" value={form.amount} onChange={handleInputChange} required />
                                         {isCustomerRelated && <span className="text-danger small fw-bold">{creditLimitMessage}</span>}
                                     </div>
                                     <div className={`col-md-${isIncomeOrExpense ? 8 : 5}`}>
-                                        <label className="text-form-label">විස්තරය</label>
+                                        <label className="text-form-label">{tr('Description', 'විස්තරය')}</label>
                                         <CreatableSelect
                                             options={isExpense ? expenseOptions : []}
                                             onChange={handleDescriptionChange}
@@ -480,18 +481,18 @@ const LoanManager = () => {
                             {isSettlingWayVisible && isCheque && (
                                 <div className="col-md-6 mt-2">
                                     <div className="border rounded p-2 bg-light text-dark">
-                                        <h6 className="text-success fw-bold">චෙක් විස්තර</h6>
+                                        <h6 className="text-success fw-bold">{tr('Cheque Details', 'චෙක් විස්තර')}</h6>
                                         <div className="row g-2">
                                             <div className="col-4">
-                                                <label className="text-dark small">දිනය</label>
+                                                <label className="text-dark small">{tr('Date', 'දිනය')}</label>
                                                 <input type="date" className="form-control form-control-sm" name="cheque_date" value={form.cheque_date} onChange={handleInputChange} />
                                             </div>
                                             <div className="col-4">
-                                                <label className="text-dark small">අංකය</label>
+                                                <label className="text-dark small">{tr('Number', 'අංකය')}</label>
                                                 <input type="text" className="form-control form-control-sm" name="cheque_no" value={form.cheque_no} onChange={handleInputChange} />
                                             </div>
                                             <div className="col-4">
-                                                <label className="text-dark small">බැංකුව</label>
+                                                <label className="text-dark small">{tr('Bank', 'බැංකුව')}</label>
                                                 <input type="text" className="form-control form-control-sm" name="bank" value={form.bank} onChange={handleInputChange} />
                                             </div>
                                         </div>
@@ -510,17 +511,17 @@ const LoanManager = () => {
                         </div>
                     </form>
 
-                    <h4 className="mt-4">අදේණු ණය වාර්තා</h4>
+                    <h4 className="mt-4">{tr('Today\'s Loan Records', 'අදේණු ණය වාර්තා')}</h4>
                     <div className="table-responsive">
                         <table className="table table-bordered table-sm mt-2 bg-white text-dark">
                             <thead>
                                 <tr className="text-center">
-                                    <th>විස්තරය</th>
-                                    <th>මුදල</th>
-                                    <th>විලා</th>
-                                    <th>වර්ගය</th>
-                                    <th>බිල්පත් අං</th>
-                                    <th>ක්‍රියා</th>
+                                    <th>{tr('Description', 'විස්තරය')}</th>
+                                    <th>{tr('Amount', 'මුදල')}</th>
+                                    <th>{tr('Time', 'විලා')}</th>
+                                    <th>{tr('Type', 'වර්ගය')}</th>
+                                    <th>{tr('Bill No', 'බිල්පත් අං')}</th>
+                                    <th>{tr('Actions', 'ක්‍රියා')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -533,18 +534,18 @@ const LoanManager = () => {
                                             <td>{loan.loan_type}</td>
                                             <td className="text-center">{loan.bill_no || '-'}</td>
                                             <td className="text-center">
-                                                <button className="btn btn-xs btn-warning me-1" onClick={() => handleEdit(loan)}>සංස්කරණය</button>
-                                                <button className="btn btn-xs btn-danger" onClick={() => handleDelete(loan.id)}>මකන්න</button>
+                                                <button className="btn btn-xs btn-warning me-1" onClick={() => handleEdit(loan)}>{tr('Edit', 'සංස්කරණය')}</button>
+                                                <button className="btn btn-xs btn-danger" onClick={() => handleDelete(loan.id)}>{tr('Delete', 'මකන්න')}</button>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
-                                    <tr><td colSpan="6" className="text-center">අද සඳහා ණය වාර්තා කිසිවක් සොයාගත නොහැක</td></tr>
+                                    <tr><td colSpan="6" className="text-center">{tr('No loan records found for today', 'අද සඳහා ණය වාර්තා කිසිවක් සොයාගත නොහැක')}</td></tr>
                                 )}
                             </tbody>
                         </table>
                         <div className="d-flex flex-wrap gap-2 mt-3">
-                            <a href={`${APP_BASE}/loan-report`} className="btn btn-sm btn-dark">ණය වාර්තාව</a>
+                            <a href={`${APP_BASE}/loan-report`} className="btn btn-sm btn-dark">{tr('Loan Report', 'ණය වාර්තාව')}</a>
                         </div>
                     </div>
                 </div>

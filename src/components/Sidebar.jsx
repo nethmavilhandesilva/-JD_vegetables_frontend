@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { APP_BASE } from '../config/paths';
+import { tr } from '../i18n/language';
 
 const Sidebar = () => {
     const location = useLocation();
@@ -54,7 +55,7 @@ const Sidebar = () => {
             textAlign: 'left'
         }}
     >
-        ප්‍රධාන දත්ත
+        {tr('Master Data', 'ප්‍රධාන දත්ත')}
     </h6>
 
     {/* Dashboard */}
@@ -67,7 +68,7 @@ const Sidebar = () => {
         }}
     >
         <i className="material-icons me-2">warehouse</i>
-       මුල් පිටුව
+       {tr('Home', 'මුල් පිටුව')}
     </Link>
 
     {/* Navigation */}
@@ -81,7 +82,7 @@ const Sidebar = () => {
             }}
         >
             <i className="material-icons me-2">people</i>
-           ගනුදෙනුකරුවන්
+           {tr('Customers', 'ගනුදෙනුකරුවන්')}
         </Link>
 
         <Link
@@ -93,7 +94,7 @@ const Sidebar = () => {
             }}
         >
             <i className="material-icons me-2">inventory_2</i>
-           අයිතමය
+           {tr('Items', 'අයිතමය')}
         </Link>
 
         <Link
@@ -105,7 +106,7 @@ const Sidebar = () => {
             }}
         >
             <i className="material-icons me-2">local_shipping</i>
-            සැපයුම්කරුවන්
+            {tr('Suppliers', 'සැපයුම්කරුවන්')}
         </Link>
 
         <Link
@@ -117,7 +118,7 @@ const Sidebar = () => {
             }}
         >
             <i className="material-icons me-2">attach_money</i>
-            කොමිෂන්
+            {tr('Commission', 'කොමිෂන්')}
         </Link>
     </nav>
 
@@ -133,7 +134,7 @@ const Sidebar = () => {
             }}
         >
             <i className="material-icons me-2">logout</i>
-           ඉවත් වන්න
+           {tr('Logout', 'ඉවත් වන්න')}
         </button>
     </div>
 </div>

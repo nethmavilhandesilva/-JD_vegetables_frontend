@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import api from '../../api';
 import { SHOP_NAME } from '../../config/shop';
+import { tr } from '../../i18n/language';
 
 const SalesAdjustmentReportView = ({ reportData, onClose }) => {
     const printRef = useRef();
@@ -75,7 +76,7 @@ const SalesAdjustmentReportView = ({ reportData, onClose }) => {
         win.document.write(`
             <html>
             <head>
-                <title>වෙනස්කිරීම් වාර්තාව</title>
+                <title>${tr('Adjustments Report', 'වෙනස්කිරීම් වාර්තාව')}</title>
                 <style>
                     body { font-family: sans-serif; font-size: 12px; }
                     table { width:100%; border-collapse: collapse; }
@@ -100,8 +101,8 @@ const SalesAdjustmentReportView = ({ reportData, onClose }) => {
     const handleExportExcel = () => {
         const excelData = [];
         excelData.push([
-            'විකුණුම්කරු', 'වර්ගය', 'බර', 'මිල', 'මලු', 'මුළු මුදල', 
-            'බිල්පත් අංකය', 'පාරිභෝගික කේතය', 'වර්ගය (type)', 'දිනය සහ වේලාව'
+            tr('Seller', 'විකුණුම්කරු'), tr('Type', 'වර්ගය'), tr('Weight', 'බර'), tr('Price', 'මිල'), tr('Bags', 'මලු'), tr('Total Amount', 'මුළු මුදල'), 
+            tr('Bill No', 'බිල්පත් අංකය'), tr('Customer Code', 'පාරිභෝගික කේතය'), tr('Type (type)', 'වර්ගය (type)'), tr('Date & Time', 'දිනය සහ වේලාව')
         ]);
 
         if (entries.data && entries.data.length > 0) {
@@ -144,19 +145,19 @@ const SalesAdjustmentReportView = ({ reportData, onClose }) => {
                 boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
             }}>
                 <h2 style={{ fontWeight: '700', margin: 0 }}>{companyName}</h2>
-                <h3 style={{ margin: 0 }}>📦 වෙනස්කිරීම් වාර්තාව</h3>
+                <h3 style={{ margin: 0 }}>{tr('📦 Adjustments Report', '📦 වෙනස්කිරීම් වාර්තාව')}</h3>
                 <p style={{ fontSize: '0.9rem', margin: 0 }}>{reportDate}</p>
             </div>
 
             {/* Filters */}
             {(filters.code || filters.start_date || filters.end_date) && (
                 <div className="meta-info" style={{ marginBottom:'15px', fontSize:'0.95rem' }}>
-                    {filters.code && <span><strong>කේතය:</strong> {filters.code}</span>}
+                    {filters.code && <span><strong>{tr('Code:', 'කේතය:')}</strong> {filters.code}</span>}
                     {(filters.start_date || filters.end_date) && (
                         <span className="ms-3">
-                            <strong>දිනයන්:</strong>
+                            <strong>{tr('Dates:', 'දිනයන්:')}</strong>
                             {filters.start_date && ` ${filters.start_date}`}
-                            {filters.end_date && ` සිට ${filters.end_date} දක්වා`}
+                            {filters.end_date && ` ${tr('to', 'සිට')} ${filters.end_date}${tr('', ' දක්වා')}`}
                         </span>
                     )}
                 </div>
@@ -187,16 +188,16 @@ const SalesAdjustmentReportView = ({ reportData, onClose }) => {
                 <table className="table table-bordered table-striped table-sm text-center align-middle">
                     <thead className="table-dark">
                         <tr>
-                            <th>විකුණුම්කරු</th>
-                            <th>වර්ගය</th>
-                            <th>බර</th>
-                            <th>මිල</th>
-                            <th>මලු</th>
-                            <th>මුළු මුදල</th>
-                            <th>බිල්පත් අංකය</th>
-                            <th>පාරිභෝගික කේතය</th>
-                            <th>වර්ගය (type)</th>
-                            <th>දිනය සහ වේලාව</th>
+                            <th>{tr('Seller', 'විකුණුම්කරු')}</th>
+                            <th>{tr('Type', 'වර්ගය')}</th>
+                            <th>{tr('Weight', 'බර')}</th>
+                            <th>{tr('Price', 'මිල')}</th>
+                            <th>{tr('Bags', 'මලු')}</th>
+                            <th>{tr('Total Amount', 'මුළු මුදල')}</th>
+                            <th>{tr('Bill No', 'බිල්පත් අංකය')}</th>
+                            <th>{tr('Customer Code', 'පාරිභෝගික කේතය')}</th>
+                            <th>{tr('Type (type)', 'වර්ගය (type)')}</th>
+                            <th>{tr('Date & Time', 'දිනය සහ වේලාව')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -217,7 +218,7 @@ const SalesAdjustmentReportView = ({ reportData, onClose }) => {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="10" className="text-center">සටහන් කිසිවක් සොයාගෙන නොමැත</td>
+                                <td colSpan="10" className="text-center">{tr('No records found', 'සටහන් කිසිවක් සොයාගෙන නොමැත')}</td>
                             </tr>
                         )}
                     </tbody>

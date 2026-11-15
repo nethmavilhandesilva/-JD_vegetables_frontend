@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import api from "../../api";
 import { useNavigate } from 'react-router-dom';
 import { STORAGE_URL } from '../../config/paths';
+import { tr } from '../../i18n/language';
 
 const SupplierReport = () => {
     const navigate = useNavigate();
@@ -67,7 +68,7 @@ const SupplierReport = () => {
     // --- Report Action ---
     const handleOpenFarmerReport = async () => {
         if (!selectedFarmerForReport) {
-            alert("කරුණාකර කේතයක් තෝරන්න");
+            alert(tr('Please select a code', 'කරුණාකර කේතයක් තෝරන්න'));
             return;
         }
         try {
@@ -76,7 +77,7 @@ const SupplierReport = () => {
                 setFullReportData(res.data);
                 setIsFarmerModalOpen(false);
             }
-        } catch (e) { alert("දත්ත ලබාගැනීම අසාර්ථක විය."); }
+        } catch (e) { alert(tr('Failed to fetch data.', 'දත්ත ලබාගැනීම අසාර්ථක විය.')); }
     };
 
     // --- Right Click/Delete ---
@@ -88,7 +89,7 @@ const SupplierReport = () => {
     const handleDeleteRecord = async () => {
         const loan = contextMenu.target;
         if (!loan) return;
-        if (window.confirm("මකා දැමීමට ඔබට විශ්වාසද?")) {
+        if (window.confirm(tr('Are you sure you want to delete?', 'මකා දැමීමට ඔබට විශ්වාසද?'))) {
             try {
                 await api.post('/suppliers/delete-loan-record', { code: loan.supplier_code, bill_no: loan.supplier_bill_no });
                 fetchLoanSummary(); fetchSummary();
@@ -133,21 +134,21 @@ const SupplierReport = () => {
             <div style={modernModalOverlay}>
                 <div style={modernSelectionCard}>
                     <div style={modalHeaderDecoration}></div>
-                    <h2 style={{ color: '#1a2a6c', margin: '20px 0 10px 0' }}>සැපයුම්කරු වාර්තාව</h2>
-                    <p style={{ color: '#777', fontSize: '0.9rem', marginBottom: '25px' }}>විස්තරාත්මක වාර්තාව බැලීම සඳහා ගොවි කේතය තෝරන්න</p>
+                    <h2 style={{ color: '#1a2a6c', margin: '20px 0 10px 0' }}>{tr('Supplier Report', 'සැපයුම්කරු වාර්තාව')}</h2>
+                    <p style={{ color: '#777', fontSize: '0.9rem', marginBottom: '25px' }}>{tr('Select a farmer code to view the detailed report', 'විස්තරාත්මක වාර්තාව බැලීම සඳහා ගොවි කේතය තෝරන්න')}</p>
                     
                     <select 
                         style={modernSelectInput} 
                         value={selectedFarmerForReport} 
                         onChange={(e) => setSelectedFarmerForReport(e.target.value)}
                     >
-                        <option value="">සැපයුම්කරු කේතය තෝරන්න...</option>
+                        <option value="">{tr('Select supplier code...', 'සැපයුම්කරු කේතය තෝරන්න...')}</option>
                         {allSuppliers.map(s => <option key={s.id} value={s.code}>{s.code} - {s.name}</option>)}
                     </select>
 
                     <div style={{ display: 'flex', gap: '15px', marginTop: '30px' }}>
-                        <button onClick={handleOpenFarmerReport} style={modernSubmitBtn}>වාර්තාව බලන්න</button>
-                        <button onClick={() => setIsFarmerModalOpen(false)} style={modernCancelBtn}>අවලංගු කරන්න</button>
+                        <button onClick={handleOpenFarmerReport} style={modernSubmitBtn}>{tr('View Report', 'වාර්තාව බලන්න')}</button>
+                        <button onClick={() => setIsFarmerModalOpen(false)} style={modernCancelBtn}>{tr('Cancel', 'අවලංගු කරන්න')}</button>
                     </div>
                 </div>
             </div>
@@ -180,16 +181,16 @@ const SupplierReport = () => {
                     {/* Stats Cards */}
                     <div style={statsGrid}>
                         <div style={{ ...statCard, borderLeft: '6px solid #4e73df' }}>
-                            <small>ලිපිනය</small>
+                            <small>{tr('Address', 'ලිපිනය')}</small>
                             <p>{profile.address}</p>
                         </div>
                         <div style={{ ...statCard, borderLeft: '6px solid #1cc88a' }}>
-                            <small>දුරකථන අංකය</small>
+                            <small>{tr('Phone Number', 'දුරකථන අංකය')}</small>
                             <p>{profile.telephone_no}</p>
                         </div>
                         <div style={{ ...statCard, borderLeft: '6px solid #f6c23e' }}>
-                            <small>පවතින අත්තිකාරම්</small>
-                            <h2 style={{ margin: 0, color: '#f6c23e' }}>රු. {formatDecimal(profile.advance_amount)}</h2>
+                            <small>{tr('Current Advance', 'පවතින අත්තිකාරම්')}</small>
+                            <h2 style={{ margin: 0, color: '#f6c23e' }}>{tr('Rs.', 'රු.')} {formatDecimal(profile.advance_amount)}</h2>
                         </div>
                     </div>
 
@@ -197,11 +198,11 @@ const SupplierReport = () => {
                     <div style={dashboardMainGrid}>
                         {/* Sales Section */}
                         <div style={dashboardCard}>
-                            <div style={cardHeader}>📦 විකුණුම් ඉතිහාසය (Sales)</div>
+                            <div style={cardHeader}>{tr('📦 Sales History', '📦 විකුණුම් ඉතිහාසය (Sales)')}</div>
                             <div style={cardBody}>
                                 <table style={modernTable}>
                                     <thead>
-                                        <tr><th>දිනය</th><th>අයිතමය</th><th>බර (kg)</th><th>අගය (රු.)</th></tr>
+                                        <tr><th>{tr('Date', 'දිනය')}</th><th>{tr('Item', 'අයිතමය')}</th><th>{tr('Weight (kg)', 'බර (kg)')}</th><th>{tr('Value (Rs.)', 'අගය (රු.)')}</th></tr>
                                     </thead>
                                     <tbody>
                                         {sales.map(s => (
@@ -219,11 +220,11 @@ const SupplierReport = () => {
 
                         {/* Payments Section */}
                         <div style={dashboardCard}>
-                            <div style={cardHeader}>💳 ගෙවීම් සහ ණය (Payments)</div>
+                            <div style={cardHeader}>{tr('💳 Payments & Loans', '💳 ගෙවීම් සහ ණය (Payments)')}</div>
                             <div style={cardBody}>
                                 <table style={modernTable}>
                                     <thead>
-                                        <tr><th>බිල් අං</th><th>ගෙවූ (රු.)</th><th>ඉතිරි (රු.)</th><th>වර්ගය</th></tr>
+                                        <tr><th>{tr('Bill No', 'බිල් අං')}</th><th>{tr('Paid (Rs.)', 'ගෙවූ (රු.)')}</th><th>{tr('Remaining (Rs.)', 'ඉතිරි (රු.)')}</th><th>{tr('Type', 'වර්ගය')}</th></tr>
                                     </thead>
                                     <tbody>
                                         {loans.map(l => (
@@ -255,17 +256,17 @@ const SupplierReport = () => {
             )}
 
             <nav className="sr-nav" style={navBarStyle}>
-                <h1 style={{ color: 'white', fontSize: '1.5rem', margin: 0 }}>සැපයුම්කරු වාර්තාව</h1>
+                <h1 style={{ color: 'white', fontSize: '1.5rem', margin: 0 }}>{tr('Supplier Report', 'සැපයුම්කරු වාර්තාව')}</h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     <button 
                         style={farmerReportNavBtn} 
                         onClick={() => setIsFarmerModalOpen(true)}
                     >
-                        📊 ගොවි වාර්තාව
+                        {tr('📊 Farmer Report', '📊 ගොවි වාර්තාව')}
                     </button>
-                    <button style={navBtnPink} onClick={() => navigate('/supplier-loan-report')}>ගොවි ණය</button>
-                    <button style={navBtnCyan} onClick={() => setBillSize(billSize === '3mm' ? '4mm' : '3mm')}>බිල්පත: {billSize}</button>
-                    <button style={navBtnGreen} onClick={goToSalesEntry}>මුල් පිටුව</button>
+                    <button style={navBtnPink} onClick={() => navigate('/supplier-loan-report')}>{tr('Farmer Loans', 'ගොවි ණය')}</button>
+                    <button style={navBtnCyan} onClick={() => setBillSize(billSize === '3mm' ? '4mm' : '3mm')}>{tr('Bill:', 'බිල්පත:')} {billSize}</button>
+                    <button style={navBtnGreen} onClick={goToSalesEntry}>{tr('Home', 'මුල් පිටුව')}</button>
                 </div>
             </nav>
 
@@ -273,8 +274,8 @@ const SupplierReport = () => {
                 <div className="sr-sections" style={sectionsContainerStyle}>
                     <div className="sr-side" style={printedContainerStyle}>
                         <div className="sr-side-section" style={printedSectionStyle}>
-                            <h2 style={sectionHeader}>මුද්‍රණය කළ</h2>
-                            <input type="text" placeholder="🔍 සෙවීම..." value={printedSearchTerm} onChange={(e) => setPrintedSearchTerm(e.target.value)} style={searchBarStyle} />
+                            <h2 style={sectionHeader}>{tr('Printed', 'මුද්‍රණය කළ')}</h2>
+                            <input type="text" placeholder={tr('🔍 Search...', '🔍 සෙවීම...')} value={printedSearchTerm} onChange={(e) => setPrintedSearchTerm(e.target.value)} style={searchBarStyle} />
                             <div style={listContainerStyle}>
                                 {filteredPrintedItems.map((item, i) => (
                                     <button key={i} onClick={() => handlePrintedBillClick(item.supplier_code, item.supplier_bill_no)} style={printedBtn}>{item.supplier_code}-{item.supplier_bill_no}</button>
@@ -286,19 +287,19 @@ const SupplierReport = () => {
                     <div className="sr-center" style={centerPanelContainerStyle}>
                         <div style={mainDetailsPanel}>
                             <div style={headerStyle}>
-                                <h2 style={{ color: 'white' }}>බිල්පත් විස්තර: {selectedBillNo || '...'}</h2>
+                                <h2 style={{ color: 'white' }}>{tr('Bill Details:', 'බිල්පත් විස්තර:')} {selectedBillNo || '...'}</h2>
                                 {profilePic && <img src={`${STORAGE_URL}/${profilePic}`} style={profilePicStyle} alt="S" />}
                             </div>
                             <table style={dataTable}>
-                                <thead><tr style={{ backgroundColor: '#4e73df', color: 'white' }}><th>බිල්</th><th>ගනුදෙ</th><th>අයිතමය</th><th>බර</th><th>එකතුව</th></tr></thead>
+                                <thead><tr style={{ backgroundColor: '#4e73df', color: 'white' }}><th>{tr('Bill', 'බිල්')}</th><th>{tr('Customer', 'ගනුදෙ')}</th><th>{tr('Item', 'අයිතමය')}</th><th>{tr('Weight', 'බර')}</th><th>{tr('Total', 'එකතුව')}</th></tr></thead>
                                 {supplierDetails.length > 0 ? (
                                     <tbody>{supplierDetails.map((r, i) => <tr key={i} style={getRowStyle(i)}><td>{r.bill_no}</td><td>{r.customer_code}</td><td>{r.item_name}</td><td>{r.weight}</td><td>{r.SupplierTotal}</td></tr>)}</tbody>
                                 ) : (<tbody><tr><td colSpan="5" style={{ textAlign: 'center', padding: '20px', color: '#888' }}>Select a record to view details</td></tr></tbody>)}
                             </table>
                             {selectedLoanRecord && (
                                 <div style={loanSummaryBox}>
-                                    <div><span style={{ fontSize: '0.8rem', opacity: 0.8 }}>ගෙවූ මුදල</span><h3 style={{ margin: 0, color: '#1cc88a' }}>රු. {formatDecimal(selectedLoanRecord.loan_amount)}</h3></div>
-                                    <div><span style={{ fontSize: '0.8rem', opacity: 0.8 }}>ඉතිරි ශේෂය</span><h3 style={{ margin: 0, color: '#e74a3b' }}>රු. {formatDecimal(selectedLoanRecord.total_amount)}</h3></div>
+                                    <div><span style={{ fontSize: '0.8rem', opacity: 0.8 }}>{tr('Paid Amount', 'ගෙවූ මුදල')}</span><h3 style={{ margin: 0, color: '#1cc88a' }}>{tr('Rs.', 'රු.')} {formatDecimal(selectedLoanRecord.loan_amount)}</h3></div>
+                                    <div><span style={{ fontSize: '0.8rem', opacity: 0.8 }}>{tr('Remaining Balance', 'ඉතිරි ශේෂය')}</span><h3 style={{ margin: 0, color: '#e74a3b' }}>{tr('Rs.', 'රු.')} {formatDecimal(selectedLoanRecord.total_amount)}</h3></div>
                                 </div>
                             )}
                         </div>
@@ -306,11 +307,11 @@ const SupplierReport = () => {
 
                     <div className="sr-side" style={unprintedContainerStyle}>
                         <div className="sr-side-section" style={unprintedSectionStyle}>
-                            <h2 style={sectionHeader}>ණය ලබාගත්</h2>
+                            <h2 style={sectionHeader}>{tr('Loans Taken', 'ණය ලබාගත්')}</h2>
                             <div style={listContainerStyle}>
                                 {loanSummary.map((loan, index) => (
                                     <button key={index} onClick={() => handleUnprintedBillClick(loan.supplier_code, loan.supplier_bill_no)} onContextMenu={(e) => handleContextMenu(e, loan)} style={unprintedBtn}>
-                                        <strong>{loan.supplier_code}</strong><br/><small>බිල්: {loan.supplier_bill_no}</small>
+                                        <strong>{loan.supplier_code}</strong><br/><small>{tr('Bill:', 'බිල්:')} {loan.supplier_bill_no}</small>
                                     </button>
                                 ))}
                             </div>

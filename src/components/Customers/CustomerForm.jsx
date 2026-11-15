@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import axios from "axios";
 import { API_BASE_URL, STORAGE_URL as BACKEND_STORAGE_URL } from '../../config/paths';
+import { tr } from '../../i18n/language';
 
 export default function CustomerForm({ customer, onSubmit, onCancel }) {
 
@@ -100,7 +101,7 @@ export default function CustomerForm({ customer, onSubmit, onCancel }) {
           setErrors((prev) => ({
             ...prev,
             short_name: isDuplicate
-              ? "මෙම කෙටි නම දැනටමත් පවතිනවා"
+              ? tr('This short name already exists', 'මෙම කෙටි නම දැනටමත් පවතිනවා')
               : null,
           }));
         }
@@ -137,12 +138,12 @@ export default function CustomerForm({ customer, onSubmit, onCancel }) {
     e.preventDefault();
 
     if (!formData.short_name.trim() || !formData.name.trim()) {
-      alert("කරුණාකර අවශ්‍ය ක්ෂේත්‍ර පුරවන්න");
+      alert(tr('Please fill in the required fields', 'කරුණාකර අවශ්‍ය ක්ෂේත්‍ර පුරවන්න'));
       return;
     }
 
     if (errors.short_name) {
-      alert("මෙම කෙටි නම දැනටමත් පවතිනවා.");
+      alert(tr('This short name already exists.', 'මෙම කෙටි නම දැනටමත් පවතිනවා.'));
       return;
     }
 
@@ -185,8 +186,8 @@ export default function CustomerForm({ customer, onSubmit, onCancel }) {
       >
         <h2 className="text-center text-white mb-4">
           {customer
-            ? "පාරිභෝගිකයා සංස්කරණය කරන්න"
-            : "පාරිභෝගිකයා එක් කරන්න"}
+            ? tr('Edit Customer', 'පාරිභෝගිකයා සංස්කරණය කරන්න')
+            : tr('Add Customer', 'පාරිභෝගිකයා එක් කරන්න')}
         </h2>
 
         <form onSubmit={handleSubmit}>
@@ -194,7 +195,7 @@ export default function CustomerForm({ customer, onSubmit, onCancel }) {
 
             {/* SHORT NAME */}
             <div className="col-md-6 mb-3">
-              <label className="form-label text-white">කෙටි නම *</label>
+              <label className="form-label text-white">{tr('Short Name *', 'කෙටි නම *')}</label>
               <input
                 type="text"
                 name="short_name"
@@ -214,7 +215,7 @@ export default function CustomerForm({ customer, onSubmit, onCancel }) {
             {/* FULL NAME */}
             <div className="col-md-6 mb-3">
               <label className="form-label text-white">
-                සම්පූර්ණ නම *
+                {tr('Full Name *', 'සම්පූර්ණ නම *')}
               </label>
               <input
                 type="text"
@@ -228,7 +229,7 @@ export default function CustomerForm({ customer, onSubmit, onCancel }) {
             {/* TELEPHONE */}
             <div className="col-md-6 mb-3">
               <label className="form-label text-white">
-                දුරකථන අංකය
+                {tr('Phone Number', 'දුරකථන අංකය')}
               </label>
               <input
                 type="text"
@@ -242,7 +243,7 @@ export default function CustomerForm({ customer, onSubmit, onCancel }) {
             {/* ID NO */}
             <div className="col-md-6 mb-3">
               <label className="form-label text-white">
-                හැඳුනුම්පත් අංකය
+                {tr('NIC Number', 'හැඳුනුම්පත් අංකය')}
               </label>
               <input
                 type="text"
@@ -255,7 +256,7 @@ export default function CustomerForm({ customer, onSubmit, onCancel }) {
 
             {/* ADDRESS */}
             <div className="col-md-12 mb-3">
-              <label className="form-label text-white">ලිපිනය</label>
+              <label className="form-label text-white">{tr('Address', 'ලිපිනය')}</label>
               <textarea
                 name="address"
                 rows="2"
@@ -308,7 +309,7 @@ export default function CustomerForm({ customer, onSubmit, onCancel }) {
             {showCreditLimit && (
               <div className="col-md-6 mb-3">
                 <label className="form-label text-white">
-                  ණය සීමාව (Rs.)
+                  {tr('Credit Limit (Rs.)', 'ණය සීමාව (Rs.)')}
                 </label>
                 <input
                   type="number"
@@ -329,10 +330,10 @@ export default function CustomerForm({ customer, onSubmit, onCancel }) {
               disabled={isSubmitting}
             >
               {isSubmitting
-                ? "සුරකිමින්..."
+                ? tr('Saving...', 'සුරකිමින්...')
                 : customer
-                ? "යාවත්කාලීන කරන්න"
-                : "එක් කරන්න"}
+                ? tr('Update', 'යාවත්කාලීන කරන්න')
+                : tr('Add', 'එක් කරන්න')}
             </button>
 
             <button
@@ -340,7 +341,7 @@ export default function CustomerForm({ customer, onSubmit, onCancel }) {
               className="btn btn-secondary"
               onClick={onCancel}
             >
-              අවලංගු කරන්න
+              {tr('Cancel', 'අවලංගු කරන්න')}
             </button>
           </div>
         </form>

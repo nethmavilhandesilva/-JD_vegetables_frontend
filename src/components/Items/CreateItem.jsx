@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api from '../../api';
 import { useNavigate, Link } from 'react-router-dom';
+import { tr } from '../../i18n/language';
 
 const CreateItem = () => {
     const [formData, setFormData] = useState({
@@ -46,7 +47,7 @@ const CreateItem = () => {
             <div className="row justify-content-center">
                 <div className="col-md-8">
                     <div className="custom-card">
-                        <h2 className="text-primary mb-4">නව භාණ්ඩය එක් කරන්න (Add New Item)</h2>
+                        <h2 className="text-primary mb-4">{tr('Add New Item', 'නව භාණ්ඩය එක් කරන්න (Add New Item)')}</h2>
 
                         {errors.general && (
                             <div className="alert alert-danger">{errors.general}</div>
@@ -54,7 +55,7 @@ const CreateItem = () => {
 
                         <form onSubmit={handleSubmit}>
                             <div className="mb-3">
-                                <label htmlFor="no" className="form-label">අංකය</label>
+                                <label htmlFor="no" className="form-label">{tr('No', 'අංකය')}</label>
                                 <input 
                                     type="text"
                                     id="no"
@@ -69,7 +70,7 @@ const CreateItem = () => {
                             </div>
 
                             <div className="mb-3">
-                                <label htmlFor="type" className="form-label">වර්ගය</label>
+                                <label htmlFor="type" className="form-label">{tr('Type', 'වර්ගය')}</label>
                                 <input 
                                     type="text"
                                     id="type"
@@ -83,7 +84,7 @@ const CreateItem = () => {
                             </div>
 
                             <div className="mb-3">
-                                <label htmlFor="pack_cost" className="form-label">මල්ලක අගය</label>
+                                <label htmlFor="pack_cost" className="form-label">{tr('Bag Value', 'මල්ලක අගය')}</label>
                                 <input 
                                     type="number"
                                     id="pack_cost"
@@ -98,7 +99,7 @@ const CreateItem = () => {
                             </div>
 
                             <div className="mb-3">
-                                <label htmlFor="pack_due" className="form-label">මල්ලක කුලිය</label>
+                                <label htmlFor="pack_due" className="form-label">{tr('Bag Kuliya', 'මල්ලක කුලිය')}</label>
                                 <input 
                                     type="number"
                                     id="pack_due"
@@ -114,7 +115,7 @@ const CreateItem = () => {
 
                             {/* --- New Field: Bag Real Price --- */}
                             <div className="mb-3">
-                                <label htmlFor="bag_real_price" className="form-label">සත්‍ය බර (</label>
+                                <label htmlFor="bag_real_price" className="form-label">{tr('Actual Weight', 'සත්‍ය බර (')}</label>
                                 <input 
                                     type="number"
                                     id="bag_real_price"
@@ -130,9 +131,9 @@ const CreateItem = () => {
 
                             <div className="d-flex justify-content-center mt-4">
                                 <button type="submit" disabled={loading} className="btn btn-success me-2">
-                                    {loading ? 'Adding...' : 'එක් කරන්න'}
+                                    {loading ? 'Adding...' : tr('Add', 'එක් කරන්න')}
                                 </button>
-                                <Link to="/items" className="btn btn-secondary">අවලංගු කරන්න</Link>
+                                <Link to="/items" className="btn btn-secondary">{tr('Cancel', 'අවලංගු කරන්න')}</Link>
                             </div>
                         </form>
                     </div>

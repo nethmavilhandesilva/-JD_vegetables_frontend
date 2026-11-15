@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { tr } from '../i18n/language';
 
 // The app's own print window: bill preview + Print / Cancel.
 // Print (Enter) runs onPrint; Cancel (Esc) runs onCancel and nothing is marked printed.
@@ -74,14 +75,14 @@ const PrintPreviewDialog = ({ html, title, onPrint, onCancel, busy = false, erro
                         disabled={busy}
                         style={{ ...buttonBase, flex: 2, backgroundColor: '#28a745', color: 'white', opacity: busy ? 0.7 : 1 }}
                     >
-                        {busy ? 'මුද්‍රණය වෙමින්... / Printing...' : '🖨️ මුද්‍රණය / Print (Enter)'}
+                        {busy ? tr('Printing...', 'මුද්‍රණය වෙමින්...') : tr('🖨️ Print (Enter)', '🖨️ මුද්‍රණය (Enter)')}
                     </button>
                     <button
                         onClick={onCancel}
                         disabled={busy}
                         style={{ ...buttonBase, flex: 1, backgroundColor: '#6c757d', color: 'white', opacity: busy ? 0.7 : 1 }}
                     >
-                        අවලංගු / Cancel (Esc)
+                        {tr('Cancel (Esc)', 'අවලංගු (Esc)')}
                     </button>
                 </div>
             </div>

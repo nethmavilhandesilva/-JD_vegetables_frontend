@@ -5,6 +5,7 @@ import api from "../../api";  // 👈 IMPORT THE AXIOS INSTANCE
 // The BACKEND_URL constant is no longer strictly needed if api.js sets the baseURL,
 // but we'll keep it as a reminder, though the api instance will use 'http://127.0.0.1:8000/api'
 // const BACKEND_URL = 'http://localhost:8000/api'; 
+import { tr } from '../../i18n/language';
 
 const ItemReportModal = ({ isOpen, onClose }) => {
   const [items, setItems] = useState([]);
@@ -184,7 +185,7 @@ const ItemReportModal = ({ isOpen, onClose }) => {
       <div className="modal-dialog">
         <div className="modal-content" style={{ backgroundColor: '#99ff99' }}>
           <div className="modal-header">
-            <h5 className="modal-title">📦 අයිතමය අනුව වාර්තාව</h5>
+            <h5 className="modal-title">{tr('📦 Report by Item', '📦 අයිතමය අනුව වාර්තාව')}</h5>
             <button
               type="button"
               className="btn-close"
@@ -198,14 +199,14 @@ const ItemReportModal = ({ isOpen, onClose }) => {
             <div className="modal-body">
               <div className="mb-3">
                 <label htmlFor="item_password" className="form-label" style={{ fontWeight: 'bold', color: 'black' }}>
-                  පස්වර්ඩ් ඇතුල් කරන්න
+                  {tr('Enter password', 'පස්වර්ඩ් ඇතුල් කරන්න')}
                 </label>
                 <input
                   type="password"
                   id="item_password"
                   name="password"
                   className="form-control"
-                  placeholder="පස්වර්ඩ්"
+                  placeholder={tr('Password', 'පස්වර්ඩ්')}
                   value={password}
                   onChange={handlePasswordChange}
                   disabled={loading}
@@ -214,7 +215,7 @@ const ItemReportModal = ({ isOpen, onClose }) => {
 
               <div className="mb-3">
                 <label htmlFor="item_code_select" className="form-label" style={{ fontWeight: 'bold', color: 'black' }}>
-                  අයිතමය
+                  {tr('Item', 'අයිතමය')}
                 </label>
                 <select
                   name="item_code"
@@ -225,7 +226,7 @@ const ItemReportModal = ({ isOpen, onClose }) => {
                   onChange={handleItemChange}
                   disabled={loading}
                 >
-                  <option value="">-- අයිතමයක් තෝරන්න --</option>
+                  <option value="">{tr('-- Select an item --', '-- අයිතමයක් තෝරන්න --')}</option>
 
                   {[...items]
                     .sort((a, b) => a.no.localeCompare(b.no))
@@ -242,7 +243,7 @@ const ItemReportModal = ({ isOpen, onClose }) => {
                 <div id="item_date_range_container">
                   <div className="mb-3">
                     <label htmlFor="item_start_date" className="form-label" style={{ fontWeight: 'bold', color: 'black' }}>
-                      ආරම්භ දිනය
+                      {tr('Start Date', 'ආරම්භ දිනය')}
                     </label>
                     <input
                       type="date"
@@ -257,7 +258,7 @@ const ItemReportModal = ({ isOpen, onClose }) => {
 
                   <div className="mb-3">
                     <label htmlFor="item_end_date" className="form-label" style={{ fontWeight: 'bold', color: 'black' }}>
-                      අවසන් දිනය
+                      {tr('End Date', 'අවසන් දිනය')}
                     </label>
                     <input
                       type="date"
@@ -285,7 +286,7 @@ const ItemReportModal = ({ isOpen, onClose }) => {
                     Generating Report...
                   </>
                 ) : (
-                  'වාර්තාව ලබාගන්න'
+                  tr('Get Report', 'වාර්තාව ලබාගන්න')
                 )}
               </button>
             </div>

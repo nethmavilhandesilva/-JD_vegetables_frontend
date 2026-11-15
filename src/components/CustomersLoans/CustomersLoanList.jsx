@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { customerLoanService } from '../../services/customerLoanService';
 import CreateCustomerLoan from './CreateCustomerLoan';
+import { tr } from '../../i18n/language';
 
 const CustomersLoanList = () => {
     const [loans, setLoans] = useState([]);
@@ -155,13 +156,13 @@ const CustomersLoanList = () => {
                     <div className="d-flex flex-wrap align-items-center gap-2 mb-3 mt-4">
                        
                         <button className="btn btn-dark">
-                            ණය වාර්තාව
+                            {tr('Loan Report', 'ණය වාර්තාව')}
                         </button>
                         <button className="btn btn-dark">
-                            නැවත ලබා දීම් වාර්තාව
+                            {tr('Repayments Report', 'නැවත ලබා දීම් වාර්තාව')}
                         </button>
                         <button className="btn btn-dark">
-                            චෙක් ගෙවීම් වාර්තාව බලන්න
+                            {tr('View Cheque Payments Report', 'චෙක් ගෙවීම් වාර්තාව බලන්න')}
                         </button>
                         <button className="btn btn-dark">
                             Set Balance

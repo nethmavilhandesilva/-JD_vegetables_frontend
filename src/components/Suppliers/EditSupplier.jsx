@@ -4,6 +4,7 @@ import { supplierService } from '../../services/supplierService';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import { BACKEND_URL } from '../../config/paths';
+import { tr } from '../../i18n/language';
 
 // ⭐ UPDATED TO LOCALHOST FOR IMAGES
 const STORAGE_URL = BACKEND_URL;
@@ -122,7 +123,7 @@ const EditSupplier = () => {
             const hasFace = await detectFace(file);
 
             if (!hasFace) {
-                alert("මුහුණක් හමු නොවීය. කරුණාකර නිවැරදි ඡායාරූපයක් තෝරන්න.");
+                alert(tr('No face detected. Please choose a valid photo.', 'මුහුණක් හමු නොවීය. කරුණාකර නිවැරදි ඡායාරූපයක් තෝරන්න.'));
                 return;
             }
         }
@@ -200,7 +201,7 @@ const EditSupplier = () => {
                     <div className="p-5 rounded-4 shadow-lg text-light" style={{ backgroundColor: '#004d00' }}>
 
                         <h2 className="text-center mb-5 fw-bold" style={{ fontSize: '2.5rem' }}>
-                            ✏️ සැපයුම්කරු සංස්කරණය
+                            {tr('✏️ Edit Supplier', '✏️ සැපයුම්කරු සංස්කරණය')}
                         </h2>
 
                         {errors.general && (
@@ -211,18 +212,18 @@ const EditSupplier = () => {
                             <div className="row">
 
                                 <div className="col-md-6 mb-4">
-                                    <label className="form-label">කේතය (Code)</label>
+                                    <label className="form-label">{tr('Code', 'කේතය (Code)')}</label>
                                     <input type="text" name="code" value={formData.code} onChange={handleChange} className="form-control" required />
                                 </div>
 
                                 <div className="col-md-6 mb-4">
-                                    <label className="form-label">නම (Name)</label>
+                                    <label className="form-label">{tr('Name', 'නම (Name)')}</label>
                                     <input type="text" name="name" value={formData.name} onChange={handleChange} className="form-control" required />
                                 </div>
 
                                 {/* ⭐ ADDED DOB INPUT */}
                                 <div className="col-md-12 mb-4">
-                                    <label className="form-label">උපන් දිනය (Date of Birth)</label>
+                                    <label className="form-label">{tr('Date of Birth', 'උපන් දිනය (Date of Birth)')}</label>
                                     <input 
                                         type="date" 
                                         name="dob" 
@@ -234,13 +235,13 @@ const EditSupplier = () => {
                                 </div>
 
                                 <div className="col-12 mb-4">
-                                    <label className="form-label">ලිපිනය (Address)</label>
+                                    <label className="form-label">{tr('Address', 'ලිපිනය (Address)')}</label>
                                     <textarea name="address" value={formData.address} onChange={handleChange} className="form-control" rows="3" required />
                                 </div>
 
                                 {/* PHOTO */}
                                 <div className="col-md-4 mb-4">
-                                    <label className="form-label">ඡායාරූපය</label>
+                                    <label className="form-label">{tr('Photo', 'ඡායාරූපය')}</label>
                                     <input type="file" name="profile_pic" onChange={handleFileChange} className="form-control" accept="image/*" />
                                     {previews.profile_pic && (
                                         <div style={previewBoxStyle}>

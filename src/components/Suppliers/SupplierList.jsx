@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api'; // ← Use global axios instance
 import { Link, useNavigate } from 'react-router-dom';
 import { APP_BASE, STORAGE_URL as BACKEND_STORAGE_URL } from '../../config/paths';
+import { tr } from '../../i18n/language';
 
 const SupplierList = () => {
   const [suppliers, setSuppliers] = useState([]);
@@ -52,7 +53,7 @@ const SupplierList = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('මෙම සැපයුම්කරු මකන්නද?')) {
+    if (window.confirm(tr('Delete this supplier?', 'මෙම සැපයුම්කරු මකන්නද?'))) {
       try {
         await api.delete(`/suppliers/${id}`);
         setMessage('Supplier deleted successfully!');
@@ -66,7 +67,7 @@ const SupplierList = () => {
 
   // Helper to render images in table cells
   const renderImage = (path, alt) => {
-    if (!path) return <span className="text-muted small" style={{ fontSize: '10px' }}>නැත</span>;
+    if (!path) return <span className="text-muted small" style={{ fontSize: '10px' }}>{tr('N/A', 'නැත')}</span>;
     return (
       <a href={`${STORAGE_URL}${path}`} target="_blank" rel="noreferrer">
         <img 
@@ -110,29 +111,29 @@ const SupplierList = () => {
       >
         <Link className="navbar-brand fw-bold d-flex align-items-center mb-4 text-white text-decoration-none" to="/sales">
           <i className="material-icons me-2">warehouse</i>
-          මුල් පිටුව
+          {tr('Home', 'මුල් පිටුව')}
         </Link>
 
-        <h6 className="text-uppercase text-light opacity-50 small fw-bold mb-3">ප්‍රධාන දත්ත</h6>
+        <h6 className="text-uppercase text-light opacity-50 small fw-bold mb-3">{tr('Master Data', 'ප්‍රධාන දත්ත')}</h6>
         <ul className="list-unstyled flex-grow-1">
           <li className="mb-2">
             <Link to="/customers" className="nav-link text-white d-flex align-items-center p-2 rounded">
-              <i className="material-icons me-2">people</i> ගනුදෙනුකරුවන්
+              <i className="material-icons me-2">people</i> {tr('Customers', 'ගනුදෙනුකරුවන්')}
             </Link>
           </li>
           <li className="mb-2">
             <Link to="/items" className="nav-link text-white d-flex align-items-center p-2 rounded">
-              <i className="material-icons me-2">inventory_2</i> අයිතමය
+              <i className="material-icons me-2">inventory_2</i> {tr('Items', 'අයිතමය')}
             </Link>
           </li>
           <li className="mb-2">
             <Link to="/suppliers" className="nav-link text-white d-flex align-items-center p-2 rounded" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
-              <i className="material-icons me-2">local_shipping</i> සැපයුම්කරුවන්
+              <i className="material-icons me-2">local_shipping</i> {tr('Suppliers', 'සැපයුම්කරුවන්')}
             </Link>
           </li>
           <li className="mb-2">
             <Link to="/commissions" className="nav-link text-white d-flex align-items-center p-2 rounded">
-              <i className="material-icons me-2">attach_money</i> කොමිෂන්
+              <i className="material-icons me-2">attach_money</i> {tr('Commission', 'කොමිෂන්')}
             </Link>
           </li>
           <hr className="bg-light" />
@@ -143,7 +144,7 @@ const SupplierList = () => {
             onClick={handleLogout}
             className="btn btn-outline-light w-100 fw-bold d-flex align-items-center justify-content-center"
           >
-            <i className="material-icons me-2">logout</i>ඉවත් වන්න
+            <i className="material-icons me-2">logout</i>{tr('Logout', 'ඉවත් වන්න')}
           </button>
         </div>
       </div>
@@ -159,21 +160,21 @@ const SupplierList = () => {
           }}
         >
           <div className="card-header border-0 py-4 text-center">
-            <h2 className="fw-bold mb-0">📦 සැපයුම්කරුවන් (Suppliers)</h2>
+            <h2 className="fw-bold mb-0">{tr('📦 Suppliers', '📦 සැපයුම්කරුවන් (Suppliers)')}</h2>
           </div>
 
           <div className="card-body bg-light text-dark">
             {/* Top Bar */}
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-2">
               <Link to="/suppliers/create" className="btn btn-success fw-bold px-4 shadow-sm">
-                + නව සැපයුම්කරු
+                {tr('+ New Supplier', '+ නව සැපයුම්කරු')}
               </Link>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value.toUpperCase())}
                 className="form-control form-control-sm"
-                placeholder="සොයන්න..."
+                placeholder={tr('Search...', 'සොයන්න...')}
                 style={{ maxWidth: '300px', border: '1px solid #ced4da', textTransform: 'uppercase' }}
               />
             </div>
@@ -190,14 +191,14 @@ const SupplierList = () => {
               <table className="table table-hover align-middle mb-0 bg-white shadow-sm">
                 <thead style={{ backgroundColor: '#004d00', color: 'white' }}>
                   <tr className="text-center">
-                    <th>ඡායාරූපය</th>
-                    <th>සංකේතය</th>
-                    <th>නම</th>
-                    <th>උපන් දිනය</th>
+                    <th>{tr('Photo', 'ඡායාරූපය')}</th>
+                    <th>{tr('Code', 'සංකේතය')}</th>
+                    <th>{tr('Name', 'නම')}</th>
+                    <th>{tr('Date of Birth', 'උපන් දිනය')}</th>
                     <th>Telephone_no</th>
-                    <th>ලිපිනය</th>
+                    <th>{tr('Address', 'ලිපිනය')}</th>
                     <th>NIC (F/B)</th>
-                    <th>මෙහෙයුම්</th>
+                    <th>{tr('Actions', 'මෙහෙයුම්')}</th>
                   </tr>
                 </thead>
 
@@ -205,7 +206,7 @@ const SupplierList = () => {
                   {suppliers.length === 0 ? (
                     <tr>
                       <td colSpan="7" className="text-center text-muted py-3">
-                        සැපයුම්කරුවන් නොමැත
+                        {tr('No suppliers', 'සැපයුම්කරුවන් නොමැත')}
                       </td>
                     </tr>
                   ) : (
@@ -230,14 +231,14 @@ const SupplierList = () => {
                             to={`/suppliers/edit/${supplier.id}`}
                             className="btn btn-warning btn-sm me-1 fw-bold"
                           >
-                            සංස්කරණය
+                            {tr('Edit', 'සංස්කරණය')}
                           </Link>
 
                           <button
                             onClick={() => handleDelete(supplier.id)}
                             className="btn btn-danger btn-sm fw-bold"
                           >
-                            මකන්න
+                            {tr('Delete', 'මකන්න')}
                           </button>
                         </td>
                       </tr>
@@ -254,7 +255,7 @@ const SupplierList = () => {
                 className="btn btn-primary fw-bold px-4 shadow-sm d-flex align-items-center"
               >
                 <i className="material-icons me-2">cake</i>
-                උපන් දින වාර්තාව (Birthday Report)
+                {tr('Birthday Report', 'උපන් දින වාර්තාව (Birthday Report)')}
               </Link>
             </div>
 

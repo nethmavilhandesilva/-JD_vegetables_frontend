@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api'; 
 import Sidebar from '../../components/Sidebar';
+import { tr } from '../../i18n/language';
 
 const SupplierReport = () => {
     const [reportData, setReportData] = useState([]);
@@ -29,7 +30,7 @@ const SupplierReport = () => {
         if (startDate && endDate) {
             fetchReport({ start_date: startDate, end_date: endDate });
         } else {
-            alert("කරුණාකර දිනයන් තෝරන්න.");
+            alert(tr('Please select the dates.', 'කරුණාකර දිනයන් තෝරන්න.'));
         }
     };
                                                                                                                                                                                                                                      
@@ -39,28 +40,28 @@ const SupplierReport = () => {
             <div style={{ marginLeft: '260px', flexGrow: 1, padding: '30px' }}>
                 <div className="card shadow-lg border-0 rounded-4 overflow-hidden">
                     <div className="card-header border-0 py-4 text-center" style={{ backgroundColor: '#004d00', color: 'white' }}>
-                        <h2 className="fw-bold mb-0">📅 සැපයුම්කරු වාර්තාව (Supplier Report)</h2>
+                        <h2 className="fw-bold mb-0">{tr('📅 Supplier Report', '📅 සැපයුම්කරු වාර්තාව (Supplier Report)')}</h2>
                     </div>
 
                     <div className="card-body bg-light">
                         {/* Filters */}
                         <div className="row g-3 align-items-end mb-4 p-3 rounded bg-white shadow-sm">
                             <div className="col-md-3">
-                                <label className="form-label fw-bold">සිට (From)</label>
+                                <label className="form-label fw-bold">{tr('From', 'සිට (From)')}</label>
                                 <input type="date" className="form-control" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                             </div>
                             <div className="col-md-3">
-                                <label className="form-label fw-bold">දක්වා (To)</label>
+                                <label className="form-label fw-bold">{tr('To', 'දක්වා (To)')}</label>
                                 <input type="date" className="form-control" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                             </div>
                             <div className="col-md-2">
-                                <button onClick={handleFilter} className="btn btn-success w-100 fw-bold">සොයන්න</button>
+                                <button onClick={handleFilter} className="btn btn-success w-100 fw-bold">{tr('Search', 'සොයන්න')}</button>
                             </div>
                             <div className="col-md-2">
-                                <button onClick={() => fetchReport({ today_birthday: 'true' })} className="btn btn-primary w-100 fw-bold">🎈 අද උපන් දින</button>
+                                <button onClick={() => fetchReport({ today_birthday: 'true' })} className="btn btn-primary w-100 fw-bold">{tr('🎈 Today\'s Birthdays', '🎈 අද උපන් දින')}</button>
                             </div>
                             <div className="col-md-2">
-                                <button onClick={() => fetchReport()} className="btn btn-secondary w-100 fw-bold">සියල්ල</button>
+                                <button onClick={() => fetchReport()} className="btn btn-secondary w-100 fw-bold">{tr('All', 'සියල්ල')}</button>
                             </div>
                         </div>
 
@@ -69,9 +70,9 @@ const SupplierReport = () => {
                             <table className="table table-hover bg-white text-center shadow-sm">
                                 <thead className="table-dark">
                                     <tr>
-                                        <th>සංකේතය (Code)</th>
-                                        <th>නම (Name)</th>
-                                        <th>උපන් දිනය (DOB)</th>
+                                        <th>{tr('Code', 'සංකේතය (Code)')}</th>
+                                        <th>{tr('Name', 'නම (Name)')}</th>
+                                        <th>{tr('Date of Birth', 'උපන් දිනය (DOB)')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -86,7 +87,7 @@ const SupplierReport = () => {
                                             </tr>
                                         ))
                                     ) : (
-                                        <tr><td colSpan="3" className="text-muted py-4">දත්ත කිසිවක් හමු නොවීය.</td></tr>
+                                        <tr><td colSpan="3" className="text-muted py-4">{tr('No data found.', 'දත්ත කිසිවක් හමු නොවීය.')}</td></tr>
                                     )}
                                 </tbody>
                             </table>

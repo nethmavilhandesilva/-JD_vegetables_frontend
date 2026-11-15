@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../api';
+import { tr } from '../../i18n/language';
 
 const TodaysKuliyaModal = ({ isOpen, onClose }) => {
     const [loading, setLoading] = useState(false);
@@ -155,7 +156,7 @@ const TodaysKuliyaModal = ({ isOpen, onClose }) => {
                 <body>
                     <div class="print-container">
                         <div class="header">
-                            <div class="title">අද දින කුලිය</div>
+                            <div class="title">${tr('Today\'s Kuliya', 'අද දින කුලිය')}</div>
                             <div class="title">Today's Kuliya</div>
                         </div>
                         
@@ -164,40 +165,40 @@ const TodaysKuliyaModal = ({ isOpen, onClose }) => {
                         </div>
                         
                         <div class="amount">
-                            රු. ${formatNumber(totalKuliya)}
+                            ${tr('Rs.', 'රු.')} ${formatNumber(totalKuliya)}
                         </div>
                         <div class="amount-label">
-                            සම්පූර්ණ කුලිය (Total Kuliya)
+                            ${tr('Total Kuliya', 'සම්පූර්ණ කුලිය (Total Kuliya)')}
                         </div>
                         
                         ${numberOfWorkers > 0 ? `
                             <div class="per-person-section">
                                 <div class="worker-count">
-                                    👥 සේවක සංඛ්‍යාව: ${numberOfWorkers}
+                                    👥 ${tr('Workers', 'සේවක සංඛ්‍යාව')}: ${numberOfWorkers}
                                 </div>
                                 <div class="per-person-amount">
-                                    රු. ${formatNumber(perPersonKuliya)}
+                                    ${tr('Rs.', 'රු.')} ${formatNumber(perPersonKuliya)}
                                 </div>
                                 <div class="amount-label">
-                                    එක් සේවකයෙකුට (Per Person)
+                                    ${tr('Per Person', 'එක් සේවකයෙකුට (Per Person)')}
                                 </div>
                             </div>
                         ` : ''}
                         
                         <div class="record-count">
-                            🧾 ගනුදෙනු ගණන: ${recordCount}
+                            🧾 ${tr('Transactions', 'ගනුදෙනු ගණන')}: ${recordCount}
                         </div>
                         
                         ${recordCount === 0 ? `
                             <div class="no-data">
-                                ℹ️ අද දින කුලිය ගෙවූ ගනුදෙනු නොමැත
+                                ${tr('ℹ️ No transactions with Kuliya today', 'ℹ️ අද දින කුලිය ගෙවූ ගනුදෙනු නොමැත')}
                             </div>
                         ` : ''}
                         
                         ${numberOfWorkers > 0 && perPersonKuliya > 0 ? `
                             <div class="divider"></div>
                             <div style="font-size: 12px; color: #666;">
-                                * කුලිය සේවක ${numberOfWorkers} දෙනෙකුට බෙදා දෙන ලදී
+                                * ${tr('Kuliya divided among', 'කුලිය සේවක')} ${numberOfWorkers} ${tr('workers', 'දෙනෙකුට බෙදා දෙන ලදී')}
                             </div>
                         ` : ''}
                         
@@ -238,7 +239,7 @@ const TodaysKuliyaModal = ({ isOpen, onClose }) => {
                     <div className="modal-header" style={{ backgroundColor: '#004d00', color: 'white', padding: '15px' }}>
                         <h5 className="modal-title" style={{ fontWeight: 'bold' }}>
                             <i className="material-icons align-middle me-2" style={{ fontSize: '24px' }}>account_balance_wallet</i>
-                            අද දින කුලිය (Today's Kuliya)
+                            {tr('Today\'s Kuliya', 'අද දින කුලිය (Today\'s Kuliya)')}
                         </h5>
                         <button type="button" className="btn-close btn-close-white" onClick={onClose} aria-label="Close"></button>
                     </div>
@@ -249,7 +250,7 @@ const TodaysKuliyaModal = ({ isOpen, onClose }) => {
                                 <div className="spinner-border text-success" role="status">
                                     <span className="visually-hidden">Loading...</span>
                                 </div>
-                                <p className="mt-3">පූරණය වෙමින්...</p>
+                                <p className="mt-3">{tr('Loading...', 'පූරණය වෙමින්...')}</p>
                             </div>
                         ) : (
                             <div className="text-center">
@@ -264,17 +265,17 @@ const TodaysKuliyaModal = ({ isOpen, onClose }) => {
                                 {/* Total Kuliya Amount */}
                                 <div className="mb-4">
                                     <div className="display-4 fw-bold text-success" style={{ fontSize: '48px', fontWeight: 'bold' }}>
-                                        රු. {formatNumber(totalKuliya)}
+                                        {tr('Rs.', 'රු.')} {formatNumber(totalKuliya)}
                                     </div>
                                     <div className="text-muted mt-2" style={{ fontSize: '14px' }}>
-                                        සම්පූර්ණ කුලිය (Total Kuliya)
+                                        {tr('Total Kuliya', 'සම්පූර්ණ කුලිය (Total Kuliya)')}
                                     </div>
                                 </div>
 
                                 {/* Number of Workers Input */}
                                 <div className="mb-4">
                                     <label className="form-label" style={{ fontWeight: 'bold', fontSize: '14px' }}>
-                                        👥 සේවක සංඛ්‍යාව (Number of Workers)
+                                        {tr('👥 Number of Workers', '👥 සේවක සංඛ්‍යාව (Number of Workers)')}
                                     </label>
                                     <input
                                         type="number"
@@ -297,10 +298,10 @@ const TodaysKuliyaModal = ({ isOpen, onClose }) => {
                                 {numberOfWorkers > 0 && totalKuliya > 0 && (
                                     <div className="mb-4 p-3 rounded" style={{ backgroundColor: '#e8f5e9' }}>
                                         <div className="text-muted mb-2" style={{ fontSize: '13px' }}>
-                                            එක් සේවකයෙකුට (Per Person)
+                                            {tr('Per Person', 'එක් සේවකයෙකුට (Per Person)')}
                                         </div>
                                         <div className="fw-bold" style={{ fontSize: '32px', color: '#ff9800' }}>
-                                            රු. {formatNumber(perPersonKuliya)}
+                                            {tr('Rs.', 'රු.')} {formatNumber(perPersonKuliya)}
                                         </div>
                                     </div>
                                 )}
@@ -309,7 +310,7 @@ const TodaysKuliyaModal = ({ isOpen, onClose }) => {
                                 <div className="mt-3">
                                     <span className="badge bg-info" style={{ fontSize: '14px', padding: '8px 15px' }}>
                                         <i className="material-icons align-middle me-1" style={{ fontSize: '16px' }}>receipt</i>
-                                        ගනුදෙනු ගණන: {recordCount}
+                                        {tr('Transactions:', 'ගනුදෙනු ගණන:')} {recordCount}
                                     </span>
                                 </div>
 
@@ -317,7 +318,7 @@ const TodaysKuliyaModal = ({ isOpen, onClose }) => {
                                 {recordCount === 0 && !loading && (
                                     <div className="alert alert-info text-center mt-3" style={{ fontSize: '13px' }}>
                                         <i className="material-icons align-middle me-1" style={{ fontSize: '16px' }}>info</i>
-                                        අද දින කුලිය ගෙවූ ගනුදෙනු නොමැත
+                                        {tr('No transactions with Kuliya today', 'අද දින කුලිය ගෙවූ ගනුදෙනු නොමැත')}
                                     </div>
                                 )}
                             </div>
@@ -330,7 +331,7 @@ const TodaysKuliyaModal = ({ isOpen, onClose }) => {
                             className="btn btn-secondary" 
                             onClick={onClose}
                         >
-                            වසන්න (Close)
+                            {tr('Close', 'වසන්න (Close)')}
                         </button>
                         <button 
                             type="button" 
@@ -339,7 +340,7 @@ const TodaysKuliyaModal = ({ isOpen, onClose }) => {
                             disabled={loading}
                         >
                             <i className="material-icons align-middle me-1">print</i>
-                            මුද්‍රණය කරන්න (Print)
+                            {tr('Print', 'මුද්‍රණය කරන්න (Print)')}
                         </button>
                         <button 
                             type="button" 
@@ -348,7 +349,7 @@ const TodaysKuliyaModal = ({ isOpen, onClose }) => {
                             disabled={loading}
                         >
                             <i className="material-icons align-middle me-1">refresh</i>
-                            නැවත පූරණය කරන්න (Refresh)
+                            {tr('Refresh', 'නැවත පූරණය කරන්න (Refresh)')}
                         </button>
                     </div>
                 </div>

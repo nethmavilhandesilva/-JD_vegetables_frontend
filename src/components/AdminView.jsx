@@ -2,6 +2,7 @@
 import React, { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { ThermalBillHTML, A4BillHTML } from './BillTemplates';
 import { SHOP_NAME, SHOP_PHONE, SHOP_TAGLINE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/shop';
+import { tr } from '../i18n/language';
 
 const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) => {
     const [searchQueries, setSearchQueries] = useState({
@@ -192,7 +193,7 @@ const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) =>
                     <div style="font-size: 16px; margin-bottom: 5px;">${SHOP_TAGLINE}</div>
                     <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin: 12px 0;">
                         <span style="border: 2.5px solid #000; padding: 5px 12px; font-size: 22px;">${SHOP_STALL_NO}</span>
-                        <div style="font-size: 18px;">ගොවියා: <span style="border: 2.5px solid #000; padding: 5px 10px; font-size: 22px;">${displayName}</span></div>
+                        <div style="font-size: 18px;">${tr('Farmer', 'ගොවියා')}: <span style="border: 2.5px solid #000; padding: 5px 10px; font-size: 22px;">${displayName}</span></div>
                     </div>
                     <div style="font-size: 16px;">${SHOP_TAGLINE}</div>
                     <div style="display: flex; justify-content: space-between; font-size: 14px; margin-top: 6px; padding: 0 5px;">
@@ -200,9 +201,9 @@ const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) =>
                     </div>
                 </div>
                 <div style="font-size: 19px; margin-top: 10px; padding: 0 5px;">
-                    <div style="font-weight: bold;">දුර: ${mobile}</div>
+                    <div style="font-weight: bold;">${tr('Tel', 'දුර')}: ${mobile}</div>
                     <div style="display: flex; justify-content: space-between; margin-top: 3px;">
-                        <span>බිල් අංකය: ${billNo}</span><span>දිනය: ${date}</span>
+                        <span>${tr('Bill No', 'බිල් අංකය')}: ${billNo}</span><span>${tr('Date', 'දිනය')}: ${date}</span>
                     </div>
                 </div>
                 <hr style="border: none; border-top: 2.5px solid #000; margin: 10px 0;" />
@@ -210,10 +211,10 @@ const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) =>
                     <colgroup><col style="width: 32%" /><col style="width: 21%" /><col style="width: 21%" /><col style="width: 26%" /></colgroup>
                     <thead>
                         <tr style="border-bottom: 2.5px solid #000; font-weight: bold;">
-                            <th style="text-align: left; padding-bottom: 8px; font-size: ${fontSizeHeader};">වර්ගය<br />මලු</th>
-                            <th style="text-align: right; padding-bottom: 8px; font-size: ${fontSizeHeader}; position: relative; left: -50px; top: 24px;">කිලෝ</th>
-                            <th style="text-align: right; padding-bottom: 8px; font-size: ${fontSizeHeader}; position: relative; left: -45px; top: 24px;">මිල</th>
-                            <th style="text-align: right; padding-bottom: 8px; font-size: ${fontSizeHeader};">කේතය<br />අගය</th>
+                            <th style="text-align: left; padding-bottom: 8px; font-size: ${fontSizeHeader};">${tr('Type', 'වර්ගය')}<br />${tr('Bags', 'මලු')}</th>
+                            <th style="text-align: right; padding-bottom: 8px; font-size: ${fontSizeHeader}; position: relative; left: -50px; top: 24px;">${tr('Kg', 'කිලෝ')}</th>
+                            <th style="text-align: right; padding-bottom: 8px; font-size: ${fontSizeHeader}; position: relative; left: -45px; top: 24px;">${tr('Price', 'මිල')}</th>
+                            <th style="text-align: right; padding-bottom: 8px; font-size: ${fontSizeHeader};">${tr('Code', 'කේතය')}<br />${tr('Value', 'අගය')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -245,7 +246,7 @@ const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) =>
                 </table>
                 <table style="width: 100%; margin-top: 20px; font-weight: bold; font-size: 22px; padding: 0 5px;">
                     <tr>
-                        <td style="font-size: 15px; padding-top: 8px; white-space: nowrap; position: relative; left: -15px;">මෙම බිලට ගෙවන්න:</td>
+                        <td style="font-size: 15px; padding-top: 8px; white-space: nowrap; position: relative; left: -15px;">${tr('Pay for this bill', 'මෙම බිලට ගෙවන්න')}:</td>
                         <td style="text-align: right; padding-top: 8px;">
                             <span style="border-bottom: 5px double #000; border-top: 2px solid #000; font-size: ${fontSizeTotal}; padding: 5px 10px; padding-left: 25px;">
                                 ${formatNumberFarmer(totalSalesSum)}
@@ -304,7 +305,7 @@ const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) =>
                     maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' 
                 }} onClick={(e) => e.stopPropagation()}>
                     <div style={{ padding: '12px', background: '#111827', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 'bold' }}>බිල්පත් පෙරදසුන (ගොවියා)</span>
+                        <span style={{ fontWeight: 'bold' }}>{tr('Bill Preview (Farmer)', 'බිල්පත් පෙරදසුන (ගොවියා)')}</span>
                         <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '20px' }}>✕</button>
                     </div>
                     <div style={{ padding: '20px', overflowY: 'auto', backgroundColor: '#e5e7eb', flexGrow: 1 }}>
@@ -325,7 +326,7 @@ const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) =>
                                 width: '100%'
                             }}
                         >
-                            මුද්‍රණය කරන්න
+                            {tr('Print', 'මුද්‍රණය කරන්න')}
                         </button>
                     </div>
                 </div>
@@ -339,7 +340,7 @@ const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) =>
             (isPrinted ? s.supplier_bill_printed === 'Y' : s.supplier_bill_printed !== 'Y')
         );
         setModalData({
-            title: `ගොවියා: ${farmer.supplier_code}`,
+            title: `${tr('Farmer', 'ගොවියා')}: ${farmer.supplier_code}`,
             type: 'farmer',
             sales: farmerSales
         });
@@ -373,7 +374,7 @@ const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) =>
                     className="flex flex-col bg-gray-800 rounded-xl border border-gray-600 overflow-hidden"
                 >
                     <div className="bg-green-800 p-2 text-center font-bold text-white">
-                        මුද්‍රණය කළ ගොවීන්
+                        {tr('Printed Farmers', 'මුද්‍රණය කළ ගොවීන්')}
                     </div>
 
                     <div
@@ -382,7 +383,7 @@ const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) =>
                     >
                         <input 
                             type="text" 
-                            placeholder="සොයන්න..." 
+                            placeholder={tr('Search...', 'සොයන්න...')} 
                             className="w-full p-2 mb-2 rounded bg-white text-black text-sm" 
                             style={{ textTransform: "uppercase" }} 
                             value={searchQueries.farmerPrinted || ""} 
@@ -399,7 +400,7 @@ const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) =>
                                 </div>
                             ))
                         ) : (
-                            <p className="text-center text-gray-400 mt-4">දත්ත නොමැත</p>
+                            <p className="text-center text-gray-400 mt-4">{tr('No data', 'දත්ත නොමැත')}</p>
                         )}
                     </div>
                 </div>
@@ -410,7 +411,7 @@ const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) =>
                     className="flex flex-col bg-gray-800 rounded-xl border border-gray-600 overflow-hidden"
                 >
                     <div className="bg-red-800 p-2 text-center font-bold text-white">
-                        මුද්‍රණය නොකළ ගොවීන්
+                        {tr('Unprinted Farmers', 'මුද්‍රණය නොකළ ගොවීන්')}
                     </div>
 
                     <div
@@ -419,7 +420,7 @@ const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) =>
                     >
                         <input
                             type="text"
-                            placeholder="සොයන්න..."
+                            placeholder={tr('Search...', 'සොයන්න...')}
                             className="w-full p-2 mb-2 rounded bg-white text-black text-sm"
                             style={{ textTransform: "uppercase" }}
                             value={searchQueries.farmerUnprinted || ""}
@@ -437,7 +438,7 @@ const AdminView = forwardRef(({ allSales, customers, items, suppliers }, ref) =>
                                 </div>
                             ))
                         ) : (
-                            <p className="text-center text-gray-400 mt-4">දත්ත නොමැත</p>
+                            <p className="text-center text-gray-400 mt-4">{tr('No data', 'දත්ත නොමැත')}</p>
                         )}
                     </div>
                 </div>

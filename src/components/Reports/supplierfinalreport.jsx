@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
 import Sidebar from '../Sidebar';
+import { tr } from '../../i18n/language';
 
 const SupplierReport = () => {
 
@@ -146,10 +147,10 @@ const SupplierReport = () => {
             <div key={key} className="mb-5 shadow card border-0">
                 <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
                     <h5 className="mb-0 fw-bold">
-                        සැපයුම්කරු: {key}
+                        {tr('Supplier:', 'සැපයුම්කරු:')} {key}
                     </h5>
                     <span className="badge bg-white text-primary">
-                        වාර්තා ගණන: {groups[key].length}
+                        {tr('Records:', 'වාර්තා ගණන:')} {groups[key].length}
                     </span>
                 </div>
 
@@ -158,14 +159,14 @@ const SupplierReport = () => {
                         <table className="table table-striped table-hover mb-0">
                             <thead style={{ backgroundColor: '#007bff', color: 'white' }}>
                                 <tr>
-                                    <th>දිනය</th>
-                                    <th>අයිතම කේතය</th>
-                                    <th>අයිතමය</th>
-                                    <th>ගනුදෙනුකරු</th>
-                                    <th className="text-end">බර</th>
-                                    <th className="text-end">මිල</th>
-                                    <th className="text-end">එකතුව</th>
-                                    <th className="text-end">ලාභය</th>
+                                    <th>{tr('Date', 'දිනය')}</th>
+                                    <th>{tr('Item Code', 'අයිතම කේතය')}</th>
+                                    <th>{tr('Item', 'අයිතමය')}</th>
+                                    <th>{tr('Customer', 'ගනුදෙනුකරු')}</th>
+                                    <th className="text-end">{tr('Weight', 'බර')}</th>
+                                    <th className="text-end">{tr('Price', 'මිල')}</th>
+                                    <th className="text-end">{tr('Total', 'එකතුව')}</th>
+                                    <th className="text-end">{tr('Profit', 'ලාභය')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -186,7 +187,7 @@ const SupplierReport = () => {
                             </tbody>
                             <tfoot className="table-secondary">
                                 <tr>
-                                    <td colSpan="6" className="text-end fw-bold">මුළු එකතුව:</td>
+                                    <td colSpan="6" className="text-end fw-bold">{tr('Grand Total:', 'මුළු එකතුව:')}</td>
                                     <td className="text-end fw-bold text-primary">
                                         {groups[key].reduce((sum, item) => sum + parseFloat(item.SupplierTotal || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </td>
@@ -221,7 +222,7 @@ const SupplierReport = () => {
                 <div className="card shadow mb-4 p-3">
                     <div className="row g-3 align-items-end">
                         <div className="col-md-3">
-                            <label className="fw-bold">ආරම්භ දිනය</label>
+                            <label className="fw-bold">{tr('Start Date', 'ආරම්භ දිනය')}</label>
                             <input type="date" className="form-control"
                                 value={startDate}
                                 onChange={e => setStartDate(e.target.value)}
@@ -229,7 +230,7 @@ const SupplierReport = () => {
                         </div>
 
                         <div className="col-md-3">
-                            <label className="fw-bold">අවසන් දිනය</label>
+                            <label className="fw-bold">{tr('End Date', 'අවසන් දිනය')}</label>
                             <input type="date" className="form-control"
                                 value={endDate}
                                 onChange={e => setEndDate(e.target.value)}
@@ -265,12 +266,12 @@ const SupplierReport = () => {
                 <div className="card shadow mb-4 p-3">
                     <div className="row g-3 align-items-center">
                         <div className="col-md-8">
-                            <label className="fw-bold">සැපයුම්කරු බිල් අංකය අනුව සොයන්න</label>
+                            <label className="fw-bold">{tr('Search by Supplier Bill No', 'සැපයුම්කරු බිල් අංකය අනුව සොයන්න')}</label>
                             <div className="input-group">
                                 <input 
                                     type="text" 
                                     className="form-control"
-                                    placeholder="සැපයුම්කරු බිල් අංකය ඇතුලත් කරන්න..."
+                                    placeholder={tr('Enter supplier bill no...', 'සැපයුම්කරු බිල් අංකය ඇතුලත් කරන්න...')}
                                     value={searchSupplierBillNo}
                                     onChange={handleSearchChange}
                                 />
@@ -288,7 +289,7 @@ const SupplierReport = () => {
                         <div className="col-md-4">
                             {searchSupplierBillNo && (
                                 <div className="alert alert-info mb-0 py-2">
-                                    <i className="bi bi-search"></i> පෙරහන: <strong>{searchSupplierBillNo}</strong>
+                                    <i className="bi bi-search"></i> {tr('Filter:', 'පෙරහන:')} <strong>{searchSupplierBillNo}</strong>
                                 </div>
                             )}
                         </div>
@@ -297,7 +298,7 @@ const SupplierReport = () => {
 
                 {/* TITLE */}
                 <div className="d-flex justify-content-between align-items-center mb-4">
-                    <h2 className="fw-bold">සැපයුම්කරු අනුව වාර්තාව</h2>
+                    <h2 className="fw-bold">{tr('Report by Supplier', 'සැපයුම්කරු අනුව වාර්තාව')}</h2>
                     <button className="btn btn-success" onClick={() => window.print()}>
                         Print
                     </button>
@@ -316,7 +317,7 @@ const SupplierReport = () => {
                     <>
                         {Object.keys(filteredReportData.nonBilled).length > 0 && (
                             <>
-                                <h4 className="fw-bold">බිල් නොකළ වාර්තා</h4>
+                                <h4 className="fw-bold">{tr('Unbilled Records', 'බිල් නොකළ වාර්තා')}</h4>
                                 {renderTableBlock(filteredReportData.nonBilled, 'nonBilled')}
                             </>
                         )}
@@ -324,7 +325,7 @@ const SupplierReport = () => {
                         {Object.keys(filteredReportData.billed).length > 0 && (
                             <>
                                 <hr />
-                                <h4 className="fw-bold">බිල් කළ වාර්තා</h4>
+                                <h4 className="fw-bold">{tr('Billed Records', 'බිල් කළ වාර්තා')}</h4>
                                 {renderTableBlock(filteredReportData.billed, 'billed')}
                             </>
                         )}
@@ -332,7 +333,7 @@ const SupplierReport = () => {
                         {Object.keys(filteredReportData.billed).length === 0 &&
                          Object.keys(filteredReportData.nonBilled).length === 0 && (
                             <div className="alert alert-info">
-                                {searchSupplierBillNo ? `"${searchSupplierBillNo}" සඳහා වාර්තා හමු නොවිණි` : 'No records found'}
+                                {searchSupplierBillNo ? tr(`No records found for "${searchSupplierBillNo}"`, `"${searchSupplierBillNo}" සඳහා වාර්තා හමු නොවිණි`) : tr('No records found', 'වාර්තා හමු නොවිණි')}
                             </div>
                         )}
 
@@ -346,13 +347,13 @@ const SupplierReport = () => {
                                             <table className="table table-bordered mb-0">
                                                 <tbody>
                                                     <tr style={{ backgroundColor: '#e9ecef' }}>
-                                                        <td className="fw-bold fs-5">සම්පූර්ණ එකතුව (Grand Total):</td>
+                                                        <td className="fw-bold fs-5">{tr('Grand Total:', 'සම්පූර්ණ එකතුව (Grand Total):')}</td>
                                                         <td className="text-end fw-bold fs-5 text-primary">
                                                             {grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </td>
                                                     </tr>
                                                     <tr style={{ backgroundColor: '#e9ecef' }}>
-                                                        <td className="fw-bold fs-5">සම්පූර්ණ ලාභය (Grand Profit):</td>
+                                                        <td className="fw-bold fs-5">{tr('Grand Profit:', 'සම්පූර්ණ ලාභය (Grand Profit):')}</td>
                                                         <td className="text-end fw-bold fs-5 text-success">
                                                             {grandProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </td>
@@ -361,7 +362,7 @@ const SupplierReport = () => {
                                                         <tr style={{ backgroundColor: '#fff3cd' }}>
                                                             <td colSpan="2" className="text-muted small">
                                                                 <i className="bi bi-info-circle"></i> 
-                                                                පෙරහනට අනුව ගණනය කරන ලදී (Filtered results)
+                                                                {tr('Filtered results', 'පෙරහනට අනුව ගණනය කරන ලදී (Filtered results)')}
                                                             </td>
                                                         </tr>
                                                     )}

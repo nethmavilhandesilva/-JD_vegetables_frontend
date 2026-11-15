@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import GrnReportView from './GrnReportView';
 import { API_BASE_URL } from '../../config/paths';
+import { tr } from '../../i18n/language';
 
 const BACKEND_URL = API_BASE_URL;
 
@@ -120,7 +121,7 @@ const GrnReportModal = ({ isOpen, onClose }) => {
       <div className="modal-dialog">
         <div className="modal-content" style={{ backgroundColor: '#99ff99' }}>
           <div className="modal-header">
-            <h5 className="modal-title">📋 GRN වාර්තාව</h5>
+            <h5 className="modal-title">{tr('📋 GRN Report', '📋 GRN වාර්තාව')}</h5>
             <button 
               type="button" 
               className="btn-close" 
@@ -134,7 +135,7 @@ const GrnReportModal = ({ isOpen, onClose }) => {
             <div className="modal-body">
               <div className="mb-3">
                 <label htmlFor="code_select" className="form-label" style={{ fontWeight: 'bold', color: 'black' }}>
-                  කේතය
+                  {tr('Code', 'කේතය')}
                 </label>
                 <select
                   id="code_select"
@@ -143,7 +144,7 @@ const GrnReportModal = ({ isOpen, onClose }) => {
                   onChange={(e) => setSelectedCode(e.target.value)}
                   disabled={loading}
                 >
-                  <option value="">-- සියලුම වාර්තා සඳහා --</option>
+                  <option value="">{tr('-- For all records --', '-- සියලුම වාර්තා සඳහා --')}</option>
                   {codes.map((code) => (
                     <option key={code} value={code}>
                       {code}
@@ -165,7 +166,7 @@ const GrnReportModal = ({ isOpen, onClose }) => {
                     Generating Report...
                   </>
                 ) : (
-                  'වාර්තාව ලබාගන්න'
+                  tr('Get Report', 'වාර්තාව ලබාගන්න')
                 )}
               </button>
             </div>

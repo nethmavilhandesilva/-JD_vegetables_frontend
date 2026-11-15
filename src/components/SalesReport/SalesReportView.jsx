@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import api from '../../api';
 import { SHOP_NAME } from '../../config/shop';
+import { tr } from '../../i18n/language';
 
 const SalesReportView = ({ reportData, onClose }) => {
     const { salesData: initialSalesData, filters: initialFilters } = reportData;
@@ -215,7 +216,7 @@ const SalesReportView = ({ reportData, onClose }) => {
             return `
                 <div style="background: white; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e0e0e0;">
                     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; font-weight: 600; font-size: 16px;">
-                        🏢 ගනුදෙනුකරු කේතය: ${customerCode}
+                        ${tr('🏢 Customer Code', '🏢 ගනුදෙනුකරු කේතය')}: ${customerCode}
                     </div>
 
                     ${Object.entries(bills).map(([billNo, sales]) => {
@@ -227,17 +228,17 @@ const SalesReportView = ({ reportData, onClose }) => {
                         return `
                             <div style="padding: 20px; border-bottom: 1px solid #e0e0e0;">
                                 <div style="background: #f8f9fa; padding: 12px 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #4CAF50;">
-                                    <strong>🧾 බිල් අංකය: ${billNo}</strong>
+                                    <strong>${tr('🧾 Bill No', '🧾 බිල් අංකය')}: ${billNo}</strong>
                                 </div>
                                 <table style="width:100%; border-collapse:collapse; margin-bottom:15px; border:1px solid #e0e0e0;">
                                     <thead>
                                         <tr>
                                             <th style="background:#4CAF50; color:white; padding:10px;">Date</th>
-                                            <th style="background:#4CAF50; color:white; padding:10px; text-align:left;">භාණ්ඩ නාමය</th>
-                                            <th style="background:#4CAF50; color:white; padding:10px;">බර (kg)</th>
-                                            <th style="background:#4CAF50; color:white; padding:10px;">මිල/kg</th>
-                                            <th style="background:#4CAF50; color:white; padding:10px;">කුලිය (Kuliya)</th>
-                                            <th style="background:#4CAF50; color:white; padding:10px;">එකතුව</th>
+                                            <th style="background:#4CAF50; color:white; padding:10px; text-align:left;">${tr('Item Name', 'භාණ්ඩ නාමය')}</th>
+                                            <th style="background:#4CAF50; color:white; padding:10px;">${tr('Weight (kg)', 'බර (kg)')}</th>
+                                            <th style="background:#4CAF50; color:white; padding:10px;">${tr('Price/kg', 'මිල/kg')}</th>
+                                            <th style="background:#4CAF50; color:white; padding:10px;">${tr('Kuliya', 'කුලිය (Kuliya)')}</th>
+                                            <th style="background:#4CAF50; color:white; padding:10px;">${tr('Total', 'එකතුව')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -262,7 +263,7 @@ const SalesReportView = ({ reportData, onClose }) => {
                                     </tbody>
                                     <tfoot>
                                         <tr>
-                                            <td colspan="5" style="text-align:right; padding:10px; font-weight:600; background:#f0f2f5;">මලු + කුලිය සමඟ එකතුව:</td>
+                                            <td colspan="5" style="text-align:right; padding:10px; font-weight:600; background:#f0f2f5;">${tr('Total incl. Bags + Kuliya:', 'මලු + කුලිය සමඟ එකතුව:')}</td>
                                             <td style="text-align:right; padding:10px; font-weight:700; background:#f0f2f5; color:#4CAF50;">${billGrand.toFixed(2)}</td>
                                         </tr>
                                     </tfoot>
@@ -271,7 +272,7 @@ const SalesReportView = ({ reportData, onClose }) => {
                         `;
                     }).join('')}
                     <div style="text-align:right; padding:15px 20px; background:#f8f9fa; font-weight:700; color:#4CAF50; border-top:2px solid #4CAF50;">
-                        පාරිභෝගික එකතුව (කුලිය සමඟ): ${customerTotal.toFixed(2)}
+                        ${tr('Customer Total (incl. Kuliya)', 'පාරිභෝගික එකතුව (කුලිය සමඟ)')}: ${customerTotal.toFixed(2)}
                     </div>
                 </div>
             `;
@@ -280,13 +281,13 @@ const SalesReportView = ({ reportData, onClose }) => {
         return `
             <div style="padding: 20px; font-family: sans-serif;">
                 <h1 style="text-align:center; margin-bottom:5px;">${companyName}</h1>
-                <h2 style="text-align:center; color:#4CAF50; margin-top:0;">සකස් කළ විකුණුම් සාරාංශය</h2>
-                <p style="text-align:center;">දිනය: ${settingDate}</p>
+                <h2 style="text-align:center; color:#4CAF50; margin-top:0;">${tr('Processed Sales Summary', 'සකස් කළ විකුණුම් සාරාංශය')}</h2>
+                <p style="text-align:center;">${tr('Date', 'දිනය')}: ${settingDate}</p>
                 <hr/>
                 ${activeFiltersHTML}
                 ${salesHTML}
                 <div style="text-align:right; font-size:24px; font-weight:700; margin-top:30px; border-top:3px double #333; padding-top:10px;">
-                    මුළු එකතුව (Grand Total): ${grandTotal.toFixed(2)}
+                    ${tr('Grand Total', 'මුළු එකතුව (Grand Total)')}: ${grandTotal.toFixed(2)}
                 </div>
             </div>
         `;
@@ -350,7 +351,7 @@ const SalesReportView = ({ reportData, onClose }) => {
                     {loading ? (
                         <div style={{ textAlign: 'center', padding: '40px' }}>
                             <div className="spinner"></div>
-                            <p>පැටවෙමින් පවතී (Loading Data)...</p>
+                            <p>{tr('Loading Data...', 'පැටවෙමින් පවතී (Loading Data)...')}</p>
                         </div>
                     ) : (
                         Object.entries(groupedData).map(([customerCode, bills]) => {
@@ -394,14 +395,14 @@ const SalesReportView = ({ reportData, onClose }) => {
                                         </div>
                                     ))}
                                     <div style={{ padding: '15px 20px', textAlign: 'right', background: '#e8f5e9', fontWeight: 'bold', fontSize: '18px', color: '#2e7d32' }}>
-                                        පාරිභෝගික එකතුව (Kuliya සහිතව): {customerTotal.toFixed(2)}
+                                        {tr('Customer Total (incl. Kuliya):', 'පාරිභෝගික එකතුව (Kuliya සහිතව):')} {customerTotal.toFixed(2)}
                                     </div>
                                 </div>
                             );
                         })
                     )}
                     <div style={{ textAlign: 'right', fontSize: '28px', fontWeight: 'bold', marginTop: '20px', padding: '20px', borderTop: '5px solid #4CAF50', background: '#f9f9f9' }}>
-                        මුළු එකතුව: {grandTotal.toFixed(2)}
+                        {tr('Grand Total:', 'මුළු එකතුව:')} {grandTotal.toFixed(2)}
                     </div>
                 </div>
             </div>

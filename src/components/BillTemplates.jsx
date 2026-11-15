@@ -1,4 +1,5 @@
 import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/shop';
+import { tr } from '../i18n/language';
 // src/components/BillTemplates.jsx
 
 export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAmount = 0, billSize = '3inch' }) => {
@@ -150,9 +151,9 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
             <div class="info-section">
                 <div style="font-weight: bold; font-size: 14px;">Tel: ${SHOP_PHONE}</div>
                 <div style="display:flex; justify-content:space-between; font-size: 13px; margin-top: 5px;">
-                    <span>බිල් අංකය: ${billNo}</span>
+                    <span>${tr('Bill No', 'බිල් අංකය')}: ${billNo}</span>
                     <div style="text-align:right;">
-                        <span style="white-space:nowrap;">දිනය: ${date}</span><br>
+                        <span style="white-space:nowrap;">${tr('Date', 'දිනය')}: ${date}</span><br>
                         <span>${time}</span>
                     </div>
                 </div>
@@ -170,11 +171,11 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
                 <thead>
                     <tr style="border-bottom:2px solid #000; font-weight:bold; font-size:14px;">
                       <th style="text-align:left;">
-                       වර්ගය<br>මලු
+                       ${tr('Type', 'වර්ගය')}<br>${tr('Bags', 'මලු')}
                        </th>
-                        <th style="text-align:right;">කිලෝ</th>
-                        <th style="text-align:right;">මිල</th>
-                        <th style="text-align:right;">අගය</th>
+                        <th style="text-align:right;">${tr('Kg', 'කිලෝ')}</th>
+                        <th style="text-align:right;">${tr('Price', 'මිල')}</th>
+                        <th style="text-align:right;">${tr('Value', 'අගය')}</th>
                     </tr>
                 </thead>
                 <tbody>${itemsHtml}</tbody>
@@ -193,16 +194,16 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
             <table class="total-table">
                 ${totalPackCost > 0 ? `
 <tr>
-    <td style="font-size:14px;">මලු:</td>
+    <td style="font-size:14px;">${tr('Bags', 'මලු')}:</td>
     <td style="text-align:right;">${formatNumber(totalPackCost.toFixed(2))}</td>
 </tr>` : ''}
 
 <tr>
-    <td style="font-size:14px;">කුලිය:</td>
+    <td style="font-size:14px;">${tr('Kuliya', 'කුලිය')}:</td>
     <td style="text-align:right;">${formatNumber(totalKuliyaSum.toFixed(2))}</td>
 </tr>
                 <tr>
-                    <td style="padding-top:10px;">එකතුව:</td>
+                    <td style="padding-top:10px;">${tr('Total', 'එකතුව')}:</td>
                     <td style="text-align:right; padding-top:10px;">
                         <span style="border-bottom:4px double #000; border-top:1px solid #000; font-size:26px;">
                             ${Number(finalGrandTotal).toFixed(2)}
@@ -211,7 +212,7 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
                 </tr>
                 ${globalLoanAmount !== 0 ? `
                 <tr>
-                    <td style="font-size:18px; padding-top:10px;">පෙර ණය:</td>
+                    <td style="font-size:18px; padding-top:10px;">${tr('Previous Loan', 'පෙර ණය')}:</td>
                     <td style="text-align:right; font-size:20px; padding-top:10px;">
                         Rs. ${formatNumber(Math.abs(globalLoanAmount).toFixed(2))}
                     </td>
@@ -391,27 +392,27 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
             <div class="header">
                 <div class="shop-name">${SHOP_NAME}</div>
                 <div class="shop-address">${SHOP_ADDRESS}</div>
-                <div class="shop-phone">දුරකථන: ${SHOP_PHONE}</div>
+                <div class="shop-phone">${tr('Tel', 'දුරකථන')}: ${SHOP_PHONE}</div>
             </div>
             
             <div class="info-row" style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="font-size: 4.6mm; font-weight: bold;">${SHOP_STALL_NO}</div>
-                <div style="font-size: 4.6mm; font-weight: bold;">ගණුම්කරු: ${(customerName || '').toUpperCase()}</div>
+                <div style="font-size: 4.6mm; font-weight: bold;">${tr('Customer', 'ගණුම්කරු')}: ${(customerName || '').toUpperCase()}</div>
             </div>
             
             <div class="info-row">
-                <div style="font-size: 3.6mm;">අංකය: ${billNo}</div>
-                <div style="font-size: 3.6mm;">දිනය: ${date}</div>
+                <div style="font-size: 3.6mm;">${tr('No', 'අංකය')}: ${billNo}</div>
+                <div style="font-size: 3.6mm;">${tr('Date', 'දිනය')}: ${date}</div>
             </div>
             ` : `
             <div class="header-continued">
-                <div class="continued-label">(පිටුව ${pageNumber} / ${itemPages.length} - කරුණාකර දිගටම කියවන්න)</div>
+                <div class="continued-label">(${tr('Page', 'පිටුව')} ${pageNumber} / ${itemPages.length} - ${tr('please continue reading', 'කරුණාකර දිගටම කියවන්න')})</div>
             </div>
             `}
 
             ${itemPages.length > 1 ? `
             <div style="margin-bottom: 1.3mm; font-size: ${styles.tinyFontSize}; text-align: center; font-weight: bold;">
-                පිටුව ${pageNumber} / ${itemPages.length}
+                ${tr('Page', 'පිටුව')} ${pageNumber} / ${itemPages.length}
             </div>
             ` : ''}
 
@@ -427,11 +428,11 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
                 <thead>
                     <tr>
                         <th style="font-size: ${styles.tableHeaderFontSize};">#</th>
-                        <th style="font-size: ${styles.tableHeaderFontSize};">අයිතමය</th>
-                        <th style="font-size: ${styles.tableHeaderFontSize};">බර(kg)</th>
-                        <th style="font-size: ${styles.tableHeaderFontSize};">මිල</th>
-                        <th style="font-size: ${styles.tableHeaderFontSize};">මලු</th>
-                        <th style="font-size: ${styles.tableHeaderFontSize};">එකතුව</th>
+                        <th style="font-size: ${styles.tableHeaderFontSize};">${tr('Item', 'අයිතමය')}</th>
+                        <th style="font-size: ${styles.tableHeaderFontSize};">${tr('Weight(kg)', 'බර(kg)')}</th>
+                        <th style="font-size: ${styles.tableHeaderFontSize};">${tr('Price', 'මිල')}</th>
+                        <th style="font-size: ${styles.tableHeaderFontSize};">${tr('Bags', 'මලු')}</th>
+                        <th style="font-size: ${styles.tableHeaderFontSize};">${tr('Total', 'එකතුව')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -439,7 +440,7 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
                 </tbody>
                 <tfoot>
                     <tr style="background: #f0f0f0;">
-                        <td colspan="2" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">මෙම පිටුවේ එකතුව</td>
+                        <td colspan="2" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${tr('Page Total', 'මෙම පිටුවේ එකතුව')}</td>
                         <td class="text-right" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${formatNumber(pageTotalSales)}</td>
                         <td style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};"></td>
                         <td class="text-center" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${pageTotalPacks}</td>
@@ -450,23 +451,23 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
 
             ${isLastPage ? `
             <div class="totals-section">
-                <div class="total-row"><span>භාණ්ඩ එකතුව:</span><span>රු. ${formatNumber(totalSales)}</span></div>
-                <div class="total-row"><span>මලු වියදම:</span><span>රු. ${formatNumber(totalPackCost)}</span></div>
-                <div class="total-row"><span>කුලිය:</span><span>රු. ${formatNumber(totalKuliya)}</span></div>
-                ${globalLoanAmount !== 0 ? `<div class="total-row"><span>පෙර ණය:</span><span>රු. ${formatNumber(Math.abs(globalLoanAmount))}</span></div>` : ''}
+                <div class="total-row"><span>${tr('Items Total', 'භාණ්ඩ එකතුව')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(totalSales)}</span></div>
+                <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(totalPackCost)}</span></div>
+                <div class="total-row"><span>${tr('Kuliya', 'කුලිය')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(totalKuliya)}</span></div>
+                ${globalLoanAmount !== 0 ? `<div class="total-row"><span>${tr('Previous Loan', 'පෙර ණය')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(Math.abs(globalLoanAmount))}</span></div>` : ''}
                 <div class="net-total">
-                    <span>මුළු ගෙවිය යුතු මුදල:</span>
-                    <span>රු. ${formatNumber(finalGrandTotal)}</span>
+                    <span>${tr('Total Amount Payable', 'මුළු ගෙවිය යුතු මුදල')}:</span>
+                    <span>${tr('Rs.', 'රු.')} ${formatNumber(finalGrandTotal)}</span>
                 </div>
             </div>
             
             <div class="footer">
-                *** ස්තුතියි! නැවත පැමිණෙන්න ***
+                ${tr('*** Thank you! Please come again ***', '*** ස්තුතියි! නැවත පැමිණෙන්න ***')}
                 <div style="margin-top: 1mm; font-size: ${styles.tinyFontSize};">${date} | ${time}</div>
             </div>
             ` : `
             <div class="footer" style="margin-top: 2.6mm; text-align: center; font-size: ${styles.smallFontSize}; border-top: 0.3mm dashed #000; padding-top: 1.6mm;">
-                *** කරුණාකර පහත පිටුවට හැරෙන්න ***
+                ${tr('*** Please turn to the next page ***', '*** කරුණාකර පහත පිටුවට හැරෙන්න ***')}
             </div>
             `}
         </div>
@@ -480,25 +481,25 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
                 <div class="header">
                     <div class="shop-name">${SHOP_NAME}</div>
                     <div class="shop-address">${SHOP_ADDRESS}</div>
-                    <div class="shop-phone">දුරකථන: ${SHOP_PHONE}</div>
+                    <div class="shop-phone">${tr('Tel', 'දුරකථන')}: ${SHOP_PHONE}</div>
                 </div>
                 
                 <div class="info-row" style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="font-size: 4.6mm; font-weight: bold;">${SHOP_STALL_NO}</div>
-                    <div style="font-size: 4.6mm; font-weight: bold;">ගණුම්කරු: ${(customerName || '').toUpperCase()}</div>
+                    <div style="font-size: 4.6mm; font-weight: bold;">${tr('Customer', 'ගණුම්කරු')}: ${(customerName || '').toUpperCase()}</div>
                 </div>
                 
                 <div class="info-row">
-                    <div style="font-size: 3.6mm;">අංකය: ${billNo}</div>
-                    <div style="font-size: 3.6mm;">දිනය: ${date}</div>
+                    <div style="font-size: 3.6mm;">${tr('No', 'අංකය')}: ${billNo}</div>
+                    <div style="font-size: 3.6mm;">${tr('Date', 'දිනය')}: ${date}</div>
                 </div>
                 
                 <div style="text-align: center; padding: 6.5mm; font-size: ${styles.normalFontSize}; font-weight: bold;">
-                    අයිතම නොමැත
+                    ${tr('No items', 'අයිතම නොමැත')}
                 </div>
                 
                 <div class="footer">
-                    *** ස්තුතියි! නැවත පැමිණෙන්න ***
+                    ${tr('*** Thank you! Please come again ***', '*** ස්තුතියි! නැවත පැමිණෙන්න ***')}
                     <div style="margin-top: 1mm; font-size: ${styles.tinyFontSize};">${date} | ${time}</div>
                 </div>
             </div>

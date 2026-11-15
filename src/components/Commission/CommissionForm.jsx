@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../api';
+import { tr } from '../../i18n/language';
 
 const defaultFormData = {
     item_code: '',
@@ -202,7 +203,7 @@ const CommissionForm = ({ itemOptions, supplierOptions = [], initialData, onSubm
             
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px', justifyContent: 'space-between' }}>
                 <h3 style={{ color: '#004d00', margin: 0 }}>
-                    {isEditing ? '✏️ කමිෂන් සංස්කරණය කරන්න' : '➕ නව කමිෂන් සකසන්න'}
+                    {isEditing ? tr('✏️ Edit Commission', '✏️ කමිෂන් සංස්කරණය කරන්න') : tr('➕ Set New Commission', '➕ නව කමිෂන් සකසන්න')}
                 </h3>
                 {!isPasswordVerified && (
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -249,7 +250,7 @@ const CommissionForm = ({ itemOptions, supplierOptions = [], initialData, onSubm
                 
                 {/* Select By Type */}
                 <div>
-                    <label>තෝරන්න:</label>
+                    <label>{tr('Select:', 'තෝරන්න:')}</label>
                     <select
                         name="select_by_type"
                         value={selectByType} 
@@ -280,7 +281,7 @@ const CommissionForm = ({ itemOptions, supplierOptions = [], initialData, onSubm
                             style={!isPasswordVerified ? disabledInputStyle : inputStyle}
                             onFocus={handleFocus}
                         >
-                            <option value="">-- තෝරන්න --</option>
+                            <option value="">{tr('-- Select --', '-- තෝරන්න --')}</option>
                             {(selectByType === 'Items' ? itemOptions : supplierOptions).map((opt) => (
                                 <option key={opt.item_code || opt.code} value={opt.item_code || opt.code}>
                                     {opt.item_code || opt.code} - {opt.item_name || opt.name}
@@ -292,7 +293,7 @@ const CommissionForm = ({ itemOptions, supplierOptions = [], initialData, onSubm
 
                 {/* Price and Commission Fields */}
                 <div>
-                    <label>ආරම්භක මිල:</label>
+                    <label>{tr('Start Price:', 'ආරම්භක මිල:')}</label>
                     <input
                         type="number"
                         name="starting_price"
@@ -307,7 +308,7 @@ const CommissionForm = ({ itemOptions, supplierOptions = [], initialData, onSubm
                 </div>
 
                 <div>
-                    <label>අවසාන මිල:</label>
+                    <label>{tr('End Price:', 'අවසාන මිල:')}</label>
                     <input
                         type="number"
                         name="end_price"
@@ -322,7 +323,7 @@ const CommissionForm = ({ itemOptions, supplierOptions = [], initialData, onSubm
                 </div>
 
                 <div>
-                    <label>මුදල (Rs):</label>
+                    <label>{tr('Amount (Rs):', 'මුදල (Rs):')}</label>
                     <input
                         type="number"
                         name="commission_amount" 
@@ -351,7 +352,7 @@ const CommissionForm = ({ itemOptions, supplierOptions = [], initialData, onSubm
                             cursor: !isPasswordVerified ? 'not-allowed' : 'pointer'
                         }}
                     >
-                        {isEditing ? 'Save' : 'එකතු කරන්න'}
+                        {isEditing ? tr('Save', 'සුරකින්න') : tr('Add', 'එකතු කරන්න')}
                     </button>
                     {isEditing && (
                         <button type="button" onClick={onCancelEdit} style={{ padding: '10px 15px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px' }}>

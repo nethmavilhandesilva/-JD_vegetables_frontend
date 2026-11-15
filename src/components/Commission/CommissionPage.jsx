@@ -3,6 +3,7 @@ import api from '../../api';
 import { Link } from 'react-router-dom';
 import CommissionForm from './CommissionForm';
 import { APP_BASE } from '../../config/paths';
+import { tr } from '../../i18n/language';
 
 const CommissionPage = () => {
     const [commissions, setCommissions] = useState([]);
@@ -68,20 +69,20 @@ const CommissionPage = () => {
         <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#99ff99' }}>
             {/* Sidebar */}
             <div style={{ width: '260px', backgroundColor: '#004d00', color: 'white', padding: '20px', position: 'fixed', height: '100vh' }}>
-                <Link className="text-white text-decoration-none d-flex align-items-center mb-4" to="/"><i className="material-icons me-2">warehouse</i>මුල් පිටුව</Link>
+                <Link className="text-white text-decoration-none d-flex align-items-center mb-4" to="/"><i className="material-icons me-2">warehouse</i>{tr('Home', 'මුල් පිටුව')}</Link>
                 <ul className="list-unstyled">
-                    <li className="mb-2"><Link to="/customers" className="nav-link text-white p-2 text-decoration-none"><i className="material-icons me-2">people</i>ගනුදෙනුකරුවන්</Link></li>
-                    <li className="mb-2"><Link to="/items" className="nav-link text-white p-2 text-decoration-none"><i className="material-icons me-2">inventory_2</i>අයිතමය</Link></li>
-                    <li className="mb-2"><Link to="/suppliers" className="nav-link text-white p-2 text-decoration-none"><i className="material-icons me-2">local_shipping</i>සැපයුම්කරුවන්</Link></li>
-                    <li className="mb-2"><Link to="/commissions" className="nav-link text-white p-2 rounded text-decoration-none" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}><i className="material-icons me-2">attach_money</i>කොමිෂන්</Link></li>
+                    <li className="mb-2"><Link to="/customers" className="nav-link text-white p-2 text-decoration-none"><i className="material-icons me-2">people</i>{tr('Customers', 'ගනුදෙනුකරුවන්')}</Link></li>
+                    <li className="mb-2"><Link to="/items" className="nav-link text-white p-2 text-decoration-none"><i className="material-icons me-2">inventory_2</i>{tr('Items', 'අයිතමය')}</Link></li>
+                    <li className="mb-2"><Link to="/suppliers" className="nav-link text-white p-2 text-decoration-none"><i className="material-icons me-2">local_shipping</i>{tr('Suppliers', 'සැපයුම්කරුවන්')}</Link></li>
+                    <li className="mb-2"><Link to="/commissions" className="nav-link text-white p-2 rounded text-decoration-none" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}><i className="material-icons me-2">attach_money</i>{tr('Commission', 'කොමිෂන්')}</Link></li>
                 </ul>
-                <button onClick={handleLogout} className="btn btn-outline-light w-100 mt-5">ඉවත් වන්න</button>
+                <button onClick={handleLogout} className="btn btn-outline-light w-100 mt-5">{tr('Logout', 'ඉවත් වන්න')}</button>
             </div>
 
             {/* Main Content */}
             <div style={{ marginLeft: '260px', flexGrow: 1, padding: '30px' }}>
                 <div style={{ backgroundColor: '#fff', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                    <h1 style={{ color: '#004d00' }}>💲කමිෂන් කළමනාකරණ මූල පුවරුව</h1>
+                    <h1 style={{ color: '#004d00' }}>{tr('💲 Commission Management Dashboard', '💲කමිෂන් කළමනාකරණ මූල පුවරුව')}</h1>
 
                     <div id="commission-form-section" style={{ border: '2px solid #004d00', padding: '25px', borderRadius: '10px', margin: '20px 0', backgroundColor: '#f9f9f9' }}>
                         {!loadingSuppliers && (
@@ -100,13 +101,13 @@ const CommissionPage = () => {
                         <table className="table table-bordered table-hover align-middle">
                             <thead style={{ backgroundColor: '#004d00' }}>
                                 <tr className="text-center white-th" style={{ backgroundColor: '#004d00' }}>
-                                    <th>අංකය</th>
-                                    <th>භාණ්ඩය</th>
-                                    <th>සැපයුම්කරු</th>
-                                    <th>ආරම්භක මිල</th>
-                                    <th>අවසාන මිල</th>
-                                    <th>මුදල</th>
-                                    <th>ක්‍රියාමාර්ග</th>
+                                    <th>{tr('No', 'අංකය')}</th>
+                                    <th>{tr('Item', 'භාණ්ඩය')}</th>
+                                    <th>{tr('Supplier', 'සැපයුම්කරු')}</th>
+                                    <th>{tr('Start Price', 'ආරම්භක මිල')}</th>
+                                    <th>{tr('End Price', 'අවසාන මිල')}</th>
+                                    <th>{tr('Amount', 'මුදල')}</th>
+                                    <th>{tr('Actions', 'ක්‍රියාමාර්ග')}</th>
                                 </tr>
                             </thead>
                             <tbody>

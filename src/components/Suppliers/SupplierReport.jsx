@@ -5,6 +5,7 @@ import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../../config
 import { STORAGE_URL } from '../../config/paths';
 import { printHtml } from '../../utils/printHtml';
 import PrintPreviewDialog from '../PrintPreviewDialog';
+import { tr } from '../../i18n/language';
 
 // Surfaces the real backend error (Laravel validation errors, custom error/message
 // fields, etc.) instead of a hardcoded generic string, so failures are diagnosable
@@ -49,6 +50,19 @@ const combineSupplierBillLines = (records) => {
 // inline inside SupplierReport, React treated it as a brand-new component type on
 // every render and fully remounted it — which reset its auto-focus effect and
 // stole focus out of whichever input the user was typing in every few seconds.
+const supplierValueInputStyle = {
+    width: '100%',
+    padding: '10px 12px',
+    border: '2px solid #c7d2fe',
+    borderRadius: '10px',
+    fontSize: '14px',
+    fontWeight: '600',
+    boxSizing: 'border-box',
+    fontFamily: 'monospace',
+    outline: 'none',
+    background: '#ffffff'
+};
+
 const BulkUpdateContextMenu = React.memo(({
     show,
     selectionCriteria,
@@ -57,11 +71,18 @@ const BulkUpdateContextMenu = React.memo(({
     setBulkUpdateSupplierCode,
     bulkUpdateCustomerCode,
     setBulkUpdateCustomerCode,
+    bulkUpdateSupplierWeight,
+    setBulkUpdateSupplierWeight,
+    bulkUpdateSupplierPrice,
+    setBulkUpdateSupplierPrice,
+    selectedRecord,
     handleBulkUpdate,
     closeContextMenu
 }) => {
     const supplierInputRef = useRef(null);
     const customerInputRef = useRef(null);
+    const supplierWeightInputRef = useRef(null);
+    const supplierPriceInputRef = useRef(null);
 
     // Auto-focus on the first input when modal opens
     useEffect(() => {
@@ -255,7 +276,8 @@ const BulkUpdateContextMenu = React.memo(({
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                     e.preventDefault();
-                                    handleBulkUpdate();
+                                    // Move to the supplier weight / price fields
+                                    (supplierWeightInputRef.current || supplierPriceInputRef.current)?.focus();
                                 } else if (e.key === 'Escape') {
                                     closeContextMenu();
                                 }
@@ -282,6 +304,83 @@ const BulkUpdateContextMenu = React.memo(({
                             }}
                             placeholder="e.g., CUST001 (leave empty to skip)"
                         />
+                    </div>
+
+                    {/* Supplier-side values (SupplierWeight / SupplierPricePerKg in the sales table) */}
+                    <div style={{
+                        border: '1px solid #c7d2fe',
+                        background: '#eef2ff',
+                        borderRadius: '10px',
+                        padding: '12px',
+                        marginBottom: '20px'
+                    }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '12px', color: '#3730a3', marginBottom: '10px' }}>
+                            ⚖️ {tr('Supplier Weight & Price', 'සැපයුම්කරු බර සහ මිල')}
+                        </div>
+
+                        {selectedRecord ? (
+                            <div style={{ marginBottom: '12px' }}>
+                                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '12px', color: '#374151' }}>
+                                    {tr('Supplier Weight (kg)', 'සැපයුම්කරු බර (kg)')}
+                                </label>
+                                <input
+                                    ref={supplierWeightInputRef}
+                                    type="number"
+                                    step="0.001"
+                                    min="0"
+                                    inputMode="decimal"
+                                    value={bulkUpdateSupplierWeight}
+                                    onChange={(e) => setBulkUpdateSupplierWeight(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            supplierPriceInputRef.current?.focus();
+                                        } else if (e.key === 'Escape') {
+                                            closeContextMenu();
+                                        }
+                                    }}
+                                    style={supplierValueInputStyle}
+                                />
+                                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                                    {tr('Customer weight', 'පාරිභෝගික බර')}: {selectedRecord.customer_weight ?? selectedRecord.weight} kg
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '10px' }}>
+                                {tr('Select a single record to change its supplier weight.', 'සැපයුම්කරු බර වෙනස් කිරීමට එක් වාර්තාවක් පමණක් තෝරන්න.')}
+                            </div>
+                        )}
+
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '12px', color: '#374151' }}>
+                                {tr('Supplier Price / kg', 'සැපයුම්කරු මිල / kg')}
+                                {!selectedRecord && ` (${tr('applies to all selected', 'තෝරාගත් සියල්ලටම')})`}
+                            </label>
+                            <input
+                                ref={supplierPriceInputRef}
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                inputMode="decimal"
+                                value={bulkUpdateSupplierPrice}
+                                onChange={(e) => setBulkUpdateSupplierPrice(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleBulkUpdate();
+                                    } else if (e.key === 'Escape') {
+                                        closeContextMenu();
+                                    }
+                                }}
+                                placeholder={selectedRecord ? '' : tr('leave empty to skip', 'මඟ හැරීමට හිස්ව තබන්න')}
+                                style={supplierValueInputStyle}
+                            />
+                            {selectedRecord && (
+                                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                                    {tr('Customer price', 'පාරිභෝගික මිල')}: {selectedRecord.price_per_kg} / kg
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Action Buttons */}
@@ -355,6 +454,9 @@ const SupplierReport = () => {
     const [bulkUpdateContextMenu, setBulkUpdateContextMenu] = useState({ show: false, x: 0, y: 0 });
     const [bulkUpdateSupplierCode, setBulkUpdateSupplierCode] = useState('');
     const [bulkUpdateCustomerCode, setBulkUpdateCustomerCode] = useState('');
+    // Supplier-side values (SupplierWeight / SupplierPricePerKg) edited from the same menu
+    const [bulkUpdateSupplierWeight, setBulkUpdateSupplierWeight] = useState('');
+    const [bulkUpdateSupplierPrice, setBulkUpdateSupplierPrice] = useState('');
 
     // 🚀 NEW STATE: Bill size selector (3mm or 4mm) - PERSISTED
     const [billSize, setBillSize] = useState(() => {
@@ -624,7 +726,7 @@ const SupplierReport = () => {
 
         try {
             const response = await api.post('/suppliers/advance', advancePayload);
-            setAdvanceStatus({ type: 'success', text: `සාර්ථකයි! අත්තිකාරම් යාවත්කාලීන විය.` });
+            setAdvanceStatus({ type: 'success', text: tr('Success! Advance updated.', 'සාර්ථකයි! අත්තිකාරම් යාවත්කාලීන විය.') });
 
             // Immediately update the display advance amount
             setAdvanceAmount(parseFloat(response.data.data.advance_amount) || 0);
@@ -637,7 +739,7 @@ const SupplierReport = () => {
             }
         } catch (error) {
             console.error("Advance Update Error:", error);
-            setAdvanceStatus({ type: 'error', text: 'යාවත්කාලීන කිරීම අසාර්ථක විය.' });
+            setAdvanceStatus({ type: 'error', text: tr('Update failed.', 'යාවත්කාලීන කිරීම අසාර්ථක විය.') });
         } finally {
             setAdvanceLoading(false);
             setTimeout(() => {
@@ -891,6 +993,16 @@ const SupplierReport = () => {
         e.preventDefault();
         e.stopPropagation();
 
+        const nextSelectedIds = selectedTransactionIds.includes(transaction.id)
+            ? selectedTransactionIds
+            : [...selectedTransactionIds, transaction.id];
+        const singleRecord = nextSelectedIds.length === 1
+            ? supplierDetails.find(r => r.id === nextSelectedIds[0])
+            : null;
+        // One record: start from its current supplier weight / price. Several: start empty (= skip).
+        setBulkUpdateSupplierWeight(singleRecord ? String(singleRecord.weight ?? '') : '');
+        setBulkUpdateSupplierPrice(singleRecord ? String(singleRecord.SupplierPricePerKg ?? '') : '');
+
         if (!selectedTransactionIds.includes(transaction.id)) {
             setSelectedTransactionIds([...selectedTransactionIds, transaction.id]);
             if (!selectionCriteria) {
@@ -915,6 +1027,8 @@ const SupplierReport = () => {
         setBulkUpdateContextMenu({ show: false, x: 0, y: 0 });
         setBulkUpdateSupplierCode('');
         setBulkUpdateCustomerCode('');
+        setBulkUpdateSupplierWeight('');
+        setBulkUpdateSupplierPrice('');
     };
 
     // 🚀 BULK SELECTION: Handle Escape key
@@ -933,13 +1047,54 @@ const SupplierReport = () => {
         const finalSupplierCode = bulkUpdateSupplierCode.trim().toUpperCase();
         const finalCustomerCode = bulkUpdateCustomerCode.trim().toUpperCase();
 
-        if (!finalSupplierCode && !finalCustomerCode) {
-            alert("Please enter at least one code to update (Supplier or Customer)");
+        if (selectedTransactionIds.length === 0) {
+            alert("No transactions selected");
             return;
         }
 
-        if (selectedTransactionIds.length === 0) {
-            alert("No transactions selected");
+        // --- Supplier weight / price (sales.SupplierWeight / sales.SupplierPricePerKg) ---
+        const singleRecord = selectedTransactionIds.length === 1
+            ? supplierDetails.find(r => r.id === selectedTransactionIds[0])
+            : null;
+        const parseValue = (raw, label) => {
+            const text = String(raw ?? '').trim();
+            if (text === '') return { value: null };
+            const num = Number(text);
+            if (!Number.isFinite(num) || num < 0) {
+                return { error: tr(`Please enter a valid ${label}.`, `කරුණාකර නිවැරදි ${label} ඇතුළත් කරන්න.`) };
+            }
+            return { value: num };
+        };
+        const weightInput = singleRecord ? parseValue(bulkUpdateSupplierWeight, tr('supplier weight', 'සැපයුම්කරු බර')) : { value: null };
+        const priceInput = parseValue(bulkUpdateSupplierPrice, tr('supplier price', 'සැපයුම්කරු මිල'));
+        if (weightInput.error || priceInput.error) {
+            alert(weightInput.error || priceInput.error);
+            return;
+        }
+
+        const sameNumber = (a, b) => Math.abs((parseFloat(a) || 0) - (parseFloat(b) || 0)) < 0.0005;
+        let supplierValueUpdates = [];
+        if (singleRecord) {
+            // Only send what actually changed from the record's current values
+            const update = { id: singleRecord.id };
+            if (weightInput.value !== null && !sameNumber(weightInput.value, singleRecord.weight)) {
+                update.SupplierWeight = weightInput.value;
+            }
+            if (priceInput.value !== null && !sameNumber(priceInput.value, singleRecord.SupplierPricePerKg)) {
+                update.SupplierPricePerKg = priceInput.value;
+            }
+            if (update.SupplierWeight !== undefined || update.SupplierPricePerKg !== undefined) {
+                supplierValueUpdates = [update];
+            }
+        } else if (priceInput.value !== null) {
+            supplierValueUpdates = selectedTransactionIds.map(id => ({ id, SupplierPricePerKg: priceInput.value }));
+        }
+
+        if (!finalSupplierCode && !finalCustomerCode && supplierValueUpdates.length === 0) {
+            alert(tr(
+                "Please enter a supplier code, customer code, supplier weight or supplier price to update.",
+                "යාවත්කාලීන කිරීමට සැපයුම්කරු කේතය, පාරිභෝගික කේතය, සැපයුම්කරු බර හෝ මිල ඇතුළත් කරන්න."
+            ));
             return;
         }
 
@@ -947,13 +1102,23 @@ const SupplierReport = () => {
         isPrintingOrUpdatingRef.current = true;
 
         try {
-            const payload = {
-                transaction_ids: selectedTransactionIds,
-                ...(finalSupplierCode && { supplier_code: finalSupplierCode }),
-                ...(finalCustomerCode && { customer_code: finalCustomerCode })
-            };
+            let response = { status: 200 };
 
-            const response = await api.put(`/sales/bulk-update-supplier`, payload);
+            // 1. Codes first: a new supplier code re-applies the commission rules on the
+            //    server, which would otherwise overwrite a supplier price set below.
+            if (finalSupplierCode || finalCustomerCode) {
+                const payload = {
+                    transaction_ids: selectedTransactionIds,
+                    ...(finalSupplierCode && { supplier_code: finalSupplierCode }),
+                    ...(finalCustomerCode && { customer_code: finalCustomerCode })
+                };
+                response = await api.put(`/sales/bulk-update-supplier`, payload);
+            }
+
+            // 2. Supplier weight / price (server recalculates SupplierTotal, profit and commission)
+            if (response.status === 200 && supplierValueUpdates.length > 0) {
+                response = await api.put(`/sales/supplier-values`, { updates: supplierValueUpdates });
+            }
 
             if (response.status === 200) {
                 // Clear selection
@@ -1209,24 +1374,24 @@ const SupplierReport = () => {
             <div class="header">
                 <div class="shop-name">${SHOP_NAME}</div>
                 <div class="shop-address">${SHOP_ADDRESS}</div>
-                <div class="shop-phone">දුරකථන: ${SHOP_PHONE}</div>
+                <div class="shop-phone">${tr('Tel', 'දුරකථන')}: ${SHOP_PHONE}</div>
             </div>
             
             <div class="info-row" style="display: flex; flex-wrap: nowrap; gap: 3.3mm; white-space: nowrap;">
-                <div>ගොවියා: ${(selectedSupplier || '').toUpperCase()}</div>
-                <div>අං: ${currentBillNo || ''}</div>
-                <div>දිනය: ${date}</div>
+                <div>${tr('Farmer', 'ගොවියා')}: ${(selectedSupplier || '').toUpperCase()}</div>
+                <div>${tr('No:', 'අං:')} ${currentBillNo || ''}</div>
+                <div>${tr('Date', 'දිනය')}: ${date}</div>
                 <div>${time}</div>
             </div>
             ` : `
             <div class="header-continued">
-                <div class="continued-label">(පිටුව ${pageNumber} / ${itemPages.length} - කරුණාකර දිගටම කියවන්න)</div>
+                <div class="continued-label">(${tr('Page', 'පිටුව')} ${pageNumber} / ${itemPages.length} - ${tr('please continue reading', 'කරුණාකර දිගටම කියවන්න')})</div>
             </div>
             `}
 
             ${itemPages.length > 1 ? `
             <div style="margin-bottom: 1.3mm; font-size: ${styles.tinyFontSize}; text-align: center; font-weight: bold;">
-                පිටුව ${pageNumber} / ${itemPages.length}
+                ${tr('Page', 'පිටුව')} ${pageNumber} / ${itemPages.length}
             </div>
             ` : ''}
 
@@ -1241,12 +1406,12 @@ const SupplierReport = () => {
                 </colgroup>
                 <thead>
                     <tr>
-                        <th style="text-align: left; font-size: ${styles.tableHeaderFontSize};">වර්ගය</th>
-                        <th style="font-size: ${styles.tableHeaderFontSize};">මලු</th>
-                        <th style="text-align: right; font-size: ${styles.tableHeaderFontSize};">බර</th>
-                        <th style="text-align: right; font-size: ${styles.tableHeaderFontSize};">මිල</th>
-                        <th style="text-align: center; font-size: ${styles.tableHeaderFontSize};">ගනු</th>
-                        <th style="text-align: right; font-size: ${styles.tableHeaderFontSize};">එකතුව</th>
+                        <th style="text-align: left; font-size: ${styles.tableHeaderFontSize};">${tr('Type', 'වර්ගය')}</th>
+                        <th style="font-size: ${styles.tableHeaderFontSize};">${tr('Bags', 'මලු')}</th>
+                        <th style="text-align: right; font-size: ${styles.tableHeaderFontSize};">${tr('Weight', 'බර')}</th>
+                        <th style="text-align: right; font-size: ${styles.tableHeaderFontSize};">${tr('Price', 'මිල')}</th>
+                        <th style="text-align: center; font-size: ${styles.tableHeaderFontSize};">${tr('Cust', 'ගනු')}</th>
+                        <th style="text-align: right; font-size: ${styles.tableHeaderFontSize};">${tr('Total', 'එකතුව')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1263,7 +1428,7 @@ const SupplierReport = () => {
                 </tbody>
                 <tfoot>
                     <tr style="background: #f0f0f0;">
-                        <td colspan="2" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">මෙම පිටුවේ එකතුව</td>
+                        <td colspan="2" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${tr('Page Total', 'මෙම පිටුවේ එකතුව')}</td>
                         <td class="text-right" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">  </td>
                         <td style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">  </td>
                         <td class="text-center" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${pageTotalPacks}</td>
@@ -1274,24 +1439,24 @@ const SupplierReport = () => {
 
             ${isLastPage ? `
             <div class="totals-section">
-                <div class="total-row"><span>මුළු එකතුව:</span><span>රු. ${formatNumber(grandTotalSales)}</span></div>
-                <div class="total-row"><span>මලු වියදම:</span><span>රු. ${formatNumber(grandTotalPackCost)}</span></div>
-                <div class="total-row"><span>අත්තිකාරම්:</span><span style="color: red !important;">රු. -${formatNumber(grandAdvanceAmount)}</span></div>
-                ${grandPaidAmount > 0 ? `<div class="total-row"><span>ගෙවූ මුදල:</span><span>රු. -${formatNumber(grandPaidAmount)}</span></div>` : ''}
+                <div class="total-row"><span>${tr('Grand Total', 'මුළු එකතුව')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalSales)}</span></div>
+                <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalPackCost)}</span></div>
+                <div class="total-row"><span>${tr('Advance', 'අත්තිකාරම්')}:</span><span style="color: red !important;">${tr('Rs.', 'රු.')} -${formatNumber(grandAdvanceAmount)}</span></div>
+                ${grandPaidAmount > 0 ? `<div class="total-row"><span>${tr('Paid Amount', 'ගෙවූ මුදල')}:</span><span>${tr('Rs.', 'රු.')} -${formatNumber(grandPaidAmount)}</span></div>` : ''}
                 <div class="net-total">
-                    <span>ගෙවිය යුතු මුදල:</span>
-                    <span>රු. ${formatNumber(grandNetPayable)}</span>
+                    <span>${tr('Amount Payable', 'ගෙවිය යුතු මුදල')}:</span>
+                    <span>${tr('Rs.', 'රු.')} ${formatNumber(grandNetPayable)}</span>
                 </div>
-                ${farmerLoanTotal !== 0 ? `<div class="total-row"><span>පෙර ණය:</span><span>රු. ${Math.abs(farmerLoanTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>` : ''}
+                ${farmerLoanTotal !== 0 ? `<div class="total-row"><span>${tr('Previous Loan', 'පෙර ණය')}:</span><span>${tr('Rs.', 'රු.')} ${Math.abs(farmerLoanTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>` : ''}
             </div>
             
             <div class="footer">
-                *** ස්තුතියි! නැවත පැමිණෙන්න ***
+                ${tr('*** Thank you! Please come again ***', '*** ස්තුතියි! නැවත පැමිණෙන්න ***')}
                 <div style="margin-top: 1mm; font-size: ${styles.tinyFontSize};">${date} | ${time}</div>
             </div>
             ` : `
             <div class="footer" style="margin-top: 2.6mm; text-align: center; font-size: ${styles.smallFontSize}; border-top: 0.3mm dashed #000; padding-top: 1.6mm;">
-                *** කරුණාකර පහත පිටුවට හැරෙන්න ***
+                ${tr('*** Please turn to the next page ***', '*** කරුණාකර පහත පිටුවට හැරෙන්න ***')}
             </div>
             `}
         </div>
@@ -1306,22 +1471,22 @@ const SupplierReport = () => {
             <div class="header">
                 <div class="shop-name">${SHOP_NAME}</div>
                 <div class="shop-address">${SHOP_ADDRESS}</div>
-                <div class="shop-phone">දුරකථන: ${SHOP_PHONE}</div>
+                <div class="shop-phone">${tr('Tel', 'දුරකථන')}: ${SHOP_PHONE}</div>
             </div>
             
             <div class="info-row">
-                <div>කේතය: ${(selectedSupplier || '').toUpperCase()}</div>
-                <div>අංකය: ${currentBillNo || ''}</div>
-                <div>දිනය: ${date}</div>
-                <div>වේලාව: ${time}</div>
+                <div>${tr('Code', 'කේතය')}: ${(selectedSupplier || '').toUpperCase()}</div>
+                <div>${tr('No', 'අංකය')}: ${currentBillNo || ''}</div>
+                <div>${tr('Date', 'දිනය')}: ${date}</div>
+                <div>${tr('Time', 'වේලාව')}: ${time}</div>
             </div>
             
             <div style="text-align: center; padding: 6.5mm; font-size: ${styles.headerFontSize}; font-weight: bold;">
-                අයිතම නොමැත
+                ${tr('No items', 'අයිතම නොමැත')}
             </div>
             
             <div class="footer">
-                *** ස්තුතියි! නැවත පැමිණෙන්න ***
+                ${tr('*** Thank you! Please come again ***', '*** ස්තුතියි! නැවත පැමිණෙන්න ***')}
                 <div style="margin-top: 1mm; font-size: ${styles.tinyFontSize};">${date} | ${time}</div>
             </div>
         </div>
@@ -1588,15 +1753,15 @@ const SupplierReport = () => {
         <div style="font-size:24px;">${SHOP_NAME}</div>
         <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;">
             <span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">${SHOP_STALL_NO}</span>
-            <div style="font-size:18px;">ගොවියා: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${selectedSupplier}</span></div>
+            <div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${selectedSupplier}</span></div>
         </div>
       <div style="font-size:16px; white-space: nowrap;">${SHOP_ADDRESS}</div>
     </div>
     <div style="font-size:19px; margin-top:10px; padding:0 5px;">
-        <div style="font-weight: bold; white-space: normal;">දුර: ${mobile}</div>
+        <div style="font-weight: bold; white-space: normal;">${tr('Tel', 'දුර')}: ${mobile}</div>
         <div style="display:flex; justify-content:space-between; margin-top:3px;">
-            <span>බිල් අංකය:${currentBillNo}</span>
-            <span>දිනය:${date}</span>
+            <span>${tr('Bill No', 'බිල් අංකය')}:${currentBillNo}</span>
+            <span>${tr('Date', 'දිනය')}:${date}</span>
         </div>
     </div>
     <hr style="border:none; border-top:2.5px solid #000; margin:10px 0;">
@@ -1604,10 +1769,10 @@ const SupplierReport = () => {
         ${colGroups}
         <thead>
             <tr style="border-bottom:2.5px solid #000; font-weight:bold;">
-                <th style="text-align:left; padding-bottom:8px; font-size:${fontSizeHeader};">වර්ගය<br>මලු</th>
-                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -50px; top: 24px;"> කිලෝ </th>
-                 <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -45px; top: 24px;">මිල</th>
-                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};">කේතය<br>අගය</th>
+                <th style="text-align:left; padding-bottom:8px; font-size:${fontSizeHeader};">${tr('Type', 'වර්ගය')}<br>${tr('Bags', 'මලු')}</th>
+                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -50px; top: 24px;"> ${tr('Kg', 'කිලෝ')} </th>
+                 <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -45px; top: 24px;">${tr('Price', 'මිල')}</th>
+                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};">${tr('Code', 'කේතය')}<br>${tr('Value', 'අගය')}</th>
               </tr>
         </thead>
         <tbody>${detailedItemsHtml}</tbody>
@@ -1621,23 +1786,23 @@ const SupplierReport = () => {
 
     <table style="width:100%; margin-top:20px; font-weight:bold; font-size:22px; padding:0 5px;">
          <tr>
-          <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">මෙම බිලට මුළු අගය:</td>
+          <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">${tr('Total value of this bill', 'මෙම බිලට මුළු අගය')}:</td>
           <td style="text-align:right;"><span style="border-bottom:2px solid #000; font-size:${fontSizeTotal}; padding:5px 10px;">${(totalsupplierSales.toFixed(2))}</span></td>
          </tr>
         <tr>
-          <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">මලු වියදම:</td>
+          <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">${tr('Bag Cost', 'මලු වියදම')}:</td>
           <td style="text-align:right;"><span style="font-size:${fontSizeTotal}; padding:5px 10px;">${totalCustomerPackCost.toFixed(2)}</span></td>
         </tr>
         
         ${paidAmountValue > 0 ? `
         <tr style="font-size:18px;">
-            <td style="font-size:15px; padding-top:10px;">ගෙවූ මුදල (Paid):</td>
+            <td style="font-size:15px; padding-top:10px;">${tr('Paid', 'ගෙවූ මුදල (Paid)')}:</td>
             <td style="text-align:right; padding-top:10px; color:#000;">
                 - ${paidAmountValue.toFixed(2)}
               </td>
           </tr>
         <tr style="font-size:18px;">
-            <td style="font-size:15px; padding-top:5px;">ඉතිරි මුදල (Remaining):</td>
+            <td style="font-size:15px; padding-top:5px;">${tr('Remaining', 'ඉතිරි මුදල (Remaining)')}:</td>
             <td style="text-align:right; padding-top:5px; color:#000;">
                 ${remainingAfterPayment.toFixed(2)}
               </td>
@@ -1646,14 +1811,14 @@ const SupplierReport = () => {
         ` : ''}
 
         <tr style="font-size:18px;">
-          <td style="font-size:15px; padding-top:5px;">අත්තිකාරම්</td>
+          <td style="font-size:15px; padding-top:5px;">${tr('Advance', 'අත්තිකාරම්')}</td>
           <td style="text-align:right; padding-top:5px; color:#000;">
             - ${advanceAmount.toFixed(2)}
            </td>
           </tr>
 
         <tr style="font-weight:900;">
-          <td style="font-size:18px; padding-top:10px;">ශුද්ධ ඉතිරි ශේෂය:</td>
+          <td style="font-size:18px; padding-top:10px;">${tr('Net Remaining Balance', 'ශුද්ධ ඉතිරි ශේෂය')}:</td>
           <td style="text-align:right; padding-top:10px;">
             <span style="color:#000; font-size:${fontSizeTotal}; border-bottom:5px double #000; border-top:2px solid #000;">
               ${netPayable.toFixed(2)}
@@ -1662,7 +1827,7 @@ const SupplierReport = () => {
         </tr>
         ${farmerLoanTotal !== 0 ? `
         <tr>
-          <td style="font-size:18px; padding-top:10px;">පෙර ණය:</td>
+          <td style="font-size:18px; padding-top:10px;">${tr('Previous Loan', 'පෙර ණය')}:</td>
           <td style="text-align:right; font-size:20px; padding-top:10px;">
             Rs. ${Math.abs(farmerLoanTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </td>
@@ -1847,7 +2012,7 @@ const SupplierReport = () => {
                 >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: '#343a40' }}>
                         <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
-                            බිල් පෙරදසුන (F2) — #{selectedBillNo || 'N/A'}
+                            {tr('Bill Preview (F2)', 'බිල් පෙරදසුන (F2)')} — #{selectedBillNo || 'N/A'}
                         </span>
                         <button
                             onClick={onClose}
@@ -1896,7 +2061,7 @@ const SupplierReport = () => {
                     {/* Header Area */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #374151', paddingBottom: '15px' }}>
                         <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white', margin: 0 }}>
-                            {supplierDocs.title} - ලේඛන පරීක්ෂාව
+                            {supplierDocs.title} {tr('- Document Check', '- ලේඛන පරීක්ෂාව')}
                         </h2>
                         <button
                             onClick={onClose}
@@ -1908,7 +2073,7 @@ const SupplierReport = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1.5fr', gap: '20px', overflowY: 'auto', padding: '5px' }}>
                         {/* Profile Picture */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <span style={{ color: '#60a5fa', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>ප්‍රධාන රූපය</span>
+                            <span style={{ color: '#60a5fa', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>{tr('Main Photo', 'ප්‍රධාන රූපය')}</span>
                             <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', border: '2px solid #3b82f6', backgroundColor: '#111827', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
                                 <img src={formatUrl(supplierDocs.profile)} style={{ width: '100%', height: 'auto', display: 'block' }} alt="Profile" />
                             </div>
@@ -1916,24 +2081,24 @@ const SupplierReport = () => {
 
                         {/* NIC Front */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>NIC ඉදිරිපස</span>
+                            <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>{tr('NIC Front', 'NIC ඉදිරිපස')}</span>
                             <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', border: '2px solid #4b5563', backgroundColor: '#111827', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
                                 {supplierDocs.nic_front ? (
                                     <img src={formatUrl(supplierDocs.nic_front)} style={{ width: '100%', height: 'auto', maxHeight: '500px', display: 'block', objectFit: 'contain' }} alt="NIC Front" />
                                 ) : (
-                                    <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>ඡායාරූපයක් නොමැත</div>
+                                    <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>{tr('No photo', 'ඡායාරූපයක් නොමැත')}</div>
                                 )}
                             </div>
                         </div>
 
                         {/* NIC Back */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>NIC පසුපස</span>
+                            <span style={{ color: '#9ca3af', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase' }}>{tr('NIC Back', 'NIC පසුපස')}</span>
                             <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', border: '2px solid #4b5563', backgroundColor: '#111827', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
                                 {supplierDocs.nic_back ? (
                                     <img src={formatUrl(supplierDocs.nic_back)} style={{ width: '100%', height: 'auto', maxHeight: '500px', display: 'block', objectFit: 'contain' }} alt="NIC Back" />
                                 ) : (
-                                    <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>ඡායාරූපයක් නොමැත</div>
+                                    <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>{tr('No photo', 'ඡායාරූපයක් නොමැත')}</div>
                                 )}
                             </div>
                         </div>
@@ -1961,11 +2126,11 @@ const SupplierReport = () => {
         return (
             <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }}>
                 <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', width: '400px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
-                    <h3 style={{ marginTop: 0, color: '#091d3d', borderBottom: '2px solid #007bff', paddingBottom: '10px' }}>ගනුදෙනුව වෙනස් කරන්න</h3>
+                    <h3 style={{ marginTop: 0, color: '#091d3d', borderBottom: '2px solid #007bff', paddingBottom: '10px' }}>{tr('Edit Transaction', 'ගනුදෙනුව වෙනස් කරන්න')}</h3>
 
                     <div style={{ margin: '15px 0', fontSize: '0.9rem', color: '#666', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
-                        <p style={{ margin: '2px 0' }}><strong>බිල් අං:</strong> {editingRecord.bill_no || selectedBillNo}</p>
-                        <p style={{ margin: '2px 0' }}><strong>අයිතමය:</strong> {editingRecord.item_name} | {editingRecord.weight} kg</p>
+                        <p style={{ margin: '2px 0' }}><strong>{tr('Bill No:', 'බිල් අං:')}</strong> {editingRecord.bill_no || selectedBillNo}</p>
+                        <p style={{ margin: '2px 0' }}><strong>{tr('Item:', 'අයිතමය:')}</strong> {editingRecord.item_name} | {editingRecord.weight} kg</p>
                     </div>
 
                     {/* 🚀 BULK CHECKBOX */}
@@ -1978,14 +2143,14 @@ const SupplierReport = () => {
                                     onChange={(e) => setApplyToAllSameItems(e.target.checked)}
                                     style={{ width: '18px', height: '18px' }}
                                 />
-                                සියලුම "{editingRecord.item_name}" ({sameItemCount}) වෙනස් කරන්න
+                                {tr('Change all', 'සියලුම')} "{editingRecord.item_name}" ({sameItemCount}) {tr('', 'වෙනස් කරන්න')}
                             </label>
                         </div>
                     )}
 
                     {/* Supplier Code Input */}
                     <div style={{ marginTop: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>නව ගොවි කේතය (Supplier - Optional):</label>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>{tr('New Supplier Code (Optional):', 'නව ගොවි කේතය (Supplier - Optional):')}</label>
                         <input
                             type="text"
                             placeholder={editingRecord.supplier_code} // Show current code as placeholder
@@ -1998,7 +2163,7 @@ const SupplierReport = () => {
 
                     {/* Customer Code Input */}
                     <div style={{ marginTop: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>නව ගැනුම්කරු (Customer - Optional):</label>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>{tr('New Customer (Optional):', 'නව ගැනුම්කරු (Customer - Optional):')}</label>
                         <input
                             type="text"
                             placeholder={editingRecord.customer_code} // Show current code as placeholder
@@ -2034,7 +2199,7 @@ const SupplierReport = () => {
         const buttonBaseStyle = { width: '100%', display: 'block', textAlign: 'left', padding: '10px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', border: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', fontSize: '1rem', marginBottom: '4px', boxSizing: 'border-box' };
         const buttonStyle = type === 'printed' ? { ...buttonBaseStyle, backgroundColor: '#1E88E5', color: 'white' } : { ...buttonBaseStyle, backgroundColor: '#FF7043', color: 'white' };
 
-        if (items.length === 0) return <p style={{ color: '#6c757d', padding: '10px' }}>{searchTerm ? `No results found` : 'මෙම ප්‍රවර්ගයේ සැපයුම්කරු නොමැත'}</p>;
+        if (items.length === 0) return <p style={{ color: '#6c757d', padding: '10px' }}>{searchTerm ? `No results found` : tr('No suppliers in this category', 'මෙම ප්‍රවර්ගයේ සැපයුම්කරු නොමැත')}</p>;
 
         return (
             <div style={listContainerStyle}>
@@ -2145,7 +2310,7 @@ const SupplierReport = () => {
                 <div style={headerStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                         <h2 style={{ fontSize: "1.5rem", color: "white", margin: 0 }}>
-                            ගනුදෙනු විස්තර (බිල් අංකය: <strong>{selectedBillNo || 'N/A'}</strong>)
+                            {tr('Transaction Details (Bill No:', 'ගනුදෙනු විස්තර (බිල් අංකය:')} <strong>{selectedBillNo || 'N/A'}</strong>)
                         </h2>
 
                         {/* TELEPHONE INPUT - DISABLED FOR PRINTED BILLS */}
@@ -2154,7 +2319,7 @@ const SupplierReport = () => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <input
                                     type="text"
-                                    placeholder="දුරකථන අංකය..."
+                                    placeholder={tr('Phone number...', 'දුරකථන අංකය...')}
                                     value={phoneNo}
                                     onChange={(e) => {
                                         setPhoneNo(e.target.value);
@@ -2213,17 +2378,17 @@ const SupplierReport = () => {
                         <thead>
                             <tr>
                                 <th style={{ ...thStyle, textAlign: 'center' }}><input type="checkbox" checked={allDetailsSelected} onChange={toggleSelectAllTransactions} disabled={supplierDetails.length === 0} title="Select all" style={{ cursor: 'pointer', width: '16px', height: '16px' }} /></th>
-                                <th style={thStyle}>බිල් අං:</th>
-                                <th style={thStyle}>ගනුදෙ</th>
-                                <th style={thStyle}>අයිත</th>
-                                <th style={thStyle}>අසුරුම්</th>
-                                <th style={thStyle}>බර</th>
-                                <th style={thStyle}>ගනුදෙ මිල</th>
-                                <th style={thStyle}>සැපයුම් මිල</th>
-                                <th style={thStyle}>ගනුදෙ එක</th>
-                                <th style={thStyle}>සැපයුම් එක</th>
-                                <th style={thStyle}>කොමි</th>
-                                <th style={thStyle}>මලු විය</th>
+                                <th style={thStyle}>{tr('Bill No:', 'බිල් අං:')}</th>
+                                <th style={thStyle}>{tr('Customer', 'ගනුදෙ')}</th>
+                                <th style={thStyle}>{tr('Item', 'අයිත')}</th>
+                                <th style={thStyle}>{tr('Packs', 'අසුරුම්')}</th>
+                                <th style={thStyle}>{tr('Weight', 'බර')}</th>
+                                <th style={thStyle}>{tr('Cust. Price', 'ගනුදෙ මිල')}</th>
+                                <th style={thStyle}>{tr('Supp. Price', 'සැපයුම් මිල')}</th>
+                                <th style={thStyle}>{tr('Cust. Total', 'ගනුදෙ එක')}</th>
+                                <th style={thStyle}>{tr('Supp. Total', 'සැපයුම් එක')}</th>
+                                <th style={thStyle}>{tr('Comm.', 'කොමි')}</th>
+                                <th style={thStyle}>{tr('Bag Cost', 'මලු විය')}</th>
                             </tr>
                         </thead>
                         {selectedSupplier && supplierDetails.length > 0 ? renderDataRows() : <tbody><tr><td colSpan="12" style={{ textAlign: 'center', color: '#6c757d', fontStyle: 'italic', padding: '50px 0' }}>Select a bill to view details</td></tr></tbody>}
@@ -2234,7 +2399,7 @@ const SupplierReport = () => {
                     <>
                         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0px' }}>
                             <thead>
-                                <tr><th style={{ ...thStyle, backgroundColor: '#6c757d' }}>අයිතමය නම</th><th style={{ ...thStyle, backgroundColor: '#6c757d' }}>සම්පූර්ණ බර</th><th style={{ ...thStyle, backgroundColor: '#6c757d' }}>මුළු අසුරුම්</th></tr>
+                                <tr><th style={{ ...thStyle, backgroundColor: '#6c757d' }}>{tr('Item Name', 'අයිතමය නම')}</th><th style={{ ...thStyle, backgroundColor: '#6c757d' }}>{tr('Total Weight', 'සම්පූර්ණ බර')}</th><th style={{ ...thStyle, backgroundColor: '#6c757d' }}>{tr('Total Packs', 'මුළු අසුරුම්')}</th></tr>
                             </thead>
                             <tbody>
                                 {Object.keys(itemSummaryData).map((name, i) => (
@@ -2244,7 +2409,7 @@ const SupplierReport = () => {
                         </table>
 
                         <div style={{ marginTop: '30px', padding: '20px', border: '1px solid #ffffff33', borderRadius: '8px', backgroundColor: '#ffffff11' }}>
-                            <h3 style={{ color: '#ffc107', marginTop: 0, fontSize: '1.2rem' }}>අත්තිකාරම් ඇතුලත් කරන්න (Advance Entry)</h3>
+                            <h3 style={{ color: '#ffc107', marginTop: 0, fontSize: '1.2rem' }}>{tr('Advance Entry', 'අත්තිකාරම් ඇතුලත් කරන්න (Advance Entry)')}</h3>
                             <form onSubmit={handleAdvanceSubmit} style={{ display: 'flex', gap: '15px', alignItems: 'flex-end' }}>
                                 <div style={{ flex: 1 }}>
                                     <label style={{ fontSize: '0.8rem', color: '#eee', display: 'block', marginBottom: '5px' }}>Supplier Code</label>
@@ -2256,7 +2421,7 @@ const SupplierReport = () => {
                                     />
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <label style={{ fontSize: '0.8rem', color: '#eee', display: 'block', marginBottom: '5px' }}>Amount (රු:)</label>
+                                    <label style={{ fontSize: '0.8rem', color: '#eee', display: 'block', marginBottom: '5px' }}>{tr('Amount (Rs:)', 'Amount (රු:)')}</label>
                                     <input
                                         type="number"
                                         name="advance_amount"
@@ -2284,7 +2449,7 @@ const SupplierReport = () => {
 
                         {/* 🚀 NEW: Loan/Payment Input before Print */}
                         <div style={{ marginTop: '20px', padding: '15px', border: '2px solid #17a2b8', borderRadius: '8px', backgroundColor: '#091d3d' }}>
-                            <label style={{ color: '#17a2b8', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>ගෙවන මුදල ඇතුලත් කර Print කරන්න (Enter Paying Amount & Enter):</label>
+                            <label style={{ color: '#17a2b8', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>{tr('Enter Paying Amount & Press Enter to Print:', 'ගෙවන මුදල ඇතුලත් කර Print කරන්න (Enter Paying Amount & Enter):')}</label>
                             <input
                                 type="number"
                                 value={payingAmount}
@@ -2309,12 +2474,12 @@ const SupplierReport = () => {
                         alignItems: 'center'
                     }}>
                         <span style={{ color: '#9ca3af', fontWeight: 'bold', fontSize: '1rem', textTransform: 'uppercase' }}>
-                            තෝරාගත් බිල් එකතුව (Selected Bill Total)
+                            {tr('Selected Bill Total', 'තෝරාගත් බිල් එකතුව (Selected Bill Total)')}
                         </span>
                         <span style={{ color: '#28a745', fontWeight: 'bold', fontSize: '1.5rem' }}>
                             Rs. {(totalsupplierSales + totalCustomerPackCost).toFixed(2)}
                             <span style={{ color: '#9ca3af', fontSize: '0.9rem', marginLeft: '8px' }}>
-                                (මලු: {totalCustomerPackCost.toFixed(2)})
+                                {tr('(Bags:', '(මලු:')} {totalCustomerPackCost.toFixed(2)})
                             </span>
                         </span>
                     </div>
@@ -2340,7 +2505,7 @@ const SupplierReport = () => {
     return (
         <>
             <nav className="sr-nav" style={navBarStyle}>
-                <h1 style={{ color: 'white', fontSize: '1.5rem', margin: 0 }}>සැපයුම්කරු වාර්තාව</h1>
+                <h1 style={{ color: 'white', fontSize: '1.5rem', margin: 0 }}>{tr('Supplier Report', 'සැපයුම්කරු වාර්තාව')}</h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     {/* Auto-refresh indicator with animation when refreshing */}
                     <div style={{
@@ -2390,8 +2555,8 @@ const SupplierReport = () => {
                         </button>
                     )}
 
-                    <button style={{ padding: '8px 15px', fontSize: '1rem', fontWeight: 'bold', backgroundColor: '#e83e8c', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }} onClick={() => navigate('/suppliers/printed-report')}>සැපයුම්කරු ණය</button>
-                    <button style={{ padding: '10px 20px', fontSize: '1rem', fontWeight: 'bold', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }} onClick={goToSalesEntry}>මුල් පිටුව</button>
+                    <button style={{ padding: '8px 15px', fontSize: '1rem', fontWeight: 'bold', backgroundColor: '#e83e8c', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }} onClick={() => navigate('/suppliers/printed-report')}>{tr('Supplier Loans', 'සැපයුම්කරු ණය')}</button>
+                    <button style={{ padding: '10px 20px', fontSize: '1rem', fontWeight: 'bold', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }} onClick={goToSalesEntry}>{tr('Home', 'මුල් පිටුව')}</button>
                 </div>
             </nav>
 
@@ -2399,16 +2564,16 @@ const SupplierReport = () => {
                 <div className="sr-sections" style={sectionsContainerStyle}>
                     <div className="sr-side" style={printedContainerStyle}>
                         <div className="sr-side-section" style={printedSectionStyle}>
-                            <h2 style={{ ...printedHeaderStyle, padding: '0 25px 10px 25px', marginBottom: '15px' }}> මුද්‍රණය කළ </h2>
-                            <input type="text" placeholder="🔍 මුද්‍රිත සෙවීම..." value={printedSearchTerm} onChange={(e) => setPrintedSearchTerm(e.target.value)} style={{ ...searchBarStyle, marginBottom: '20px', height: '22px', padding: '12px 25px' }} />
+                            <h2 style={{ ...printedHeaderStyle, padding: '0 25px 10px 25px', marginBottom: '15px' }}> {tr('Printed', 'මුද්‍රණය කළ')} </h2>
+                            <input type="text" placeholder={tr('🔍 Search printed...', '🔍 මුද්‍රිත සෙවීම...')} value={printedSearchTerm} onChange={(e) => setPrintedSearchTerm(e.target.value)} style={{ ...searchBarStyle, marginBottom: '20px', height: '22px', padding: '12px 25px' }} />
                             <SupplierCodeList items={filteredPrintedItems} type="printed" searchTerm={printedSearchTerm} />
                         </div>
                     </div>
                     <div className="sr-center" style={centerPanelContainerStyle}>{renderDetailsPanel()}</div>
                     <div className="sr-side" style={unprintedContainerStyle}>
                         <div className="sr-side-section" style={unprintedSectionStyle}>
-                            <h2 style={{ ...unprintedHeaderStyle, padding: '0 25px 10px 25px', marginBottom: '15px', whiteSpace: 'nowrap' }}>මුද්‍රණය නොකළ</h2>
-                            <input type="text" placeholder="🔍 මුද්‍රණ නොකළ සෙවීම..." value={unprintedSearchTerm} onChange={(e) => setUnprintedSearchTerm(e.target.value)} style={{ ...searchBarStyle, marginBottom: '20px', height: '22px', padding: '12px 25px' }} />
+                            <h2 style={{ ...unprintedHeaderStyle, padding: '0 25px 10px 25px', marginBottom: '15px', whiteSpace: 'nowrap' }}>{tr('Unprinted', 'මුද්‍රණය නොකළ')}</h2>
+                            <input type="text" placeholder={tr('🔍 Search unprinted...', '🔍 මුද්‍රණ නොකළ සෙවීම...')} value={unprintedSearchTerm} onChange={(e) => setUnprintedSearchTerm(e.target.value)} style={{ ...searchBarStyle, marginBottom: '20px', height: '22px', padding: '12px 25px' }} />
                             <SupplierCodeList items={filteredUnprintedItems} type="unprinted" searchTerm={unprintedSearchTerm} />
                         </div>
                     </div>
@@ -2425,13 +2590,18 @@ const SupplierReport = () => {
                 setBulkUpdateSupplierCode={setBulkUpdateSupplierCode}
                 bulkUpdateCustomerCode={bulkUpdateCustomerCode}
                 setBulkUpdateCustomerCode={setBulkUpdateCustomerCode}
+                bulkUpdateSupplierWeight={bulkUpdateSupplierWeight}
+                setBulkUpdateSupplierWeight={setBulkUpdateSupplierWeight}
+                bulkUpdateSupplierPrice={bulkUpdateSupplierPrice}
+                setBulkUpdateSupplierPrice={setBulkUpdateSupplierPrice}
+                selectedRecord={selectedTransactionIds.length === 1 ? supplierDetails.find(r => r.id === selectedTransactionIds[0]) || null : null}
                 handleBulkUpdate={handleBulkUpdate}
                 closeContextMenu={closeContextMenu}
             />
             {printJob && (
                 <PrintPreviewDialog
                     html={printJob.previewHtml}
-                    title={`ගොවි බිල මුද්‍රණය / Print supplier bill — ${printJob.supplierCode}`}
+                    title={`${tr('Print supplier bill', 'ගොවි බිල මුද්‍රණය')} — ${printJob.supplierCode}`}
                     onPrint={executePrintJob}
                     onCancel={handleCancelPrintJob}
                     busy={printJob.busy}
