@@ -472,10 +472,13 @@ const SalesReportView = ({ onClose }) => {
             {/* Table headers: white text on dark green. A global rule (FinancialReport.css)
                 already paints `.table thead th` dark green without setting a text colour. */}
             <style>{`
-                .sales-report .table thead th {
-                    background-color: #1b5e20;
-                    color: #ffffff;
-                    border-color: #2e7d32;
+                .sales-report .table thead th,
+                .sales-report .table thead th * {
+                    --bs-table-color: #ffffff;
+                    --bs-table-bg: #1b5e20;
+                    background-color: #1b5e20 !important;
+                    color: #ffffff !important;
+                    border-color: #2e7d32 !important;
                 }
             `}</style>
             {/* Header */}
