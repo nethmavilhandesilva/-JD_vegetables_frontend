@@ -468,7 +468,16 @@ const SalesReportView = ({ onClose }) => {
 
     // ---- render -----------------------------------------------------------
     return (
-        <div className="d-flex flex-column" style={{ height: '100%' }}>
+        <div className="d-flex flex-column sales-report" style={{ height: '100%' }}>
+            {/* Table headers: white text on dark green. A global rule (FinancialReport.css)
+                already paints `.table thead th` dark green without setting a text colour. */}
+            <style>{`
+                .sales-report .table thead th {
+                    background-color: #1b5e20;
+                    color: #ffffff;
+                    border-color: #2e7d32;
+                }
+            `}</style>
             {/* Header */}
             <div className="d-flex align-items-center flex-wrap gap-2 px-3 py-2 text-white" style={{ background: 'linear-gradient(135deg,#1b5e20,#2e7d32)', position: 'sticky', top: 0, zIndex: 5 }}>
                 <div className="me-auto">
