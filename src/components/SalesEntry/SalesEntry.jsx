@@ -947,7 +947,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
         if (itemCode && itemCode.startsWith('/')) {
             return 50;
-        } else if (itemName && itemName.includes('කෙසෙල්')) {
+        } else if (itemName && (itemName.includes('කෙසෙල්') || /banana/i.test(itemName))) {
+            // Bananas: Sinhala ("කෙසෙල්") or English ("Banana") item names
             return 1.50;
         } else {
             if (incomingNetWeight >= 1 && incomingNetWeight <= 9) return 0;
