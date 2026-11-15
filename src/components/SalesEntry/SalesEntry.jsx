@@ -2601,7 +2601,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                         <div style={{ gridColumnStart: 1, gridColumnEnd: 3 }}>
                                             <input id="supplier_code" ref={refs.supplier_code} name="supplier_code" value={formData.supplier_code} onChange={(e) => handleInputChange("supplier_code", e.target.value.toUpperCase())} onKeyDown={(e) => handleKeyDown(e, "supplier_code")} type="text" placeholder={tr('Supplier', 'සැපයුම්කරු')} className="px-2 py-1 uppercase font-bold text-xs border rounded bg-white text-black placeholder-gray-500 w-full" style={{ width: "150px", backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: '44px', fontSize: '1.25rem', padding: '0 1rem', borderRadius: '0.5rem', boxSizing: 'border-box' }} />
                                         </div>
-                                        <div style={{ gridColumnStart: 5, gridColumnEnd: 7, marginLeft: "-120px", marginRight: "-2px", position: "relative", zIndex: 10000 }}>
+                                        <div style={{ gridColumnStart: 5, gridColumnEnd: 7, marginLeft: "-120px", marginRight: "-2px", position: "relative", zIndex: 30 /* above the page's own fields (max 20), below report modals/popups (Bootstrap ~1055) */ }}>
                                             {(() => {
                                                 const currentFilteredOptions = [...items]
                                                     .filter(item => {
