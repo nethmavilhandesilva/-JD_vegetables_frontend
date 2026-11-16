@@ -175,7 +175,7 @@ export default function NewSupplierBillDashboard() {
     // Price shown for a line: its price, or the average per kg when its packs have different prices
     const linePrice = (l) => (mixedPrices(l) && num(l.weight) > 0 ? round2(lineValue(l) / num(l.weight)) : num(l.price_per_kg));
     const packText = (l) => (mixedPrices(l)
-        ? l.pack_weights.map((w, j) => `${kg(w)}kg@${money(pricesOf(l)[j])}`).join(' + ')
+        ? l.pack_weights.map((w, j) => `${kg(w)}kg ${money(pricesOf(l)[j])}`).join(' + ')
         : `${l.pack_weights.map((w) => kg(w)).join(' + ')} kg`);
 
     useEffect(() => {
@@ -814,7 +814,7 @@ export default function NewSupplierBillDashboard() {
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                         {activePackLine.pack_weights.map((w, j) => (
                                             <span key={j} style={{ background: '#374151', borderRadius: 6, padding: '3px 8px', fontSize: 13 }}>
-                                                #{j + 1}: <b>{kg(w)} kg</b> @ {money(pricesOf(activePackLine)[j])}
+                                                #{j + 1}: <b>{kg(w)} kg</b> {money(pricesOf(activePackLine)[j])}
                                                 <button type="button" title={tr('Remove this pack', 'මෙම මල්ල ඉවත් කරන්න')} onClick={() => removePack(activePackIndex, j)}
                                                     style={{ marginLeft: 6, background: 'transparent', border: 'none', color: '#f87171', fontWeight: 'bold', cursor: 'pointer' }}>×</button>
                                             </span>
