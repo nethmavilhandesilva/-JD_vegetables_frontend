@@ -137,7 +137,6 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
     <body>
         <div class="receipt-main">
             <div class="header">
-         <span class="badge" style="position: relative; top: 3px;">${SHOP_STALL_NO}</span>
              <div style="margin-top: 8px; font-size: 22px; font-weight: bold;">
     ${SHOP_NAME} (${SHOP_STALL_NO})
 </div>
@@ -396,7 +395,7 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
             </div>
             
             <div class="info-row" style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-size: 4.6mm; font-weight: bold;">${SHOP_STALL_NO}</div>
+                <div></div>
                 <div style="font-size: 4.6mm; font-weight: bold;">${tr('Customer', 'ගණුම්කරු')}: ${(customerName || '').toUpperCase()}</div>
             </div>
             
@@ -485,7 +484,7 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
                 </div>
                 
                 <div class="info-row" style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="font-size: 4.6mm; font-weight: bold;">${SHOP_STALL_NO}</div>
+                    <div></div>
                     <div style="font-size: 4.6mm; font-weight: bold;">${tr('Customer', 'ගණුම්කරු')}: ${(customerName || '').toUpperCase()}</div>
                 </div>
                 

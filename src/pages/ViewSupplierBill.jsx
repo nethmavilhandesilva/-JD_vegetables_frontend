@@ -166,7 +166,6 @@ const ViewSupplierBill = () => {
     <div style="text-align:center; font-weight:bold;">
         <div style="font-size:24px;">${SHOP_NAME} (${SHOP_STALL_NO})</div>
         <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;">
-            <span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">${SHOP_STALL_NO}</span>
             <div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${bill.supplier_code}</span></div>
         </div>
       <div style="font-size:16px; white-space: nowrap;">${SHOP_ADDRESS}</div>
