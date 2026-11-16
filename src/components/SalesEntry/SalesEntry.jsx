@@ -767,6 +767,13 @@ const ContextMenu = React.memo(({ show, onClose, onUpdate, selectionCriteria, se
 });
 
 const KULIYA_PER_BAG = 40;
+// Records typed in are shown at once with a temporary id (above any real id) until the
+// server confirms them; then the saved database record replaces the temporary one.
+const TEMP_ID_BASE = 9e15;
+let tempIdCounter = 0;
+const nextTempId = () => TEMP_ID_BASE + (++tempIdCounter);
+const isTempId = (id) => typeof id === 'number' && id >= TEMP_ID_BASE;
+const hasPending = (row) => !!row && (row._pending || (row.group_members || []).some(m => m._pending));
 // One shared formatter: creating Intl.NumberFormat per value was slow on large tables
 const DECIMAL_FORMAT = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatDecimalShared = (value) => DECIMAL_FORMAT.format(Number(value || 0));
@@ -836,6 +843,13 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     const isLoadingAllSales = isLoading;
     const sortedAllSalesRecords = useMemo(() => [...allSales].sort((a, b) => (b.id || 0) - (a.id || 0)), [allSales]);
     const fetchAllSalesRecords = () => fetchSalesOnly();
+
+    // Change the sales list now: the ref is updated at once (so F1/F5 read the newest list
+    // without waiting for a render) and the same change is queued into React state.
+    const commitSales = (updater) => {
+        allSalesRef.current = updater(allSalesRef.current);
+        setState(prev => ({ ...prev, allSales: updater(prev.allSales) }));
+    };
 
     // Stable callbacks so the memoized sidebars only re-render when their data changes
     const customerClickRef = useRef(null);
@@ -1009,6 +1023,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
     // Checkbox of a grouped table row ticks/unticks every record in that group
     const toggleRowSelection = (row) => {
+        if (hasPending(row)) return; // still saving
         const ids = rowIds(row);
         if (ids.length === 1) { toggleSaleSelection(ids[0]); return; }
         const allSelected = ids.every(id => state.selectedSalesIds.includes(id));
@@ -1034,7 +1049,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         const first = displayedSales[0];
         setState(prev => ({
             ...prev,
-            selectedSalesIds: displayedSales.map(s => s.id),
+            selectedSalesIds: displayedSales.filter(s => !isTempId(s.id)).map(s => s.id),
             selectionCriteria: prev.selectionCriteria || { customer_code: first.customer_code, item_code: first.item_code }
         }));
     };
@@ -1053,7 +1068,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         e.preventDefault();
         e.stopPropagation();
 
-        const ids = rowIds(sale);
+        const ids = rowIds(sale).filter(id => !isTempId(id));
+        if (ids.length === 0) return; // still saving
         const isSelected = ids.every(id => state.selectedSalesIds.includes(id));
 
         if (!isSelected) {
@@ -1295,14 +1311,17 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 const params = !force && salesVersionRef.current ? { version: salesVersionRef.current } : {};
                 const res = await api.get(routes.sales, { params });
                 if (res.data?.unchanged) return allSalesRef.current;
-                // A save/delete updated the list while this poll was in flight: this answer may
-                // be older than that change, so drop it and ask again instead of hiding records
-                if (!force && allSalesRef.current !== listAtStart) {
-                    setTimeout(() => fetchSalesOnly(), 300);
+                // While saves are still in flight, or if the list changed during this request,
+                // this answer may be older than what is on screen: skip it (the next poll,
+                // 3 s later, brings the newest data). Keeps fast entry smooth.
+                if (!force && (allSalesRef.current !== listAtStart || pendingSaveRequestsRef.current.length > 0)) {
                     return allSalesRef.current;
                 }
-                const salesData = res.data.data || res.data.sales || (Array.isArray(res.data) ? res.data : []);
+                const serverSales = res.data.data || res.data.sales || (Array.isArray(res.data) ? res.data : []);
                 salesVersionRef.current = res.data.version || null;
+                // Keep records that are still being saved
+                const stillSaving = allSalesRef.current.filter(s => isTempId(s.id));
+                const salesData = stillSaving.length ? serverSales.concat(stillSaving) : serverSales;
                 allSalesRef.current = salesData;
                 updateState({ allSales: salesData });
                 return salesData;
@@ -1741,6 +1760,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                                 style={{
                                                                     borderBottom: "1px solid #2a2a3e",
                                                                     cursor: "pointer",
+                                                                    opacity: sale._pending ? 0.55 : 1,
                                                                     backgroundColor:
                                                                         editingSaleId === sale.id
                                                                             ? "#1e3a5f"
@@ -1827,6 +1847,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     ), [sortedAllSalesRecords, editingSaleId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleEditClick = (sale) => {
+        if (hasPending(sale)) return; // still saving: can be opened a moment later
         // If same record clicked again → clear fields EXCEPT customer/contact fields
         if (state.editingSaleId === sale.id) {
             setFormData((prev) => ({
@@ -1948,6 +1969,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     };
     const handleDeleteRecord = async (saleId, groupIds = null) => {
         const ids = groupIds && groupIds.length > 0 ? groupIds : [saleId];
+        if (ids.some(isTempId)) return; // still saving
         const question = ids.length > 1
             ? tr(`Delete all ${ids.length} entries in this row?`, `මෙම පේළියේ ඇතුළත් කිරීම් ${ids.length} ම මකන්නද?`)
             : "Are you sure you want to delete this sales record?";
@@ -2203,34 +2225,58 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             refs.supplier_code.current.select();
         }
 
-        // --- 4. API EXECUTION ---
-        const requestPromise = api[method](url, payload);
-        pendingSaveRequestsRef.current.push(requestPromise);
-        try {
-            const response = await requestPromise;
-
-            // --- 5. DATA SYNC: the record is now saved in the database — show it in the table.
-            // Uses a functional setState so this merges against whatever the LATEST allSales
-            // is at the moment this specific request resolves — not the allSales snapshot from
-            // when this submit started. With several saves in flight at once (fast typing),
-            // merging against a stale snapshot would let a later-resolving save silently
-            // overwrite/erase an earlier one's just-added record. ---
-            let updatedSales = response.data.sales || [response.data.sale || response.data.data || response.data];
-            const updatedIds = updatedSales.map(s => s.id);
-
-            setState(prev => ({
-                ...prev,
-                allSales: prev.allSales.filter(s => !updatedIds.includes(s.id)).concat(updatedSales)
+        // --- 4. SHOW IT AT ONCE: the record appears in the table straight away (marked as
+        // saving) and is replaced by the database record when the server confirms it ---
+        const item = items.find(i => String(i.no) === String(payload.item_code));
+        const bagWeight = (parseFloat(item?.bag_real_price) || 0) * payload.packs;
+        const netWeight = payload.weight - bagWeight;
+        const shownFields = {
+            ...payload,
+            weight: netWeight,
+            SupplierWeight: netWeight,
+            total: netWeight * payload.price_per_kg,
+            Kuliya: payload.kuliya !== null && payload.kuliya !== undefined ? payload.kuliya : payload.packs * KULIYA_PER_BAG,
+            CustomerPackCost: parseFloat(item?.pack_cost) || 0,
+            CustomerPackLabour: parseFloat(item?.pack_due) || 0,
+            _pending: true,
+        };
+        const tempId = isEditing ? null : nextTempId();
+        if (isEditing) {
+            commitSales(list => list.map(s => (s.id === editingSaleId ? { ...s, ...shownFields } : s)));
+        } else {
+            commitSales(list => list.concat({
+                ...shownFields,
+                id: tempId,
+                bill_printed: billPrintedStatus,
+                bill_no: billNoToUse,
+                created_at: new Date().toISOString(),
+                breakdown_history: [{ time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), weight: payload.weight, packs: payload.packs }],
             }));
+        }
 
-            // Refresh the all-sales table in the background — no need to block on it
-            fetchAllSalesRecords();
-        } catch (error) {
-            updateState({
-                errors: { form: error.response?.data?.message || error.message || "An error occurred" }
-            });
+        // --- 5. SAVE: several saves can run at once while typing fast. F1/F5 wait for the
+        // ones still running, so a bill never misses a record. ---
+        const saveTask = (async () => {
+            try {
+                const response = await api[method](url, payload);
+                const updatedSales = response.data.sales || [response.data.sale || response.data.data || response.data];
+                const updatedIds = updatedSales.map(s => s.id);
+                commitSales(list => list
+                    .filter(s => s.id !== tempId && !updatedIds.includes(s.id))
+                    .concat(updatedSales));
+            } catch (error) {
+                if (tempId) commitSales(list => list.filter(s => s.id !== tempId));
+                updateState({
+                    errors: { form: error.response?.data?.message || error.message || "An error occurred" }
+                });
+                if (isEditing) fetchSalesOnly({ force: true }); // put the real values back
+            }
+        })();
+        pendingSaveRequestsRef.current.push(saveTask);
+        try {
+            await saveTask;
         } finally {
-            pendingSaveRequestsRef.current = pendingSaveRequestsRef.current.filter(p => p !== requestPromise);
+            pendingSaveRequestsRef.current = pendingSaveRequestsRef.current.filter(p => p !== saveTask);
         }
     };
     const handleCustomerClick = async (type, customerCode, billNo = null, salesRecords = []) => {
@@ -2331,18 +2377,37 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
         updateState({ editingSaleId: null, isManualClear: false, customerSearchInput: "", priceManuallyChanged: false, gridPricePerKg: "" });
     };
+    // F5 hold: the screen clears at once; the hold is saved in the background
+    const holdInFlightRef = useRef(false);
     const handleMarkAllProcessed = async () => {
-        const salesToProcess = [...newSales, ...unprintedSales];
-        if (salesToProcess.length === 0) return;
+        if (holdInFlightRef.current) return;
+        holdInFlightRef.current = true;
         try {
-            const response = await api.post(routes.markAllProcessed, { sales_ids: salesToProcess.map(s => s.id) });
-            if (response.data.success) {
-                updateState({ allSales: allSales.map(s => salesToProcess.some(ps => ps.id === s.id) ? { ...s, bill_printed: "N" } : s) });
-                handleClearForm();
-                updateState({ selectedUnprintedCustomer: null, selectedPrintedCustomer: null });
-                refs.customer_code_input.current?.focus();
+            // Records still being saved must be on the server before the hold
+            const pendingSaves = pendingSaveRequestsRef.current.slice();
+            if (pendingSaves.length > 0) await Promise.allSettled(pendingSaves);
+
+            const current = allSalesRef.current;
+            const salesToProcess = current.filter(s => s.id && !isTempId(s.id) && s.bill_printed !== 'Y');
+            if (salesToProcess.length === 0) return;
+            const ids = new Set(salesToProcess.map(s => s.id));
+
+            commitSales(list => list.map(s => (ids.has(s.id) ? { ...s, bill_printed: "N" } : s)));
+            handleClearForm();
+            updateState({ selectedUnprintedCustomer: null, selectedPrintedCustomer: null });
+            refs.customer_code_input.current?.focus();
+
+            try {
+                const response = await api.post(routes.markAllProcessed, { sales_ids: [...ids] });
+                if (!response.data.success) throw new Error(response.data.message || 'Hold failed');
+            } catch (err) {
+                console.error("Failed to mark sales as processed:", err.message);
+                updateState({ errors: { form: tr('Hold (F5) failed, please press F5 again.', 'රඳවා ගැනීම (F5) අසාර්ථකයි, නැවත F5 ඔබන්න.') } });
+                fetchSalesOnly({ force: true });
             }
-        } catch (err) { console.error("Failed to mark sales as processed:", err.message); }
+        } finally {
+            holdInFlightRef.current = false;
+        }
     };
     const printSingleContent = async (html, customerName) => {
         return new Promise((resolve) => {
@@ -2433,9 +2498,9 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             await Promise.allSettled(pendingSaves);
         }
 
-        // Re-sync with the server rather than trusting the local `allSales` snapshot —
-        // this closure's `allSales` can still be stale relative to saves that just resolved.
-        const freshAllSales = await fetchSalesOnly({ force: true });
+        // Every record on screen is the server's saved copy (save responses + polling), and the
+        // saves above have finished, so the bill is built at once without a full download.
+        const freshAllSales = allSalesRef.current.filter(s => !isTempId(s.id));
 
         // Recompute the same selection the sidebar/table currently shows, against fresh data
         const freshNewSales = freshAllSales.filter(s => s.id && s.bill_printed !== 'Y' && s.bill_printed !== 'N');
@@ -2590,10 +2655,12 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
             // Update local state immediately (optimistic, no page reload). Uses a functional
             // setState so this doesn't clobber any save that resolved into allSales meanwhile.
+            const markedIds = new Set(idsToMark);
+            allSalesRef.current = allSalesRef.current.map(s => (markedIds.has(s.id) ? { ...s, bill_printed: "Y", bill_no: billNo } : s));
             setState(prev => ({
                 ...prev,
                 allSales: prev.allSales.map(s =>
-                    idsToMark.includes(s.id)
+                    markedIds.has(s.id)
                         ? { ...s, bill_printed: "Y", bill_no: billNo }
                         : s
                 ),
@@ -2612,9 +2679,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             // Keep the cursor in the customer code field
             refs.customer_code_input.current?.focus();
 
-            // Sync with the server in the background so the sidebars reflect the DB immediately
-            fetchSalesOnly();
-            fetchAllSalesRecords();
+            // Sync with the server in the background so the sidebars reflect the DB
+            fetchSalesOnly({ force: true });
 
         } catch (error) {
             console.error("Printing error:", error);
@@ -3058,7 +3124,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                 {tableRows.map((s, idx) => {
                                                     const isSelected = rowIds(s).every(id => state.selectedSalesIds.includes(id));
                                                     return (
-                                                        <tr key={idx} tabIndex={0} className={`text-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${isSelected ? 'bg-blue-900' : ''}`} onClick={() => handleEditClick(s)} onContextMenu={(e) => handleRightClick(e, s)} style={{ backgroundColor: isSelected ? '#1e40af' : 'transparent' }}>
+                                                        <tr key={idx} tabIndex={0} className={`text-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${isSelected ? 'bg-blue-900' : ''}`} onClick={() => handleEditClick(s)} onContextMenu={(e) => handleRightClick(e, s)} title={hasPending(s) ? tr('Saving...', 'සුරකිමින්...') : undefined} style={{ backgroundColor: isSelected ? '#1e40af' : 'transparent', opacity: hasPending(s) ? 0.55 : 1 }}>
                                                             <td className="px-2 py-2 border text-center" onClick={(e) => e.stopPropagation()}>
                                                                 <input type="checkbox" checked={isSelected} onChange={() => toggleRowSelection(s)} onClick={(e) => e.stopPropagation()} style={{ cursor: 'pointer' }} />
                                                             </td>
