@@ -37,6 +37,7 @@ import FarmerLoanManager from './components/LoanManager/FarmerLoanManager';
 import SupplierReportPrinted from './components/Suppliers/SupplierReportPrinted';
 import SupplierLoanReport from './components/Reports/SupplierLoanReport'; 
 import SupplierFinalReport from './components/Reports/SupplierFullReport';
+import NewSupplierBillDashboard from './components/NewSupplierBills/NewSupplierBillDashboard';
 import { APP_BASE } from './config/paths';
 
 // Import Layout
@@ -554,6 +555,22 @@ export default function App() {
                             </Layout>
                         </ProtectedRoute>
                     } 
+                />
+
+                <Route
+                    path="/new-supplier-bills"
+                    element={
+                        <ProtectedRoute>
+                            <Layout 
+                                billSize={billSize} 
+                                handleBillSizeChange={handleBillSizeChange}
+                                printMode={printMode}
+                                setPrintMode={setPrintMode}
+                            >
+                                <NewSupplierBillDashboard />
+                            </Layout>
+                        </ProtectedRoute>
+                    }
                 />
 
                 {/* ❌ Fallback route: Redirect all unknown paths to the main dashboard */}

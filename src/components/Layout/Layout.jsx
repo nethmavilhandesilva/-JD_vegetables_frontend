@@ -218,6 +218,7 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
                                     <>
                                         <Link to="/customers-loans" className="btn btn-outline-success btn-sm mx-1" style={{ fontWeight: 'bold', color: '#fff' }}>{tr('Give / Take Loans', 'ණය දීම/ගැනීම')}</Link>
                                         <Link to="/supplierreport" className="btn btn-outline-success btn-sm mx-1" style={{ fontWeight: 'bold', color: '#fff' }}>{tr('Supplier Bills', 'සැපයුම්කරු බිල්පත්')}</Link>
+                                        <Link to="/new-supplier-bills" className="btn btn-outline-success btn-sm mx-1" style={{ fontWeight: 'bold', color: '#fff' }}>{tr('New Supplier Bills', 'නව සැපයුම්කරු බිල්පත්')}</Link>
                                         <button type="button" className="btn btn-outline-success btn-sm mx-1" style={{ fontWeight: 'bold', color: '#fff' }} onClick={openDayProcessModal}>{tr('Day End Process', 'දින අවසාන ක්‍රියාවලිය')}</button>
                                     </>
                                 )}
