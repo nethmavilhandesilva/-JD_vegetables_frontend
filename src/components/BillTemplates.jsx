@@ -123,7 +123,8 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
             body { font-family: 'Arial', sans-serif; background: white; }
             .receipt-main { width: ${receiptMaxWidth}; margin: 0 auto; padding: 5px; }
             @media print {
-                @page { margin: 0; size: 80mm auto; }
+                /* Small top margin so the printer does not cut off the shop name */
+                @page { margin: 6mm 0 0 0; size: 80mm auto; }
                 body { width: 80mm; }
             }
             .header { text-align: center; }
@@ -547,15 +548,17 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
                 padding: 0; 
                 margin: 0;
             }
-            .receipt-container { 
-                box-shadow: none; 
+            .receipt-container {
+                box-shadow: none;
                 margin: 0 auto !important;
                 page-break-after: always;
                 page-break-inside: avoid;
             }
-            @page { 
+            /* Top margin on every printed page: printers cannot print right at the paper's
+               top edge, so with 0 here the shop name was cut off */
+            @page {
                 size: ${styles.containerWidth} auto;
-                margin: 0mm;
+                margin: ${topMargin} 0 0 0;
             }
         }
 
