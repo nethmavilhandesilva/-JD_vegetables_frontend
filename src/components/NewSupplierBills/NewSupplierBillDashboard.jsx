@@ -8,7 +8,8 @@ import { SHOP_NAME } from '../../config/shop';
 // Bills entered here are stored in the new tables new_supplier_bills /
 // new_supplier_bill_items. Nothing in the existing sales/supplier flow is touched.
 // Shortcuts (same idea as Sales Entry): F5 = hold the bill (save, not printed),
-// F4 = save and print. Held bills wait in the "Held bills" panel until printed.
+// F4 = save and print. Layout copies Sales Entry: Printed list on the left,
+// entry screen in the middle, Unprinted (held) list on the right.
 
 const today = () => {
     const d = new Date();
@@ -73,6 +74,11 @@ export default function NewSupplierBillDashboard() {
     const [loadingList, setLoadingList] = useState(false);
     const [listError, setListError] = useState('');
     const [heldBills, setHeldBills] = useState([]);
+    const [printedBills, setPrintedBills] = useState([]); // today's printed bills (left sidebar)
+    const [sideSearch, setSideSearch] = useState({ printed: '', held: '' });
+    const [showReport, setShowReport] = useState(false);
+    const reportOpenRef = useRef(false);
+    reportOpenRef.current = showReport;
 
     const itemRef = useRef(null);
     const packsRef = useRef(null);
@@ -123,17 +129,22 @@ export default function NewSupplierBillDashboard() {
         }
     }, []);
 
-    // Held bills of every date, so nothing waiting to be printed is missed.
-    const loadHeld = useCallback(async () => {
+    // Sidebars: unprinted = held bills of every date (so nothing waiting is missed),
+    // printed = bills printed for today's date, like Sales Entry.
+    const loadSidebars = useCallback(async () => {
         try {
-            const res = await api.get('/new-supplier-bills', { params: { print_status: 'held' } });
-            setHeldBills(res.data?.bills || []);
-        } catch { /* the main list shows load errors */ }
+            const [held, printed] = await Promise.all([
+                api.get('/new-supplier-bills', { params: { print_status: 'held' } }),
+                api.get('/new-supplier-bills', { params: { print_status: 'printed', start_date: today(), end_date: today() } }),
+            ]);
+            setHeldBills(held.data?.bills || []);
+            setPrintedBills(printed.data?.bills || []);
+        } catch { /* errors show in the report */ }
     }, []);
 
-    const refreshLists = () => { loadBills(filters); loadHeld(); };
+    const refreshLists = () => { loadSidebars(); if (showReport) loadBills(filters); };
 
-    useEffect(() => { loadBills(filters); loadHeld(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { loadSidebars(); }, [loadSidebars]);
 
     // ---------- totals (server recomputes the same values on save) ----------
     const totals = useMemo(() => {
@@ -271,6 +282,7 @@ export default function NewSupplierBillDashboard() {
         const onKey = (e) => {
             if (e.key === 'F5' || e.key === 'F4') {
                 e.preventDefault();
+                if (reportOpenRef.current) return; // not while the report popup is open
                 saveRef.current?.(e.key === 'F4');
             }
         };
@@ -389,6 +401,8 @@ export default function NewSupplierBillDashboard() {
         w.document.close();
     }
 
+    const openReport = () => { setShowReport(true); loadBills(filters); };
+
     const applyFilters = (e) => { e?.preventDefault(); loadBills(filters); };
     const clearFilters = () => {
         const f = { start_date: today(), end_date: today(), supplier: null, status: '', print_status: '', search: '' };
@@ -396,13 +410,90 @@ export default function NewSupplierBillDashboard() {
         loadBills(f);
     };
 
+    const todayTotal = useMemo(
+        () => [...printedBills, ...heldBills].filter((b) => b.bill_date === today()).reduce((sum, b) => sum + num(b.net_amount), 0),
+        [printedBills, heldBills]
+    );
+
+    const filterSide = (list, q) => {
+        const query = q.trim().toUpperCase();
+        if (!query) return list;
+        return list.filter((b) => b.supplier_code.toUpperCase().startsWith(query) || String(b.bill_no || '').toUpperCase().includes(query));
+    };
+
     // ---------- render ----------
+    const darkInput = {
+        backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: 36,
+        fontSize: '1rem', padding: '0 0.75rem', borderRadius: '0.5rem', width: '100%', boxSizing: 'border-box', fontWeight: 'bold',
+    };
+    const label = { fontSize: 12, color: '#cbd5e1', marginBottom: 2, display: 'block' };
+    const whiteSelect = {
+        control: (b) => ({ ...b, minHeight: 36, backgroundColor: 'white', borderColor: '#4a5568', borderRadius: '0.5rem' }),
+        singleValue: (b) => ({ ...b, color: 'black', fontWeight: 'bold', fontSize: 13 }),
+        input: (b) => ({ ...b, color: 'black', fontWeight: 'bold' }),
+        option: (b, st) => ({ ...b, color: 'black', fontWeight: 'bold', fontSize: 13, backgroundColor: st.isFocused ? '#e5e7eb' : 'white' }),
+        menuPortal: (b) => ({ ...b, zIndex: 1060 }),
+    };
+    const cell = { border: '1px solid #4b5563', padding: '6px 8px' };
+    const headCell = { ...cell, backgroundColor: '#f5fafb', color: '#000', fontWeight: 'bold', whiteSpace: 'nowrap' };
+
+    const renderSidebar = (type) => {
+        const isPrinted = type === 'printed';
+        const list = filterSide(isPrinted ? printedBills : heldBills, sideSearch[type]);
+        return (
+            <div className="nsb-sidebar" style={{ backgroundColor: '#1ec139ff', borderRadius: '0.75rem', maxHeight: '80.5vh', overflowY: 'auto', border: '1px solid #000', boxShadow: '0 10px 15px rgba(0,0,0,.2)' }}>
+                <div style={{ backgroundColor: '#006400', padding: 4, borderTopLeftRadius: '0.75rem', borderTopRightRadius: '0.75rem', position: 'sticky', top: 0, zIndex: 1 }}>
+                    <h2 style={{ fontSize: 14, fontWeight: 'bold', color: 'white', textAlign: 'center', margin: '2px 0 4px' }}>
+                        {isPrinted ? tr('Printed', 'මුද්‍රණය කළ') : tr('Unprinted', 'මුද්‍රණය නොකළ')}
+                        <span style={{ marginLeft: 6, background: '#000', borderRadius: 8, padding: '0 6px', fontSize: 11 }}>{list.length}</span>
+                    </h2>
+                    <input
+                        type="text"
+                        value={sideSearch[type]}
+                        onChange={(e) => setSideSearch({ ...sideSearch, [type]: e.target.value.toUpperCase() })}
+                        placeholder={isPrinted ? tr('Search bill no / code...', 'සෙවීම බිල්පත් අංකය/කේතය...') : tr('Search supplier code...', 'සැපයුම්කරු කේතය සොයන්න...')}
+                        style={{ width: 169, display: 'block', margin: '0 auto 2px', borderRadius: '0.75rem', border: '1px solid #ccc', padding: '1px 12px', textTransform: 'uppercase', fontSize: 13 }}
+                    />
+                </div>
+                <div style={{ padding: '4px' }}>
+                    {list.length === 0 ? (
+                        <p style={{ color: '#374151', textAlign: 'center', fontSize: 12, padding: 8, margin: 0 }}>{tr('No records.', 'වාර්තා නොමැත.')}</p>
+                    ) : list.map((b) => {
+                        const selected = editingBill?.id === b.id;
+                        const text = isPrinted ? `${b.supplier_code}-${b.bill_no}` : `${b.supplier_code} (${b.bill_no})`;
+                        return (
+                            <button
+                                key={b.id}
+                                type="button"
+                                onClick={() => startEdit(b)}
+                                title={`${text} · ${b.bill_date} · Rs. ${money(b.net_amount)}`}
+                                style={{
+                                    display: 'block', width: '100%', textAlign: 'left', marginBottom: 8, padding: '4px 6px',
+                                    borderRadius: '0.75rem', border: `1px solid ${selected ? '#2563eb' : '#e5e7eb'}`,
+                                    backgroundColor: selected ? '#93C5FD' : '#f9fafb', color: selected ? '#000' : '#374151',
+                                    fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                }}
+                            >
+                                {text}
+                                {!isPrinted && b.bill_date !== today() && <span style={{ display: 'block', fontSize: 10, color: '#b91c1c' }}>{b.bill_date}</span>}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
     return (
-        <div className="container-fluid py-3 new-supplier-bills" style={{ background: '#f4f6f9', minHeight: '100vh' }}>
+        <div className="new-supplier-bills" style={{ maxWidth: 1400, margin: '0 auto' }}>
             <style>{`
-                .new-supplier-bills .card-header { background:#1b5e20; color:#fff; font-weight:600; }
-                .new-supplier-bills .table thead th,
-                .new-supplier-bills .table thead th * {
+                .new-supplier-bills .nsb-grid { display:grid; grid-template-columns:200px 1fr 200px; gap:16px; padding:10px; }
+                @media (max-width: 991px) {
+                    .new-supplier-bills .nsb-grid { grid-template-columns:1fr; }
+                    .new-supplier-bills .nsb-center { order:-1; }
+                }
+                .new-supplier-bills .nsb-center input::placeholder { color:#94a3b8; font-weight:normal; }
+                .new-supplier-bills .nsb-report .table thead th {
                     --bs-table-color:#ffffff; --bs-table-bg:#1b5e20;
                     background-color:#1b5e20 !important; color:#ffffff !important; white-space:nowrap;
                 }
@@ -411,348 +502,337 @@ export default function NewSupplierBillDashboard() {
                 .new-supplier-bills .stat .l { font-size:.8rem; color:#555; }
             `}</style>
 
-            <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                <h4 className="mb-0 fw-bold" style={{ color: '#1b5e20' }}>
-                    <i className="material-icons align-middle me-2">receipt_long</i>
-                    {tr('New Supplier Bills', 'නව සැපයුම්කරු බිල්පත්')}
-                </h4>
-                <button type="button" className="btn btn-success btn-sm" onClick={resetForm}>
-                    <i className="material-icons align-middle me-1" style={{ fontSize: 18 }}>add</i>{tr('New Bill', 'නව බිල්පත')}
-                </button>
-            </div>
+            <div className="nsb-grid">
+                {/* ===== LEFT: printed ===== */}
+                {renderSidebar('printed')}
 
-            <div className="row g-3">
-                {/* ================= ENTRY FORM ================= */}
-                <div className="col-12 col-xl-5">
-                    <div className="card shadow-sm">
-                        <div className="card-header d-flex justify-content-between align-items-center">
-                            <span>{editingBill
-                                ? tr(`Editing bill ${editingBill.bill_no}`, `බිල්පත ${editingBill.bill_no} සංස්කරණය`)
-                                : tr('Enter a new bill', 'නව බිල්පතක් ඇතුළත් කරන්න')}</span>
-                            {editingBill && (
-                                <button type="button" className="btn btn-light btn-sm py-0" onClick={resetForm}>{tr('Cancel edit', 'සංස්කරණය අවලංගු')}</button>
-                            )}
+                {/* ===== CENTER: entry screen ===== */}
+                <div className="nsb-center" style={{ backgroundColor: '#111439ff', padding: 20, borderRadius: '0.75rem', color: 'white', minHeight: '80.5vh', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+                    {/* header */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+                        <div style={{ color: 'red', fontWeight: 'bold', fontSize: '1.35rem', whiteSpace: 'nowrap' }}>
+                            {tr('Bill No:', 'බිල් අං:')} {editingBill ? editingBill.bill_no : tr('New', 'නව')}
                         </div>
-                        <div className="card-body">
-                            {message && <div className="alert alert-success py-2">{message}</div>}
-                            {formError && <div className="alert alert-danger py-2">{formError}</div>}
+                        <div style={{ color: 'red', fontWeight: 'bold', fontSize: '1.15rem', whiteSpace: 'nowrap' }}>
+                            {tr("Today's Bills:", 'අද බිල්පත්:')} Rs. {money(todayTotal)}
+                        </div>
+                        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                            <button type="button" className="btn btn-sm btn-outline-light fw-bold" onClick={openReport}>
+                                📊 {tr('Bills Report', 'බිල්පත් වාර්තාව')}
+                            </button>
+                            <button type="button" className="btn btn-sm btn-success fw-bold" onClick={() => { resetForm(); setMessage(''); setTimeout(() => supplierRef.current?.focus(), 0); }}>
+                                + {tr('New Bill', 'නව බිල්පත')}
+                            </button>
+                        </div>
+                    </div>
 
-                            <div className="row g-2 mb-2">
-                                <div className="col-sm-4">
-                                    <label className="form-label small mb-1">{tr('Bill date', 'බිල්පත් දිනය')}</label>
-                                    <input type="date" className="form-control form-control-sm" value={form.bill_date}
-                                        onChange={(e) => setForm({ ...form, bill_date: e.target.value })} />
-                                </div>
-                                <div className="col-sm-8">
-                                    <label className="form-label small mb-1">{tr('Supplier', 'සැපයුම්කරු')}</label>
-                                    <Select
-                                        ref={supplierRef}
-                                        autoFocus
-                                        options={supplierOptions}
-                                        value={form.supplier}
-                                        onChange={(opt) => { setForm({ ...form, supplier: opt }); setTimeout(() => itemRef.current?.focus(), 0); }}
-                                        placeholder={tr('Search supplier code or name...', 'සැපයුම්කරු කේතය හෝ නම සොයන්න...')}
-                                        styles={selectStyles}
-                                        menuPortalTarget={document.body}
-                                        isClearable
-                                    />
-                                </div>
-                                <div className="col-12">
-                                    <label className="form-label small mb-1">{tr('Supplier ref / bill no (optional)', 'සැපයුම්කරු යොමු / බිල් අංකය (අත්‍යවශ්‍ය නැත)')}</label>
-                                    <input type="text" className="form-control form-control-sm" maxLength={100} value={form.reference_no}
-                                        onChange={(e) => setForm({ ...form, reference_no: e.target.value })} />
-                                </div>
-                            </div>
+                    {message && <div style={{ background: '#14532d', border: '1px solid #22c55e', borderRadius: '0.5rem', padding: '6px 10px', marginBottom: 8 }}>{message}</div>}
+                    {formError && <div style={{ background: '#fee2e2', color: '#b91c1c', borderRadius: '0.5rem', padding: '6px 10px', marginBottom: 8, fontWeight: 600 }}>{formError}</div>}
 
-                            {/* Line entry */}
-                            <div className="border rounded p-2 mb-2" style={{ background: editIndex !== null ? '#fff8e1' : '#f1f8e9' }}>
-                                <div className="row g-2 align-items-end">
-                                    <div className="col-12 col-md-5">
-                                        <label className="form-label small mb-1">{tr('Item', 'භාණ්ඩය')}</label>
-                                        <Select
-                                            ref={itemRef}
-                                            options={itemOptions}
-                                            value={line.item}
-                                            onChange={(opt) => { setLine({ ...line, item: opt }); if (opt) setTimeout(() => packsRef.current?.focus(), 0); }}
-                                            placeholder={tr('Item...', 'භාණ්ඩය...')}
-                                            styles={selectStyles}
-                                            menuPortalTarget={document.body}
-                                        />
-                                    </div>
-                                    <div className="col-4 col-md-2">
-                                        <label className="form-label small mb-1">{tr('Packs', 'මලු')}</label>
-                                        <input ref={packsRef} type="number" min="0" step="any" className="form-control form-control-sm" value={line.packs}
-                                            onChange={(e) => setLine({ ...line, packs: e.target.value })} onKeyDown={(e) => onLineKeyDown(e, weightRef)} />
-                                    </div>
-                                    <div className="col-4 col-md-2">
-                                        <label className="form-label small mb-1">{tr('Weight', 'බර')}</label>
-                                        <input ref={weightRef} type="number" min="0" step="any" className="form-control form-control-sm" value={line.weight}
-                                            onChange={(e) => setLine({ ...line, weight: e.target.value })} onKeyDown={(e) => onLineKeyDown(e, priceRef)} />
-                                    </div>
-                                    <div className="col-4 col-md-3">
-                                        <label className="form-label small mb-1">{tr('Price/kg', 'මිල/kg')}</label>
-                                        <input ref={priceRef} type="number" min="0" step="any" className="form-control form-control-sm" value={line.price_per_kg}
-                                            onChange={(e) => setLine({ ...line, price_per_kg: e.target.value })} onKeyDown={(e) => onLineKeyDown(e, null)} />
-                                    </div>
-                                </div>
-                                <div className="d-flex justify-content-between align-items-center mt-2">
-                                    <small className="text-muted">
-                                        {tr('Amount', 'මුදල')}: <b>{money(lineAmount)}</b> · {tr('Enter = next / add · F5 = hold · F4 = print', 'Enter = ඊළඟ / එක් කරන්න · F5 = රඳවන්න · F4 = මුද්‍රණය')}
-                                    </small>
-                                    <div>
-                                        {editIndex !== null && (
-                                            <button type="button" className="btn btn-outline-secondary btn-sm me-1" onClick={() => { setLine(emptyLine); setEditIndex(null); }}>
-                                                {tr('Cancel', 'අවලංගු')}
-                                            </button>
-                                        )}
-                                        <button type="button" className="btn btn-success btn-sm" onClick={addOrUpdateLine}>
-                                            {editIndex !== null ? tr('Update line', 'පේළිය යාවත්කාලීන') : tr('Add item', 'භාණ්ඩය එක් කරන්න')}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                    {/* bill header fields */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', columnGap: 8, rowGap: 8, alignItems: 'end' }}>
+                        <div style={{ gridColumn: 'span 3' }}>
+                            <label style={label}>{tr('Bill date', 'බිල්පත් දිනය')}</label>
+                            <input type="date" style={darkInput} value={form.bill_date} onChange={(e) => setForm({ ...form, bill_date: e.target.value })} />
+                        </div>
+                        <div style={{ gridColumn: 'span 5' }}>
+                            <label style={label}>{tr('Supplier', 'සැපයුම්කරු')}</label>
+                            <Select
+                                ref={supplierRef}
+                                autoFocus
+                                options={supplierOptions}
+                                value={form.supplier}
+                                onChange={(opt) => { setForm({ ...form, supplier: opt }); if (opt) setTimeout(() => itemRef.current?.focus(), 0); }}
+                                placeholder={tr('Supplier code or name...', 'සැපයුම්කරු කේතය හෝ නම...')}
+                                styles={whiteSelect}
+                                menuPortalTarget={document.body}
+                                isClearable
+                            />
+                        </div>
+                        <div style={{ gridColumn: 'span 4' }}>
+                            <label style={label}>{tr('Supplier ref / bill no', 'සැපයුම්කරු යොමු / බිල් අංකය')}</label>
+                            <input type="text" style={darkInput} maxLength={100} value={form.reference_no}
+                                onChange={(e) => setForm({ ...form, reference_no: e.target.value })} placeholder={tr('Optional', 'අත්‍යවශ්‍ය නැත')} />
+                        </div>
 
-                            {/* Lines table */}
-                            <div className="table-responsive mb-2" style={{ maxHeight: 280, overflowY: 'auto' }}>
-                                <table className="table table-sm table-bordered table-hover align-middle mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>{tr('Item', 'භාණ්ඩය')}</th>
-                                            <th className="text-end">{tr('Packs', 'මලු')}</th>
-                                            <th className="text-end">{tr('Weight', 'බර')}</th>
-                                            <th className="text-end">{tr('Price/kg', 'මිල/kg')}</th>
-                                            <th className="text-end">{tr('Amount', 'මුදල')}</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {lines.length === 0 && (
-                                            <tr><td colSpan={7} className="text-center text-muted py-3">{tr('No items added yet', 'තවම භාණ්ඩ එක් කර නැත')}</td></tr>
-                                        )}
-                                        {lines.map((l, i) => (
-                                            <tr key={i} className={editIndex === i ? 'table-warning' : ''}>
-                                                <td>{i + 1}</td>
-                                                <td>{l.item?.label}</td>
-                                                <td className="text-end">{num(l.packs) ? kg(l.packs) : ''}</td>
-                                                <td className="text-end">{kg(l.weight)}</td>
-                                                <td className="text-end">{money(l.price_per_kg)}</td>
-                                                <td className="text-end">{money(num(l.weight) * num(l.price_per_kg))}</td>
-                                                <td className="text-nowrap">
-                                                    <button type="button" className="btn btn-link btn-sm p-0 me-2" title={tr('Edit', 'සංස්කරණය')} onClick={() => editLine(i)}>
-                                                        <i className="material-icons" style={{ fontSize: 18 }}>edit</i>
-                                                    </button>
-                                                    <button type="button" className="btn btn-link btn-sm p-0 text-danger" title={tr('Remove', 'ඉවත් කරන්න')} onClick={() => removeLine(i)}>
-                                                        <i className="material-icons" style={{ fontSize: 18 }}>delete</i>
-                                                    </button>
-                                                </td>
-                                            </tr>
+                        {/* item line */}
+                        <div style={{ gridColumn: 'span 4' }}>
+                            <label style={label}>{tr('Item', 'භාණ්ඩය')}</label>
+                            <Select
+                                ref={itemRef}
+                                options={itemOptions}
+                                value={line.item}
+                                onChange={(opt) => { setLine({ ...line, item: opt }); if (opt) setTimeout(() => packsRef.current?.focus(), 0); }}
+                                placeholder={tr('Item', 'භාණ්ඩය')}
+                                styles={whiteSelect}
+                                menuPortalTarget={document.body}
+                            />
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                            <label style={label}>{tr('Packs', 'මලු')}</label>
+                            <input ref={packsRef} type="number" min="0" step="any" style={{ ...darkInput, textAlign: 'center' }} value={line.packs}
+                                onChange={(e) => setLine({ ...line, packs: e.target.value })} onKeyDown={(e) => onLineKeyDown(e, weightRef)} />
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                            <label style={label}>{tr('Weight', 'බර')}</label>
+                            <input ref={weightRef} type="number" min="0" step="any" style={{ ...darkInput, textAlign: 'center' }} value={line.weight}
+                                onChange={(e) => setLine({ ...line, weight: e.target.value })} onKeyDown={(e) => onLineKeyDown(e, priceRef)} />
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                            <label style={label}>{tr('Price', 'මිල')}</label>
+                            <input ref={priceRef} type="number" min="0" step="any" style={{ ...darkInput, textAlign: 'center' }} value={line.price_per_kg}
+                                onChange={(e) => setLine({ ...line, price_per_kg: e.target.value })} onKeyDown={(e) => onLineKeyDown(e, null)} />
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                            <label style={label}>{tr('Value', 'අගය')}</label>
+                            <div style={{ ...darkInput, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1f2937' }}>{money(lineAmount)}</div>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 0' }}>
+                        <small style={{ color: '#94a3b8' }}>
+                            {tr('Enter = next / add · F5 = hold · F4 = print', 'Enter = ඊළඟ / එක් කරන්න · F5 = රඳවන්න · F4 = මුද්‍රණය')}
+                        </small>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                            {editIndex !== null && (
+                                <button type="button" className="btn btn-sm btn-outline-light" onClick={() => { setLine(emptyLine); setEditIndex(null); }}>{tr('Cancel', 'අවලංගු')}</button>
+                            )}
+                            <button type="button" className="btn btn-sm btn-primary fw-bold" onClick={addOrUpdateLine}>
+                                {editIndex !== null ? tr('Update line', 'පේළිය යාවත්කාලීන') : tr('Add item', 'භාණ්ඩය එක් කරන්න')}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* lines table (Sales Entry style) */}
+                    <div style={{ flexGrow: 1, overflowY: 'auto', marginTop: 4 }}>
+                        {lines.length > 0 ? (
+                            <table style={{ width: '100%', backgroundColor: '#000', color: 'white', borderCollapse: 'collapse', fontSize: 14, textAlign: 'center' }}>
+                                <thead>
+                                    <tr>
+                                        {['#', tr('Code', 'කේතය'), tr('Item', 'අයිතමය'), tr('Bags', 'මලු'), tr('Weight(kg)', 'බර(kg)'), tr('Price', 'මිල'), tr('Value', 'අගය'), tr('Actions', 'Actions')].map((h) => (
+                                            <th key={h} style={headCell}>{h}</th>
                                         ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Totals & payment */}
-                            <div className="row g-2">
-                                <div className="col-sm-6">
-                                    <label className="form-label small mb-1">{tr('Deductions', 'අඩු කිරීම්')}</label>
-                                    <input type="number" min="0" step="any" className="form-control form-control-sm" value={form.deductions}
-                                        onChange={(e) => setForm({ ...form, deductions: e.target.value })} />
-                                </div>
-                                <div className="col-sm-6">
-                                    <label className="form-label small mb-1">{tr('Deduction reason', 'අඩු කිරීමට හේතුව')}</label>
-                                    <input type="text" className="form-control form-control-sm" maxLength={255} value={form.deduction_note}
-                                        onChange={(e) => setForm({ ...form, deduction_note: e.target.value })}
-                                        placeholder={tr('e.g. transport, advance', 'උදා: ප්‍රවාහන, අත්තිකාරම්')} />
-                                </div>
-                                <div className="col-sm-6">
-                                    <label className="form-label small mb-1">{tr('Paid now', 'දැන් ගෙවූ')}</label>
-                                    <input type="number" min="0" step="any" className="form-control form-control-sm" value={form.paid_amount}
-                                        onChange={(e) => setForm({ ...form, paid_amount: e.target.value })} />
-                                </div>
-                                <div className="col-sm-6">
-                                    <label className="form-label small mb-1">{tr('Notes', 'සටහන්')}</label>
-                                    <input type="text" className="form-control form-control-sm" maxLength={2000} value={form.notes}
-                                        onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-                                </div>
-                            </div>
-
-                            <table className="table table-sm mt-3 mb-2">
+                                    </tr>
+                                </thead>
                                 <tbody>
-                                    <tr><td>{tr('Total weight', 'මුළු බර')}</td><td className="text-end">{kg(totals.weight)} kg{totals.packs ? ` · ${kg(totals.packs)} ${tr('packs', 'මලු')}` : ''}</td></tr>
-                                    <tr><td>{tr('Gross amount', 'දළ මුදල')}</td><td className="text-end">{money(totals.gross)}</td></tr>
-                                    <tr><td>{tr('Deductions', 'අඩු කිරීම්')}</td><td className="text-end text-danger">-{money(form.deductions)}</td></tr>
-                                    <tr className="fw-bold"><td>{tr('Net amount', 'ශුද්ධ මුදල')}</td><td className="text-end">{money(totals.net)}</td></tr>
-                                    <tr className="fw-bold"><td>{tr('Balance to pay', 'ගෙවිය යුතු ශේෂය')}</td><td className={`text-end ${totals.balance > 0 ? 'text-danger' : 'text-success'}`}>{money(totals.balance)}</td></tr>
+                                    {lines.map((l, i) => (
+                                        <tr key={i} onClick={() => editLine(i)} style={{ cursor: 'pointer', backgroundColor: editIndex === i ? '#1e40af' : 'transparent' }}>
+                                            <td style={cell}>{i + 1}</td>
+                                            <td style={cell}>{l.item?.value}</td>
+                                            <td style={cell}>{l.item?.name}</td>
+                                            <td style={cell}>{num(l.packs) ? kg(l.packs) : ''}</td>
+                                            <td style={cell}>{kg(l.weight)}</td>
+                                            <td style={cell}>{money(l.price_per_kg)}</td>
+                                            <td style={cell}>{money(num(l.weight) * num(l.price_per_kg))}</td>
+                                            <td style={cell}>
+                                                <button type="button" onClick={(e) => { e.stopPropagation(); removeLine(i); }}
+                                                    style={{ background: 'white', border: 'none', borderRadius: '50%', padding: '2px 6px', fontWeight: 'bold' }}>🗑️</button>
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
-
-                            <div className="d-flex gap-2 justify-content-end">
-                                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={resetForm} disabled={saving}>{tr('Clear', 'හිස් කරන්න')}</button>
-                                <button type="button" className="btn btn-warning btn-sm fw-bold" onClick={() => saveBill(false)} disabled={saving}>
-                                    {saving ? tr('Saving...', 'සුරකිමින්...') : tr('Hold (F5)', 'රඳවන්න (F5)')}
-                                </button>
-                                <button type="button" className="btn btn-success btn-sm fw-bold" onClick={() => saveBill(true)} disabled={saving}>
-                                    🖨️ {tr('Print (F4)', 'මුද්‍රණය (F4)')}
-                                </button>
+                        ) : (
+                            <div style={{ textAlign: 'center', color: '#94a3b8', padding: '30px 0', border: '1px dashed #4b5563', borderRadius: '0.75rem' }}>
+                                {tr('No items added yet. Pick a supplier, then add items.', 'තවම භාණ්ඩ එක් කර නැත. සැපයුම්කරු තෝරා භාණ්ඩ එක් කරන්න.')}
                             </div>
+                        )}
+                    </div>
+
+                    {/* totals bar */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', marginTop: 10, padding: 8, borderRadius: '0.75rem', border: '2px solid #3b82f6', backgroundColor: '#111827', fontWeight: 'bold' }}>
+                        {[
+                            [tr('Weight:', 'බර:'), `${kg(totals.weight)} kg`, 'white'],
+                            [tr('Total:', 'එකතුව:'), money(totals.gross), 'white'],
+                            [tr('Deductions:', 'අඩු කිරීම්:'), `-${money(form.deductions)}`, '#f87171'],
+                            [tr('Net:', 'ශුද්ධ:'), money(totals.net), '#facc15'],
+                            [tr('Balance:', 'ශේෂය:'), money(totals.balance), totals.balance > 0 ? '#f87171' : '#4ade80'],
+                        ].map(([l, v, c], i, arr) => (
+                            <div key={l} style={{ flex: '1 1 120px', textAlign: 'center', padding: '0 8px', borderRight: i < arr.length - 1 ? '1px solid #374151' : 'none' }}>
+                                <span style={{ color: '#9ca3af', fontSize: 10, textTransform: 'uppercase', marginRight: 6 }}>{l}</span>
+                                <span style={{ color: c, fontSize: 14 }}>{v}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* payment fields */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', columnGap: 8, rowGap: 8, marginTop: 10, alignItems: 'end' }}>
+                        <div style={{ gridColumn: 'span 2' }}>
+                            <label style={label}>{tr('Deductions', 'අඩු කිරීම්')}</label>
+                            <input type="number" min="0" step="any" style={darkInput} value={form.deductions} onChange={(e) => setForm({ ...form, deductions: e.target.value })} />
                         </div>
+                        <div style={{ gridColumn: 'span 3' }}>
+                            <label style={label}>{tr('Deduction reason', 'අඩු කිරීමට හේතුව')}</label>
+                            <input type="text" style={darkInput} maxLength={255} value={form.deduction_note}
+                                onChange={(e) => setForm({ ...form, deduction_note: e.target.value })} placeholder={tr('e.g. transport', 'උදා: ප්‍රවාහන')} />
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                            <label style={label}>{tr('Paid now', 'දැන් ගෙවූ')}</label>
+                            <input type="number" min="0" step="any" style={darkInput} value={form.paid_amount} onChange={(e) => setForm({ ...form, paid_amount: e.target.value })} />
+                        </div>
+                        <div style={{ gridColumn: 'span 5' }}>
+                            <label style={label}>{tr('Notes', 'සටහන්')}</label>
+                            <input type="text" style={darkInput} maxLength={2000} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+                        </div>
+                    </div>
+
+                    {/* actions */}
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14, flexWrap: 'wrap' }}>
+                        {editingBill && (
+                            <button type="button" className="btn btn-sm btn-outline-danger fw-bold" onClick={() => deleteBill(editingBill)} disabled={saving}>
+                                🗑️ {tr('Delete Bill', 'බිල්පත මකන්න')}
+                            </button>
+                        )}
+                        <button type="button" className="btn btn-sm btn-outline-light" onClick={resetForm} disabled={saving}>{tr('Clear', 'හිස් කරන්න')}</button>
+                        <button type="button" className="btn btn-warning fw-bold" onClick={() => saveBill(false)} disabled={saving}>
+                            {saving ? tr('Saving...', 'සුරකිමින්...') : tr('Hold (F5)', 'රඳවන්න (F5)')}
+                        </button>
+                        <button type="button" className="btn btn-success fw-bold" onClick={() => saveBill(true)} disabled={saving}>
+                            🖨️ {tr('Print (F4)', 'මුද්‍රණය (F4)')}
+                        </button>
                     </div>
                 </div>
 
-                {/* ================= BILLS LIST ================= */}
-                <div className="col-12 col-xl-7">
-                    <div className="card shadow-sm mb-3" style={{ borderColor: '#f9a825' }}>
-                        <div className="card-header d-flex justify-content-between align-items-center" style={{ background: '#f9a825', color: '#000' }}>
-                            <span>{tr('Held bills (waiting to print)', 'රඳවා ඇති බිල්පත් (මුද්‍රණයට ඇති)')}</span>
-                            <span className="badge bg-dark">{heldBills.length}</span>
-                        </div>
-                        <div className="card-body py-2">
-                            {heldBills.length === 0 ? (
-                                <div className="text-muted small">{tr('No held bills. Press F5 while entering a bill to hold it.', 'රඳවා ඇති බිල්පත් නැත. බිල්පතක් ඇතුළත් කරන විට F5 ඔබා එය රඳවන්න.')}</div>
-                            ) : (
-                                <div className="d-flex flex-wrap gap-2">
-                                    {heldBills.map((b) => (
-                                        <button key={b.id} type="button"
-                                            className={`btn btn-sm ${editingBill?.id === b.id ? 'btn-dark' : 'btn-outline-dark'}`}
-                                            title={tr('Open this bill, then press F4 to print', 'මෙම බිල්පත විවෘත කර F4 ඔබා මුද්‍රණය කරන්න')}
-                                            onClick={() => startEdit(b)}>
-                                            <b>{b.supplier_code}</b> · {b.bill_no} · {b.bill_date} · {money(b.net_amount)}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="card shadow-sm">
-                        <div className="card-header">{tr('Saved bills', 'සුරැකි බිල්පත්')}</div>
-                        <div className="card-body">
-                            <form className="row g-2 align-items-end mb-3" onSubmit={applyFilters}>
-                                <div className="col-6 col-md-2">
-                                    <label className="form-label small mb-1">{tr('From', 'සිට')}</label>
-                                    <input type="date" className="form-control form-control-sm" value={filters.start_date}
-                                        onChange={(e) => setFilters({ ...filters, start_date: e.target.value })} />
-                                </div>
-                                <div className="col-6 col-md-2">
-                                    <label className="form-label small mb-1">{tr('To', 'දක්වා')}</label>
-                                    <input type="date" className="form-control form-control-sm" value={filters.end_date}
-                                        onChange={(e) => setFilters({ ...filters, end_date: e.target.value })} />
-                                </div>
-                                <div className="col-12 col-md-4">
-                                    <label className="form-label small mb-1">{tr('Supplier', 'සැපයුම්කරු')}</label>
-                                    <Select options={supplierOptions} value={filters.supplier} isClearable
-                                        onChange={(opt) => setFilters({ ...filters, supplier: opt })}
-                                        placeholder={tr('All', 'සියල්ල')} styles={selectStyles} menuPortalTarget={document.body} />
-                                </div>
-                                <div className="col-6 col-md-2">
-                                    <label className="form-label small mb-1">{tr('Status', 'තත්ත්වය')}</label>
-                                    <select className="form-select form-select-sm" value={filters.status}
-                                        onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
-                                        <option value="">{tr('All', 'සියල්ල')}</option>
-                                        <option value="unpaid">{statusLabel('unpaid')}</option>
-                                        <option value="partial">{statusLabel('partial')}</option>
-                                        <option value="paid">{statusLabel('paid')}</option>
-                                    </select>
-                                </div>
-                                <div className="col-6 col-md-2">
-                                    <label className="form-label small mb-1">{tr('Printed?', 'මුද්‍රිතද?')}</label>
-                                    <select className="form-select form-select-sm" value={filters.print_status}
-                                        onChange={(e) => setFilters({ ...filters, print_status: e.target.value })}>
-                                        <option value="">{tr('All', 'සියල්ල')}</option>
-                                        <option value="held">{tr('Held', 'රඳවා ඇති')}</option>
-                                        <option value="printed">{tr('Printed', 'මුද්‍රිත')}</option>
-                                    </select>
-                                </div>
-                                <div className="col-6 col-md-4">
-                                    <label className="form-label small mb-1">{tr('Search', 'සොයන්න')}</label>
-                                    <input type="text" className="form-control form-control-sm" value={filters.search}
-                                        placeholder={tr('Bill no / ref', 'බිල් අංකය / යොමු')}
-                                        onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
-                                </div>
-                                <div className="col-12 d-flex gap-2 justify-content-end">
-                                    <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => {
-                                        const f = { ...filters, start_date: '', end_date: '' };
-                                        setFilters(f); loadBills(f);
-                                    }}>{tr('All dates', 'සියලු දින')}</button>
-                                    <button type="button" className="btn btn-outline-secondary btn-sm" onClick={clearFilters}>{tr('Reset', 'යළි සකසන්න')}</button>
-                                    <button type="submit" className="btn btn-success btn-sm" disabled={loadingList}>
-                                        {loadingList ? tr('Loading...', 'පූරණය වෙමින්...') : tr('Search', 'සොයන්න')}
-                                    </button>
-                                </div>
-                            </form>
-
-                            {listError && <div className="alert alert-danger py-2">{listError}</div>}
-
-                            {summary && (
-                                <div className="row g-2 mb-3">
-                                    <div className="col-6 col-md-3"><div className="stat"><div className="l">{tr('Bills', 'බිල්පත්')}</div><div className="v">{summary.bill_count}</div></div></div>
-                                    <div className="col-6 col-md-3"><div className="stat"><div className="l">{tr('Total weight', 'මුළු බර')}</div><div className="v">{kg(summary.total_weight)} kg</div></div></div>
-                                    <div className="col-6 col-md-3"><div className="stat"><div className="l">{tr('Net amount', 'ශුද්ධ මුදල')}</div><div className="v">{money(summary.net_amount)}</div></div></div>
-                                    <div className="col-6 col-md-3"><div className="stat" style={{ borderLeftColor: '#c62828' }}><div className="l">{tr('Balance due', 'ගෙවිය යුතු ශේෂය')}</div><div className="v text-danger">{money(summary.balance_amount)}</div></div></div>
-                                </div>
-                            )}
-
-                            {truncated && (
-                                <div className="alert alert-warning py-2 small">{tr('Showing the latest 2000 bills only. Narrow the filters to see the rest.', 'නවතම බිල්පත් 2000 පමණක් පෙන්වයි. ඉතිරිය බැලීමට පෙරහන් අඩු කරන්න.')}</div>
-                            )}
-
-                            <div className="table-responsive" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-                                <table className="table table-sm table-bordered table-hover align-middle mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>{tr('Bill No', 'බිල් අංකය')}</th>
-                                            <th>{tr('Date', 'දිනය')}</th>
-                                            <th>{tr('Supplier', 'සැපයුම්කරු')}</th>
-                                            <th className="text-end">{tr('Items', 'භාණ්ඩ')}</th>
-                                            <th className="text-end">{tr('Weight', 'බර')}</th>
-                                            <th className="text-end">{tr('Net', 'ශුද්ධ')}</th>
-                                            <th className="text-end">{tr('Paid', 'ගෙවූ')}</th>
-                                            <th className="text-end">{tr('Balance', 'ශේෂය')}</th>
-                                            <th>{tr('Status', 'තත්ත්වය')}</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {!loadingList && bills.length === 0 && (
-                                            <tr><td colSpan={10} className="text-center text-muted py-3">{tr('No bills found', 'බිල්පත් හමු නොවීය')}</td></tr>
-                                        )}
-                                        {bills.map((b) => (
-                                            <tr key={b.id} className={editingBill?.id === b.id ? 'table-warning' : ''}>
-                                                <td className="fw-semibold">{b.bill_no}{b.reference_no && <div className="small text-muted">{b.reference_no}</div>}</td>
-                                                <td className="text-nowrap">{b.bill_date}</td>
-                                                <td>{b.supplier_code}<div className="small text-muted">{b.supplier_name}</div></td>
-                                                <td className="text-end">{b.items_count}</td>
-                                                <td className="text-end">{kg(b.total_weight)}</td>
-                                                <td className="text-end">{money(b.net_amount)}</td>
-                                                <td className="text-end">{money(b.paid_amount)}</td>
-                                                <td className="text-end fw-semibold">{money(b.balance_amount)}</td>
-                                                <td className="text-nowrap">
-                                                    <span className={`badge ${STATUS_BADGE[b.status] || 'bg-secondary'}`}>{statusLabel(b.status)}</span>{' '}
-                                                    {b.is_printed
-                                                        ? <span className="badge bg-secondary">{tr('Printed', 'මුද්‍රිත')}</span>
-                                                        : <span className="badge bg-warning text-dark">{tr('Held', 'රඳවා ඇති')}</span>}
-                                                </td>
-                                                <td className="text-nowrap">
-                                                    <button type="button" className="btn btn-link btn-sm p-0 me-2" title={tr('Print', 'මුද්‍රණය')} onClick={() => printSaved(b)}>
-                                                        <i className="material-icons" style={{ fontSize: 18 }}>print</i>
-                                                    </button>
-                                                    <button type="button" className="btn btn-link btn-sm p-0 me-2" title={tr('Edit', 'සංස්කරණය')} onClick={() => startEdit(b)}>
-                                                        <i className="material-icons" style={{ fontSize: 18 }}>edit</i>
-                                                    </button>
-                                                    <button type="button" className="btn btn-link btn-sm p-0 text-danger" title={tr('Delete', 'මකන්න')} onClick={() => deleteBill(b)}>
-                                                        <i className="material-icons" style={{ fontSize: 18 }}>delete</i>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {/* ===== RIGHT: unprinted (held) ===== */}
+                {renderSidebar('held')}
             </div>
+
+            {/* ===== Bills report popup ===== */}
+            {showReport && (
+                <div className="modal show d-block nsb-report" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true">
+                    <div className="modal-dialog modal-xl modal-dialog-scrollable">
+                        <div className="modal-content">
+                            <div className="modal-header" style={{ background: '#1b5e20', color: '#fff' }}>
+                                <h5 className="modal-title">{tr('Supplier Bills Report', 'සැපයුම්කරු බිල්පත් වාර්තාව')}</h5>
+                                <button type="button" className="btn-close btn-close-white" onClick={() => setShowReport(false)} aria-label="Close" />
+                            </div>
+                            <div className="modal-body">
+                                <form className="row g-2 align-items-end mb-3" onSubmit={applyFilters}>
+                                    <div className="col-6 col-md-2">
+                                        <label className="form-label small mb-1">{tr('From', 'සිට')}</label>
+                                        <input type="date" className="form-control form-control-sm" value={filters.start_date}
+                                            onChange={(e) => setFilters({ ...filters, start_date: e.target.value })} />
+                                    </div>
+                                    <div className="col-6 col-md-2">
+                                        <label className="form-label small mb-1">{tr('To', 'දක්වා')}</label>
+                                        <input type="date" className="form-control form-control-sm" value={filters.end_date}
+                                            onChange={(e) => setFilters({ ...filters, end_date: e.target.value })} />
+                                    </div>
+                                    <div className="col-12 col-md-4">
+                                        <label className="form-label small mb-1">{tr('Supplier', 'සැපයුම්කරු')}</label>
+                                        <Select options={supplierOptions} value={filters.supplier} isClearable
+                                            onChange={(opt) => setFilters({ ...filters, supplier: opt })}
+                                            placeholder={tr('All', 'සියල්ල')} styles={selectStyles} menuPortalTarget={document.body} />
+                                    </div>
+                                    <div className="col-6 col-md-2">
+                                        <label className="form-label small mb-1">{tr('Status', 'තත්ත්වය')}</label>
+                                        <select className="form-select form-select-sm" value={filters.status}
+                                            onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
+                                            <option value="">{tr('All', 'සියල්ල')}</option>
+                                            <option value="unpaid">{statusLabel('unpaid')}</option>
+                                            <option value="partial">{statusLabel('partial')}</option>
+                                            <option value="paid">{statusLabel('paid')}</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-6 col-md-2">
+                                        <label className="form-label small mb-1">{tr('Printed?', 'මුද්‍රිතද?')}</label>
+                                        <select className="form-select form-select-sm" value={filters.print_status}
+                                            onChange={(e) => setFilters({ ...filters, print_status: e.target.value })}>
+                                            <option value="">{tr('All', 'සියල්ල')}</option>
+                                            <option value="held">{tr('Held', 'රඳවා ඇති')}</option>
+                                            <option value="printed">{tr('Printed', 'මුද්‍රිත')}</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-12 col-md-6">
+                                        <label className="form-label small mb-1">{tr('Search', 'සොයන්න')}</label>
+                                        <input type="text" className="form-control form-control-sm" value={filters.search}
+                                            placeholder={tr('Bill no / ref', 'බිල් අංකය / යොමු')}
+                                            onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
+                                    </div>
+                                    <div className="col-12 col-md-6 d-flex gap-2 justify-content-end">
+                                        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => {
+                                            const f = { ...filters, start_date: '', end_date: '' };
+                                            setFilters(f); loadBills(f);
+                                        }}>{tr('All dates', 'සියලු දින')}</button>
+                                        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={clearFilters}>{tr('Reset', 'යළි සකසන්න')}</button>
+                                        <button type="submit" className="btn btn-success btn-sm" disabled={loadingList}>
+                                            {loadingList ? tr('Loading...', 'පූරණය වෙමින්...') : tr('Search', 'සොයන්න')}
+                                        </button>
+                                    </div>
+                                </form>
+
+                                {listError && <div className="alert alert-danger py-2">{listError}</div>}
+
+                                {summary && (
+                                    <div className="row g-2 mb-3">
+                                        <div className="col-6 col-md-3"><div className="stat"><div className="l">{tr('Bills', 'බිල්පත්')}</div><div className="v">{summary.bill_count}</div></div></div>
+                                        <div className="col-6 col-md-3"><div className="stat"><div className="l">{tr('Total weight', 'මුළු බර')}</div><div className="v">{kg(summary.total_weight)} kg</div></div></div>
+                                        <div className="col-6 col-md-3"><div className="stat"><div className="l">{tr('Net amount', 'ශුද්ධ මුදල')}</div><div className="v">{money(summary.net_amount)}</div></div></div>
+                                        <div className="col-6 col-md-3"><div className="stat" style={{ borderLeftColor: '#c62828' }}><div className="l">{tr('Balance due', 'ගෙවිය යුතු ශේෂය')}</div><div className="v text-danger">{money(summary.balance_amount)}</div></div></div>
+                                    </div>
+                                )}
+
+                                {truncated && (
+                                    <div className="alert alert-warning py-2 small">{tr('Showing the latest 2000 bills only. Narrow the filters to see the rest.', 'නවතම බිල්පත් 2000 පමණක් පෙන්වයි. ඉතිරිය බැලීමට පෙරහන් අඩු කරන්න.')}</div>
+                                )}
+
+                                <div className="table-responsive">
+                                    <table className="table table-sm table-bordered table-hover align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>{tr('Bill No', 'බිල් අංකය')}</th>
+                                                <th>{tr('Date', 'දිනය')}</th>
+                                                <th>{tr('Supplier', 'සැපයුම්කරු')}</th>
+                                                <th className="text-end">{tr('Items', 'භාණ්ඩ')}</th>
+                                                <th className="text-end">{tr('Weight', 'බර')}</th>
+                                                <th className="text-end">{tr('Net', 'ශුද්ධ')}</th>
+                                                <th className="text-end">{tr('Paid', 'ගෙවූ')}</th>
+                                                <th className="text-end">{tr('Balance', 'ශේෂය')}</th>
+                                                <th>{tr('Status', 'තත්ත්වය')}</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {!loadingList && bills.length === 0 && (
+                                                <tr><td colSpan={10} className="text-center text-muted py-3">{tr('No bills found', 'බිල්පත් හමු නොවීය')}</td></tr>
+                                            )}
+                                            {bills.map((b) => (
+                                                <tr key={b.id}>
+                                                    <td className="fw-semibold">{b.bill_no}{b.reference_no && <div className="small text-muted">{b.reference_no}</div>}</td>
+                                                    <td className="text-nowrap">{b.bill_date}</td>
+                                                    <td>{b.supplier_code}<div className="small text-muted">{b.supplier_name}</div></td>
+                                                    <td className="text-end">{b.items_count}</td>
+                                                    <td className="text-end">{kg(b.total_weight)}</td>
+                                                    <td className="text-end">{money(b.net_amount)}</td>
+                                                    <td className="text-end">{money(b.paid_amount)}</td>
+                                                    <td className="text-end fw-semibold">{money(b.balance_amount)}</td>
+                                                    <td className="text-nowrap">
+                                                        <span className={`badge ${STATUS_BADGE[b.status] || 'bg-secondary'}`}>{statusLabel(b.status)}</span>{' '}
+                                                        {b.is_printed
+                                                            ? <span className="badge bg-secondary">{tr('Printed', 'මුද්‍රිත')}</span>
+                                                            : <span className="badge bg-warning text-dark">{tr('Held', 'රඳවා ඇති')}</span>}
+                                                    </td>
+                                                    <td className="text-nowrap">
+                                                        <button type="button" className="btn btn-link btn-sm p-0 me-2" title={tr('Print', 'මුද්‍රණය')} onClick={() => printSaved(b)}>
+                                                            <i className="material-icons" style={{ fontSize: 18 }}>print</i>
+                                                        </button>
+                                                        <button type="button" className="btn btn-link btn-sm p-0 me-2" title={tr('Open', 'විවෘත කරන්න')} onClick={() => { setShowReport(false); startEdit(b); }}>
+                                                            <i className="material-icons" style={{ fontSize: 18 }}>edit</i>
+                                                        </button>
+                                                        <button type="button" className="btn btn-link btn-sm p-0 text-danger" title={tr('Delete', 'මකන්න')} onClick={() => deleteBill(b)}>
+                                                            <i className="material-icons" style={{ fontSize: 18 }}>delete</i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
