@@ -62,6 +62,11 @@ export default function NewSupplierBillDashboard() {
     const [form, setForm] = useState(emptyForm);
     const [lines, setLines] = useState([]);
     const [line, setLine] = useState(emptyLine);
+    // Pack by pack: type weight (+ price) and press Enter = one pack added to that item's line
+    const [packMode, setPackMode] = useState(() => {
+        try { return localStorage.getItem('nsbPackMode') === '1'; } catch { return false; }
+    });
+    const [previewHtml, setPreviewHtml] = useState(null);
     const [editIndex, setEditIndex] = useState(null); // index of the line being edited
     const [editingBill, setEditingBill] = useState(null); // { id, bill_no } when editing a saved bill
     const [saving, setSaving] = useState(false);
@@ -181,9 +186,85 @@ export default function NewSupplierBillDashboard() {
         else addOrUpdateLine();
     };
 
+    // ----- pack by pack -----
+    const togglePackMode = () => {
+        setPackMode((on) => {
+            const next = !on;
+            try { localStorage.setItem('nsbPackMode', next ? '1' : '0'); } catch { /* ignore */ }
+            return next;
+        });
+        setLine((l) => ({ ...l, weight: '', packs: '' }));
+        setEditIndex(null);
+        setTimeout(() => weightRef.current?.focus(), 0);
+    };
+
+    const sameLine = (l, item, price) => Array.isArray(l.pack_weights) && l.item?.value === item?.value && num(l.price_per_kg) === num(price);
+
+    // Lines after adding one pack (weight) to the pack line of this item + price (created if new)
+    const linesWithPack = (current, item, price, weight) => {
+        const w = Math.round(num(weight) * 1000) / 1000;
+        const idx = current.findIndex((l) => sameLine(l, item, price));
+        const withWeights = (l, weights) => ({
+            ...l,
+            pack_weights: weights,
+            packs: String(weights.length),
+            weight: String(Math.round(weights.reduce((a, b) => a + b, 0) * 1000) / 1000),
+        });
+        if (idx === -1) return [...current, withWeights({ item, price_per_kg: String(price) }, [w])];
+        return current.map((l, i) => (i === idx ? withWeights(l, [...l.pack_weights, w]) : l));
+    };
+
+    const addPack = () => {
+        setFormError('');
+        if (!line.item) { setFormError(tr('Select an item.', 'භාණ්ඩයක් තෝරන්න.')); itemRef.current?.focus(); return; }
+        if (num(line.weight) <= 0) { setFormError(tr('Enter the weight of this pack.', 'මෙම මල්ලේ බර ඇතුළත් කරන්න.')); weightRef.current?.focus(); return; }
+        if (line.price_per_kg === '' || num(line.price_per_kg) < 0) { setFormError(tr('Enter the price per kg.', 'කිලෝවක මිල ඇතුළත් කරන්න.')); priceRef.current?.focus(); return; }
+        setLines((prev) => linesWithPack(prev, line.item, line.price_per_kg, line.weight));
+        setLine((l) => ({ ...l, weight: '' })); // keep item + price for the next pack
+        setEditIndex(null);
+        setTimeout(() => weightRef.current?.focus(), 0);
+    };
+
+    const removePack = (lineIdx, packIdx) => {
+        setLines((prev) => prev.flatMap((l, i) => {
+            if (i !== lineIdx) return [l];
+            const weights = l.pack_weights.filter((_, j) => j !== packIdx);
+            if (weights.length === 0) return [];
+            return [{ ...l, pack_weights: weights, packs: String(weights.length), weight: String(Math.round(weights.reduce((a, b) => a + b, 0) * 1000) / 1000) }];
+        }));
+    };
+
+    // Pack line of the item + price being entered (its pack weights are listed under the inputs)
+    const activePackIndex = packMode ? lines.findIndex((l) => sameLine(l, line.item, line.price_per_kg)) : -1;
+    const activePackLine = activePackIndex >= 0 ? lines[activePackIndex] : null;
+
+    const onWeightEnter = (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        if (packMode && line.price_per_kg !== '') addPack();
+        else priceRef.current?.focus();
+    };
+    const onPriceEnter = (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        if (packMode) addPack();
+        else packsRef.current?.focus();
+    };
+
     const editLine = (i) => {
-        setLine(lines[i]);
-        setEditIndex(i);
+        const l = lines[i];
+        if (Array.isArray(l.pack_weights)) {
+            // Pack line: pick its item + price so the next weights are added to it
+            setLine({ item: l.item, price_per_kg: l.price_per_kg, weight: '', packs: '' });
+            if (!packMode) {
+                setPackMode(true);
+                try { localStorage.setItem('nsbPackMode', '1'); } catch { /* ignore */ }
+            }
+            setEditIndex(null);
+        } else {
+            setLine(l);
+            setEditIndex(i);
+        }
         setTimeout(() => weightRef.current?.focus(), 0);
     };
 
@@ -210,10 +291,17 @@ export default function NewSupplierBillDashboard() {
 
         // A fully typed line that was not added yet is included, so F4/F5 never drops it.
         const pendingComplete = line.item && num(line.weight) > 0 && line.price_per_kg !== '';
-        const pendingPartial = !pendingComplete && (line.item || line.weight !== '' || line.price_per_kg !== '');
         let allLines = lines;
-        if (pendingComplete) {
-            allLines = editIndex === null ? [...lines, line] : lines.map((l, i) => (i === editIndex ? line : l));
+        let pendingPartial;
+        if (packMode) {
+            // Item + price stay filled between packs; only a typed weight counts as a pending pack
+            pendingPartial = line.weight !== '' && !pendingComplete;
+            if (pendingComplete) allLines = linesWithPack(lines, line.item, line.price_per_kg, line.weight);
+        } else {
+            pendingPartial = !pendingComplete && (line.item || line.weight !== '' || line.price_per_kg !== '');
+            if (pendingComplete) {
+                allLines = editIndex === null ? [...lines, line] : lines.map((l, i) => (i === editIndex ? line : l));
+            }
         }
 
         if (!form.supplier) { setFormError(tr('Select a supplier.', 'සැපයුම්කරුවෙකු තෝරන්න.')); return; }
@@ -240,6 +328,7 @@ export default function NewSupplierBillDashboard() {
                 packs: num(l.packs),
                 weight: num(l.weight),
                 price_per_kg: num(l.price_per_kg),
+                pack_weights: Array.isArray(l.pack_weights) && l.pack_weights.length ? l.pack_weights : null,
             })),
         };
 
@@ -274,9 +363,15 @@ export default function NewSupplierBillDashboard() {
     // F5 = hold, F4 = print (also stops F5 from reloading the page and losing the bill)
     useEffect(() => {
         const onKey = (e) => {
+            if (e.key === 'F2' && !reportOpenRef.current) {
+                e.preventDefault();
+                previewRef.current?.();
+                return;
+            }
             if (e.key === 'F5' || e.key === 'F4') {
                 e.preventDefault();
                 if (reportOpenRef.current) return; // not while the report popup is open
+                setPreviewHtml(null);
                 saveRef.current?.(e.key === 'F4');
             }
         };
@@ -307,6 +402,7 @@ export default function NewSupplierBillDashboard() {
                 packs: num(it.packs) ? String(it.packs) : '',
                 weight: String(it.weight),
                 price_per_kg: String(it.price_per_kg),
+                ...(Array.isArray(it.pack_weights) && it.pack_weights.length ? { pack_weights: it.pack_weights.map(Number) } : {}),
             })));
             setLine(emptyLine);
             setEditIndex(null);
@@ -345,10 +441,16 @@ export default function NewSupplierBillDashboard() {
 
     // Prints straight away through a hidden frame (same as Sales Entry), no preview window.
     function printBill(bill) {
+        printHtml(buildBillHtml(bill));
+    }
+
+    // Bill HTML (used for printing and for the on-screen preview)
+    function buildBillHtml(bill) {
         const rows = (bill.items || []).map((it, i) => `
             <tr>
                 <td>${i + 1}</td>
-                <td>${escapeHtml(it.item_code)} ${escapeHtml(it.item_name || '')}</td>
+                <td>${escapeHtml(it.item_code)} ${escapeHtml(it.item_name || '')}${Array.isArray(it.pack_weights) && it.pack_weights.length
+                    ? `<div class="packs">${escapeHtml(tr('Packs', 'මලු'))}: ${it.pack_weights.map((w) => kg(w)).join(' + ')} kg</div>` : ''}</td>
                 <td class="r">${num(it.packs) ? kg(it.packs) : ''}</td>
                 <td class="r">${kg(it.weight)}</td>
                 <td class="r">${money(it.price_per_kg)}</td>
@@ -362,6 +464,7 @@ export default function NewSupplierBillDashboard() {
                 table{width:100%;border-collapse:collapse} th,td{border:1px solid #444;padding:4px 6px}
                 th{background:#eee} .r{text-align:right} .tot td{border:none;padding:2px 6px}
                 .tot{width:auto;margin-left:auto;margin-top:10px} .b{font-weight:bold}
+                .packs{font-size:11px;font-weight:normal;margin-top:2px}
             </style></head><body>
             <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
             <div class="sub">${escapeHtml(tr('Supplier Bill', 'සැපයුම්කරු බිල්පත'))}</div>
@@ -386,8 +489,32 @@ export default function NewSupplierBillDashboard() {
             </table>
             ${bill.notes ? `<p><b>${escapeHtml(tr('Notes', 'සටහන්'))}:</b> ${escapeHtml(bill.notes)}</p>` : ''}
             </body></html>`;
-        printHtml(html);
+        return html;
     }
+
+    // Preview (F2): the bill as it will print, built from what is on screen now
+    const openPreview = () => {
+        const pendingComplete = line.item && num(line.weight) > 0 && line.price_per_kg !== '';
+        let shown = lines;
+        if (pendingComplete) shown = packMode ? linesWithPack(lines, line.item, line.price_per_kg, line.weight) : [...lines, line];
+        if (shown.length === 0) { setFormError(tr('Add at least one item.', 'අවම වශයෙන් එක් භාණ්ඩයක් එක් කරන්න.')); return; }
+        const items = shown.map((l) => ({
+            item_code: l.item?.value, item_name: l.item?.name, packs: num(l.packs), weight: num(l.weight),
+            price_per_kg: num(l.price_per_kg), amount: round2(num(l.weight) * num(l.price_per_kg)), pack_weights: l.pack_weights || null,
+        }));
+        const gross = round2(items.reduce((a, it) => a + it.amount, 0));
+        const net = round2(gross - num(form.deductions));
+        setPreviewHtml(buildBillHtml({
+            bill_no: editingBill?.bill_no || tr('(new)', '(නව)'),
+            bill_date: form.bill_date,
+            supplier_code: form.supplier?.value || '', supplier_name: form.supplier?.name || '',
+            reference_no: form.reference_no, notes: form.notes, deduction_note: form.deduction_note,
+            items, total_weight: items.reduce((a, it) => a + it.weight, 0), gross_amount: gross,
+            deductions: num(form.deductions), net_amount: net, paid_amount: num(form.paid_amount), balance_amount: round2(net - num(form.paid_amount)),
+        }));
+    };
+    const previewRef = useRef(null);
+    previewRef.current = openPreview;
 
     const openReport = () => { setShowReport(true); loadBills(filters); };
 
@@ -563,43 +690,83 @@ export default function NewSupplierBillDashboard() {
                                 ref={itemRef}
                                 options={itemOptions}
                                 value={line.item}
-                                onChange={(opt) => { setLine({ ...line, item: opt }); if (opt) setTimeout(() => packsRef.current?.focus(), 0); }}
+                                onChange={(opt) => { setLine({ ...line, item: opt }); if (opt) setTimeout(() => weightRef.current?.focus(), 0); }}
                                 placeholder={tr('Item', 'භාණ්ඩය')}
                                 styles={whiteSelect}
                                 menuPortalTarget={document.body}
                             />
                         </div>
                         <div style={{ gridColumn: 'span 2' }}>
-                            <label style={label}>{tr('Packs', 'මලු')}</label>
-                            <input ref={packsRef} type="number" min="0" step="any" style={{ ...darkInput, textAlign: 'center' }} value={line.packs}
-                                onChange={(e) => setLine({ ...line, packs: e.target.value })} onKeyDown={(e) => onLineKeyDown(e, weightRef)} />
-                        </div>
-                        <div style={{ gridColumn: 'span 2' }}>
-                            <label style={label}>{tr('Weight', 'බර')}</label>
+                            <label style={label}>{packMode ? tr('Pack weight', 'මල්ලේ බර') : tr('Weight', 'බර')}</label>
                             <input ref={weightRef} type="number" min="0" step="any" style={{ ...darkInput, textAlign: 'center' }} value={line.weight}
-                                onChange={(e) => setLine({ ...line, weight: e.target.value })} onKeyDown={(e) => onLineKeyDown(e, priceRef)} />
+                                onChange={(e) => setLine({ ...line, weight: e.target.value })} onKeyDown={onWeightEnter} />
                         </div>
                         <div style={{ gridColumn: 'span 2' }}>
                             <label style={label}>{tr('Price', 'මිල')}</label>
                             <input ref={priceRef} type="number" min="0" step="any" style={{ ...darkInput, textAlign: 'center' }} value={line.price_per_kg}
-                                onChange={(e) => setLine({ ...line, price_per_kg: e.target.value })} onKeyDown={(e) => onLineKeyDown(e, null)} />
+                                onChange={(e) => setLine({ ...line, price_per_kg: e.target.value })} onKeyDown={onPriceEnter} />
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                            <label style={label}>{tr('Packs', 'මලු')}</label>
+                            {packMode ? (
+                                <div title={tr('Counted automatically: one per Enter', 'ස්වයංක්‍රීයව ගණන් කෙරේ: Enter එකකට එකක්')}
+                                    style={{ ...darkInput, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1f2937', color: '#facc15' }}>
+                                    {activePackLine ? activePackLine.pack_weights.length : 0}
+                                </div>
+                            ) : (
+                                <input ref={packsRef} type="number" min="0" step="any" style={{ ...darkInput, textAlign: 'center' }} value={line.packs}
+                                    onChange={(e) => setLine({ ...line, packs: e.target.value })} onKeyDown={(e) => onLineKeyDown(e, null)} />
+                            )}
                         </div>
                         <div style={{ gridColumn: 'span 2' }}>
                             <label style={label}>{tr('Value', 'අගය')}</label>
-                            <div style={{ ...darkInput, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1f2937' }}>{money(lineAmount)}</div>
+                            <div style={{ ...darkInput, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1f2937' }}>
+                                {money(packMode && activePackLine ? num(activePackLine.weight) * num(activePackLine.price_per_kg) + lineAmount : lineAmount)}
+                            </div>
                         </div>
                     </div>
 
+                    {/* pack weights of the item being entered */}
+                    {packMode && (
+                        <div style={{ marginTop: 8, padding: '8px 10px', border: '1px solid #facc15', borderRadius: '0.5rem', background: '#1c1917' }}>
+                            {activePackLine ? (
+                                <>
+                                    <div style={{ fontSize: 13, color: '#facc15', marginBottom: 6, fontWeight: 'bold' }}>
+                                        {activePackLine.item?.name || activePackLine.item?.value} @ {money(activePackLine.price_per_kg)} —
+                                        {' '}{activePackLine.pack_weights.length} {tr('packs', 'මලු')} · {kg(activePackLine.weight)} kg
+                                    </div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                        {activePackLine.pack_weights.map((w, j) => (
+                                            <span key={j} style={{ background: '#374151', borderRadius: 6, padding: '3px 8px', fontSize: 13 }}>
+                                                #{j + 1}: <b>{kg(w)} kg</b>
+                                                <button type="button" title={tr('Remove this pack', 'මෙම මල්ල ඉවත් කරන්න')} onClick={() => removePack(activePackIndex, j)}
+                                                    style={{ marginLeft: 6, background: 'transparent', border: 'none', color: '#f87171', fontWeight: 'bold', cursor: 'pointer' }}>×</button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                <div style={{ fontSize: 13, color: '#cbd5e1' }}>
+                                    {tr('Pack by pack: pick the item, type the price, then type each pack\'s weight and press Enter.', 'මල්ලෙන් මල්ල: භාණ්ඩය තෝරා මිල ටයිප් කර, එක් එක් මල්ලේ බර ටයිප් කර Enter ඔබන්න.')}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 0' }}>
                         <small style={{ color: '#94a3b8' }}>
-                            {tr('Enter = next / add · F5 = hold · F4 = print', 'Enter = ඊළඟ / එක් කරන්න · F5 = රඳවන්න · F4 = මුද්‍රණය')}
+                            {tr('Enter = next / add · F2 = preview · F5 = hold · F4 = print', 'Enter = ඊළඟ / එක් කරන්න · F2 = පෙරදසුන · F5 = රඳවන්න · F4 = මුද්‍රණය')}
                         </small>
                         <div style={{ display: 'flex', gap: 6 }}>
+                            <button type="button" className={`btn btn-sm fw-bold ${packMode ? 'btn-warning' : 'btn-outline-warning'}`} onClick={togglePackMode}
+                                title={tr('Each Enter adds one pack with its weight', 'සෑම Enter එකක්ම බර සමඟ මල්ලක් එක් කරයි')}>
+                                {packMode ? '✓ ' : ''}{tr('Pack by pack', 'මල්ලෙන් මල්ල')}
+                            </button>
                             {editIndex !== null && (
                                 <button type="button" className="btn btn-sm btn-outline-light" onClick={() => { setLine(emptyLine); setEditIndex(null); }}>{tr('Cancel', 'අවලංගු')}</button>
                             )}
-                            <button type="button" className="btn btn-sm btn-primary fw-bold" onClick={addOrUpdateLine}>
-                                {editIndex !== null ? tr('Update line', 'පේළිය යාවත්කාලීන') : tr('Add item', 'භාණ්ඩය එක් කරන්න')}
+                            <button type="button" className="btn btn-sm btn-primary fw-bold" onClick={packMode ? addPack : addOrUpdateLine}>
+                                {packMode ? tr('Add pack', 'මල්ල එක් කරන්න') : editIndex !== null ? tr('Update line', 'පේළිය යාවත්කාලීන') : tr('Add item', 'භාණ්ඩය එක් කරන්න')}
                             </button>
                         </div>
                     </div>
@@ -620,7 +787,12 @@ export default function NewSupplierBillDashboard() {
                                         <tr key={i} onClick={() => editLine(i)} style={{ cursor: 'pointer', backgroundColor: editIndex === i ? '#1e40af' : 'transparent' }}>
                                             <td style={cell}>{i + 1}</td>
                                             <td style={cell}>{l.item?.value}</td>
-                                            <td style={cell}>{l.item?.name}</td>
+                                            <td style={cell}>
+                                                {l.item?.name}
+                                                {Array.isArray(l.pack_weights) && (
+                                                    <div style={{ fontSize: 11, color: '#facc15' }}>{l.pack_weights.map((w) => kg(w)).join(' + ')} kg</div>
+                                                )}
+                                            </td>
                                             <td style={cell}>{num(l.packs) ? kg(l.packs) : ''}</td>
                                             <td style={cell}>{kg(l.weight)}</td>
                                             <td style={cell}>{money(l.price_per_kg)}</td>
@@ -685,6 +857,7 @@ export default function NewSupplierBillDashboard() {
                             </button>
                         )}
                         <button type="button" className="btn btn-sm btn-outline-light" onClick={resetForm} disabled={saving}>{tr('Clear', 'හිස් කරන්න')}</button>
+                        <button type="button" className="btn btn-sm btn-outline-info fw-bold" onClick={openPreview} disabled={saving}>👁 {tr('Preview (F2)', 'පෙරදසුන (F2)')}</button>
                         <button type="button" className="btn btn-warning fw-bold" onClick={() => saveBill(false)} disabled={saving}>
                             {saving ? tr('Saving...', 'සුරකිමින්...') : tr('Hold (F5)', 'රඳවන්න (F5)')}
                         </button>
@@ -697,6 +870,29 @@ export default function NewSupplierBillDashboard() {
                 {/* ===== RIGHT: unprinted (held) ===== */}
                 {renderSidebar('held')}
             </div>
+
+            {/* ===== Bill preview (F2) ===== */}
+            {previewHtml && (
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true"
+                    onKeyDown={(e) => { if (e.key === 'Escape') setPreviewHtml(null); }}>
+                    <div className="modal-dialog modal-lg modal-dialog-scrollable">
+                        <div className="modal-content">
+                            <div className="modal-header" style={{ background: '#1b5e20', color: '#fff' }}>
+                                <h5 className="modal-title">{tr('Bill preview', 'බිල්පත් පෙරදසුන')}</h5>
+                                <button type="button" className="btn-close btn-close-white" onClick={() => setPreviewHtml(null)} aria-label="Close" />
+                            </div>
+                            <div className="modal-body p-0" style={{ background: '#e5e7eb' }}>
+                                <iframe title="bill-preview" srcDoc={previewHtml} style={{ width: '100%', height: '70vh', border: 'none', background: '#fff' }} />
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-outline-secondary" onClick={() => setPreviewHtml(null)}>{tr('Close', 'වසන්න')}</button>
+                                <button type="button" className="btn btn-warning fw-bold" onClick={() => { setPreviewHtml(null); saveBill(false); }}>{tr('Hold (F5)', 'රඳවන්න (F5)')}</button>
+                                <button type="button" className="btn btn-success fw-bold" onClick={() => { setPreviewHtml(null); saveBill(true); }}>🖨️ {tr('Print (F4)', 'මුද්‍රණය (F4)')}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ===== Bills report popup ===== */}
             {showReport && (
