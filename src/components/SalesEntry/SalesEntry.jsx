@@ -2378,7 +2378,9 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
         const onClose = () => updateState({ showBillPreview: false });
 
-        const printData = combineSalesForPrinting(displayedSales);
+        const printData = state.isBulkPrintEnabled
+            ? combineSalesForPrinting(displayedSales)
+            : displayedSales.map(s => ({ ...s, original_ids: [s.id] }));
         const customerName = displayedSales[0]?.customer_code || "N/A";
         const mobile = formData.telephone_no || SHOP_PHONE;
         const currentLoan = loanAmount || 0;
@@ -2466,8 +2468,11 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             return;
         }
 
-        // Customer bill: records with the same item and price are one line (any supplier)
-        const printData = combineSalesForPrinting(salesData);
+        // Bulk Printing ticked: records with the same item and price are one line (any
+        // supplier). Unticked: every record is its own line.
+        const printData = state.isBulkPrintEnabled
+            ? combineSalesForPrinting(salesData)
+            : salesData.map(s => ({ ...s, original_ids: [s.id] }));
 
         // --- ZERO PRICE VALIDATION ---
         const hasZeroPrice = printData.some(s => parseFloat(s.price_per_kg) === 0);
@@ -2737,8 +2742,18 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                     {tr('Total Sales:', 'මුළු විකුණුම්:')} Rs. {formatDecimal(totalSalesValue)}
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    {/* Bulk Printing checkbox removed: the customer bill always shows the same
-                                                        item at the same price as one line (see combineCustomerBillLines) */}
+                                                    {/* Bulk Printing ticked: the same item at the same price is one line on the
+                                                        customer bill (any supplier). Unticked: every record on its own line. */}
+                                                    <input
+                                                        type="checkbox"
+                                                        id="bulkPrintCheckbox"
+                                                        checked={state.isBulkPrintEnabled}
+                                                        onChange={(e) => updateState({ isBulkPrintEnabled: e.target.checked })}
+                                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#4CAF50' }}
+                                                    />
+                                                    <label htmlFor="bulkPrintCheckbox" style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                                        {tr('Bulk Printing', 'තොග මුද්‍රණය')}
+                                                    </label>
                                                     {lastPrintedBill && (
                                                         <div className="font-bold text-xl whitespace-nowrap" style={{ color: '#4ade80', fontSize: '1.15rem', marginLeft: '15px' }}>
                                                             {tr('Last Bill Total:', 'අවසන් බිල් එකතුව:')} Rs. {formatDecimal(lastPrintedBill.total)} (#{lastPrintedBill.billNo})
