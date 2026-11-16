@@ -238,11 +238,13 @@ export default function NewSupplierBillDashboard() {
     const activePackIndex = packMode ? lines.findIndex((l) => sameLine(l, line.item, line.price_per_kg)) : -1;
     const activePackLine = activePackIndex >= 0 ? lines[activePackIndex] : null;
 
+    // Weight -> Enter -> price (in pack mode the last price stays filled and selected, so one
+    // more Enter keeps it, or type a new price). Enter on the price counts the pack.
     const onWeightEnter = (e) => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
-        if (packMode && line.price_per_kg !== '') addPack();
-        else priceRef.current?.focus();
+        priceRef.current?.focus();
+        priceRef.current?.select();
     };
     const onPriceEnter = (e) => {
         if (e.key !== 'Enter') return;
