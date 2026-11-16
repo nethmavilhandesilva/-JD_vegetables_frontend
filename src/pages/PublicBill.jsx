@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
+import { combineCustomerBillLines } from '../utils/combineCustomerBillLines';
 import html2pdf from 'html2pdf.js';
 import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/shop';
 import { API_BASE_URL } from '../config/paths';
@@ -244,9 +245,10 @@ const PublicBill = () => {
     if (loading) return <div className="p-10 text-center text-xl">Loading Bill...</div>;
     if (!billData) return <div className="p-10 text-center text-red-500">Bill Not Found.</div>;
 
-    const salesArray = typeof billData.sales_data === 'string'
+    // Same lines as the printed customer bill: same item + same price = one line
+    const salesArray = combineCustomerBillLines(typeof billData.sales_data === 'string'
         ? JSON.parse(billData.sales_data)
-        : billData.sales_data;
+        : billData.sales_data);
 
     return (
         <div className="bg-gray-200 min-h-screen p-4 flex flex-col items-center">

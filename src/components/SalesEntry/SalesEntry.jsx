@@ -9,6 +9,7 @@ import ImagePreviewModal from '../ImagePreviewModal';
 import { SHOP_PHONE } from '../../config/shop';
 import { BACKEND_URL } from '../../config/paths';
 import { printHtml } from '../../utils/printHtml';
+import { combineCustomerBillLines } from '../../utils/combineCustomerBillLines';
 import PrintPreviewDialog from '../PrintPreviewDialog';
 import { tr } from '../../i18n/language';
 
@@ -868,74 +869,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         });
         return Object.values(groups);
     }, [allSales]);
-    // Add this function to combine sales records for bulk printing
-    // Add this function to combine sales records for bulk printing
-    const combineSalesForPrinting = (salesData) => {
-        const combinedMap = new Map();
-
-        salesData.forEach(sale => {
-            // Create a unique key based on supplier_code, item_code, and price_per_kg
-            const key = `${sale.supplier_code}|${sale.item_code}|${sale.price_per_kg}`;
-
-            if (combinedMap.has(key)) {
-                // Combine existing record with new one
-                const existing = combinedMap.get(key);
-
-                // Check if CustomerPackCost and Kuliya are the same
-                const existingPackCost = parseFloat(existing.CustomerPackCost) || 0;
-                const newPackCost = parseFloat(sale.CustomerPackCost) || 0;
-                const existingKuliya = parseFloat(existing.Kuliya) || 0;
-                const newKuliyaValue = parseFloat(sale.Kuliya) || 0;
-
-                // If pack costs are different, we should NOT combine
-                if (existingPackCost !== newPackCost) {
-                    console.warn(`Different CustomerPackCost for key ${key}: ${existingPackCost} vs ${newPackCost}`);
-                    // Add a new entry with a modified key including pack cost
-                    const newKey = `${key}|${newPackCost}|${newKuliyaValue}`;
-                    if (!combinedMap.has(newKey)) {
-                        combinedMap.set(newKey, {
-                            ...sale,
-                            original_ids: [sale.id]
-                        });
-                    } else {
-                        const existingAlt = combinedMap.get(newKey);
-                        existingAlt.weight = (parseFloat(existingAlt.weight) || 0) + (parseFloat(sale.weight) || 0);
-                        existingAlt.packs = (parseInt(existingAlt.packs) || 0) + (parseInt(sale.packs) || 0);
-                        existingAlt.total = existingAlt.weight * (parseFloat(sale.price_per_kg) || 0);
-                        existingAlt.Kuliya = (parseFloat(existingAlt.Kuliya) || 0) + newKuliyaValue;
-                        existingAlt.CustomerPackCost = newPackCost;
-                        existingAlt.original_ids.push(sale.id);
-                    }
-                    return;
-                }
-
-                // If pack costs are the same, combine weights, packs, and kuliya
-                const newWeight = (parseFloat(existing.weight) || 0) + (parseFloat(sale.weight) || 0);
-                const newPacks = (parseInt(existing.packs) || 0) + (parseInt(sale.packs) || 0);
-                const newTotal = newWeight * (parseFloat(sale.price_per_kg) || 0);
-                const combinedKuliya = existingKuliya + newKuliyaValue;
-
-                combinedMap.set(key, {
-                    ...existing,
-                    weight: newWeight,
-                    packs: newPacks,
-                    total: newTotal,
-                    Kuliya: combinedKuliya,
-                    CustomerPackCost: existingPackCost,
-                    original_ids: [...(existing.original_ids || [existing.id]), sale.id]
-                });
-            } else {
-                // Add new record
-                combinedMap.set(key, {
-                    ...sale,
-                    original_ids: [sale.id]
-                });
-            }
-        });
-
-        // Convert map back to array
-        return Array.from(combinedMap.values());
-    };
+    // Customer bill: same item + same price = one line, whatever the supplier
+    const combineSalesForPrinting = combineCustomerBillLines;
     // Auto-calculate Kuliya when weight, packs, or item changes
     useEffect(() => {
         const fetchKuliya = async () => {
@@ -2443,7 +2378,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
         const onClose = () => updateState({ showBillPreview: false });
 
-        const printData = state.isBulkPrintEnabled ? combineSalesForPrinting(displayedSales) : displayedSales;
+        const printData = combineSalesForPrinting(displayedSales);
         const customerName = displayedSales[0]?.customer_code || "N/A";
         const mobile = formData.telephone_no || SHOP_PHONE;
         const currentLoan = loanAmount || 0;
@@ -2531,16 +2466,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             return;
         }
 
-        // Apply bulk printing combination if enabled
-        const shouldCombine = state.isBulkPrintEnabled;
-        let printData = salesData;
-
-        if (shouldCombine) {
-            printData = combineSalesForPrinting(salesData);
-            if (printData.length < salesData.length) {
-                console.log(`Combined ${salesData.length} records into ${printData.length} records for printing`);
-            }
-        }
+        // Customer bill: records with the same item and price are one line (any supplier)
+        const printData = combineSalesForPrinting(salesData);
 
         // --- ZERO PRICE VALIDATION ---
         const hasZeroPrice = printData.some(s => parseFloat(s.price_per_kg) === 0);
@@ -2558,10 +2485,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         const currentLoan = loanAmount || 0;
 
         // Get original IDs for marking as printed
-        let idsToMark = salesData.map(s => s.id);
-        if (shouldCombine) {
-            idsToMark = printData.flatMap(s => s.original_ids);
-        }
+        const idsToMark = printData.flatMap(s => s.original_ids);
 
         // Compute the same bill total shown as "එකතුව" on the receipt (weight*price + pack cost + Kuliya,
         // grouped by row id the same way ThermalBillHTML groups it) so the spoken amount matches the print.
@@ -2813,16 +2737,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                     {tr('Total Sales:', 'මුළු විකුණුම්:')} Rs. {formatDecimal(totalSalesValue)}
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <input
-                                                        type="checkbox"
-                                                        id="bulkPrintCheckbox"
-                                                        checked={state.isBulkPrintEnabled}
-                                                        onChange={(e) => updateState({ isBulkPrintEnabled: e.target.checked })}
-                                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#4CAF50' }}
-                                                    />
-                                                    <label htmlFor="bulkPrintCheckbox" style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                                        Bulk Printing
-                                                    </label>
+                                                    {/* Bulk Printing checkbox removed: the customer bill always shows the same
+                                                        item at the same price as one line (see combineCustomerBillLines) */}
                                                     {lastPrintedBill && (
                                                         <div className="font-bold text-xl whitespace-nowrap" style={{ color: '#4ade80', fontSize: '1.15rem', marginLeft: '15px' }}>
                                                             {tr('Last Bill Total:', 'අවසන් බිල් එකතුව:')} Rs. {formatDecimal(lastPrintedBill.total)} (#{lastPrintedBill.billNo})
