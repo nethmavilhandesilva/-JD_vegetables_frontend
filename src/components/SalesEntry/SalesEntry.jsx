@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Select from "react-select";
 import Layout from "../Layout/Layout";
 import '../../App.css';
@@ -184,7 +184,7 @@ const BreakdownDisplay = ({ sale, formatDecimal }) => {
 };
 
 //customer list section
-const CustomerList = React.memo(({ customers, type, searchQuery, onSearchChange, selectedPrintedCustomer, selectedUnprintedCustomer, handleCustomerClick, formatDecimal, allSales, lastUpdate, isCashFilterActive, toggleCashFilter }) => {
+const CustomerList = React.memo(({ customers, type, searchQuery, onSearchChange, selectedPrintedCustomer, selectedUnprintedCustomer, handleCustomerClick, formatDecimal, allSales, isCashFilterActive, toggleCashFilter }) => {
     const getPrintedCustomerGroups = () => {
         const groups = {};
         allSales.filter(s => s.bill_printed === 'Y' && s.bill_no).forEach(sale => {
@@ -221,8 +221,9 @@ const CustomerList = React.memo(({ customers, type, searchQuery, onSearchChange,
         return customerMap;
     };
 
-    const printedCustomerGroups = type === "printed" ? getPrintedCustomerGroups() : {};
-    const unprintedCustomerMap = type === "unprinted" ? getUnprintedCustomers() : {};
+    // Recomputed only when the sales data or the cash filter changes, not on every keystroke
+    const printedCustomerGroups = useMemo(() => (type === "printed" ? getPrintedCustomerGroups() : {}), [allSales, type, isCashFilterActive]); // eslint-disable-line react-hooks/exhaustive-deps
+    const unprintedCustomerMap = useMemo(() => (type === "unprinted" ? getUnprintedCustomers() : {}), [allSales, type]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const filteredPrintedGroups = useMemo(() => {
         if (type !== "printed") return [];
@@ -245,7 +246,7 @@ const CustomerList = React.memo(({ customers, type, searchQuery, onSearchChange,
     const isSelected = (item) => type === "printed" ? selectedPrintedCustomer === `${item.customerCode}-${item.billNo}` : selectedUnprintedCustomer === item.customerCode;
 
     return (
-        <div key={`${type}-${lastUpdate || ''}`} className="w-full shadow-xl rounded-xl overflow-y-auto border border-black" style={{ backgroundColor: "#1ec139ff", maxHeight: "80.5vh", overflowY: "auto" }}>
+        <div className="w-full shadow-xl rounded-xl overflow-y-auto border border-black" style={{ backgroundColor: "#1ec139ff", maxHeight: "80.5vh", overflowY: "auto" }}>
             <div style={{ backgroundColor: "#006400" }} className="p-1 rounded-t-xl">
                 <div className="flex items-center justify-center gap-2 mb-1">
                     <h2 className="font-bold text-white whitespace-nowrap" style={{ fontSize: '14px' }}>
@@ -273,19 +274,13 @@ const CustomerList = React.memo(({ customers, type, searchQuery, onSearchChange,
                 {displayItems.length === 0 ? (<p className="text-gray-700 p-2 text-center text-xs">{tr('No records.', 'වාර්තා නොමැත.')}</p>) : (
                     <ul className="flex flex-col px-1">
                         {displayItems.map((item) => {
-                            let customerCode, displayText, totalAmount, billSales;
-                            if (type === "printed") {
-                                customerCode = item.customerCode;
-                                // Show customer_code-bill_no in the printed section without total amount
-                                displayText = `${item.customerCode}-${item.billNo}`;
-                                billSales = allSales.filter(s => s.customer_code === item.customerCode && s.bill_no === item.billNo);
-                                totalAmount = billSales.reduce((sum, sale) => sum + (parseFloat(sale.total) || 0), 0);
-                            } else {
-                                customerCode = item.customerCode;
-                                displayText = item.customerCode;
-                                billSales = allSales.filter(s => s.customer_code === item.customerCode && (s.bill_printed === 'N' || !s.bill_printed || s.bill_printed === ''));
-                                totalAmount = billSales.reduce((sum, sale) => sum + (parseFloat(sale.total) || 0), 0);
-                            }
+                            const customerCode = item.customerCode;
+                            // Printed: customer_code-bill_no; unprinted: customer_code
+                            const displayText = type === "printed" ? `${item.customerCode}-${item.billNo}` : item.customerCode;
+                            // The bill's records are looked up only when the button is clicked
+                            const billSalesFor = () => (type === "printed"
+                                ? allSales.filter(s => s.customer_code === item.customerCode && s.bill_no === item.billNo)
+                                : allSales.filter(s => s.customer_code === item.customerCode && (s.bill_printed === 'N' || !s.bill_printed || s.bill_printed === '')));
                             const isItemSelected = isSelected(item);
                             // Remove the total amount from button text
                             const buttonText = displayText.replace(/\n/g, ' ');
@@ -293,7 +288,7 @@ const CustomerList = React.memo(({ customers, type, searchQuery, onSearchChange,
                             return (
                                 <li key={type === "printed" ? `${item.customerCode}-${item.billNo}` : item.customerCode} className="flex">
                                     <button
-                                        onClick={() => handleCustomerClick(type, customerCode, item.billNo || null, billSales)}
+                                        onClick={() => handleCustomerClick(type, customerCode, item.billNo || null, billSalesFor())}
                                         className={`py-1 mb-2 rounded-xl border ${isItemSelected ? "border-blue-600" : "bg-gray-50 hover:bg-gray-100 border-gray-200"}`}
                                         style={isItemSelected ? { backgroundColor: '#93C5FD', paddingLeft: '05px', width: '280px', textAlign: 'left' } : { paddingLeft: '1px', width: '280px', textAlign: 'left' }}
                                     >
@@ -772,6 +767,9 @@ const ContextMenu = React.memo(({ show, onClose, onUpdate, selectionCriteria, se
 });
 
 const KULIYA_PER_BAG = 40;
+// One shared formatter: creating Intl.NumberFormat per value was slow on large tables
+const DECIMAL_FORMAT = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const formatDecimalShared = (value) => DECIMAL_FORMAT.format(Number(value || 0));
 const initialFormData = { customer_code: "", customer_name: "", supplier_code: "", code: "", item_code: "", item_name: "", weight: "", price_per_kg: "", pack_due: "", total: "", packs: "", given_amount: "", pack_cost: "", telephone_no: "", kuliya: "", };
 const fieldOrder = ["telephone_no", "customer_code_input", "customer_code_select", "supplier_code", "item_code_select", "weight", "price_per_kg_grid_item", "packs", "kuliya"];
 const skipMap = { telephone_no: "customer_code_input", customer_code_input: "supplier_code", customer_code_select: "supplier_code", given_amount: "supplier_code", supplier_code: "item_code_select", item_code_select: "weight", price_per_kg: "packs", price_per_kg_grid_item: "packs", packs: "kuliya", kuliya: null };
@@ -782,9 +780,6 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     // Use propPrintMode if available, otherwise use local state
     const printMode = propPrintMode || localPrintMode;
     const setPrintMode = propSetPrintMode || setLocalPrintMode;
-    // Add this with your other state declarations
-    const [allSalesRecords, setAllSalesRecords] = useState([]);
-    const [isLoadingAllSales, setIsLoadingAllSales] = useState(false);
     // Last printed bill's final total, persisted in localStorage so it survives reloads/navigation
     // Bill waiting in the app's own print window (F1): nothing is marked printed until Print
     const [printJob, setPrintJob] = useState(null);
@@ -796,38 +791,6 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             return null;
         }
     });
-    // Newest-first view of allSalesRecords for the records table, without disturbing the
-    // original array's order (totals/reduce elsewhere don't care about order).
-    const sortedAllSalesRecords = useMemo(() => {
-        return [...allSalesRecords].sort((a, b) => (b.id || 0) - (a.id || 0));
-    }, [allSalesRecords]);
-    // Add this function to fetch all sales records
-    const fetchAllSalesRecords = async () => {
-        try {
-            setIsLoadingAllSales(true);
-            const response = await api.get(routes.sales);
-            const salesData = response.data.data || response.data.sales || response.data;
-
-            // Ensure we have an array
-            const salesArray = Array.isArray(salesData) ? salesData : [];
-
-            setAllSalesRecords(salesArray);
-        } catch (error) {
-            console.error("Failed to fetch all sales records:", error);
-            setAllSalesRecords([]);
-        } finally {
-            setIsLoadingAllSales(false);
-        }
-    };
-    // Add this function after your fetchAllSalesRecords function
-    const refreshAllSalesData = async () => {
-        await fetchAllSalesRecords();
-    };
-    // Add this useEffect after your existing fetchInitialData
-    useEffect(() => {
-        // Fetch all sales records from database
-        fetchAllSalesRecords();
-    }, []);
 
     const refs = {
         telephone_no: useRef(null), customer_code_input: useRef(null), customer_code_select: useRef(null), given_amount: useRef(null),
@@ -860,6 +823,27 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         searchQueries, errors, loanAmount, isManualClear, formData, packCost, isLoading, customers,
         items, suppliers, isPrinting, billSize, gridPricePerKg, selectedSaleForBreakdown, currentUser,
     } = state;
+
+    // ---- Sales data from the database (one source for the whole screen) ----
+    // allSalesRef always holds the newest list, so async code (printing) never uses a stale copy.
+    const allSalesRef = useRef(allSales);
+    allSalesRef.current = allSales;
+    const salesVersionRef = useRef(null);   // version of the list we hold (see SalesEntryController@index)
+    const salesFetchRef = useRef(null);     // in-flight poll, so polls never pile up
+
+    // The "All Sales Records" table shows the same data, newest first
+    const allSalesRecords = allSales;
+    const isLoadingAllSales = isLoading;
+    const sortedAllSalesRecords = useMemo(() => [...allSales].sort((a, b) => (b.id || 0) - (a.id || 0)), [allSales]);
+    const fetchAllSalesRecords = () => fetchSalesOnly();
+
+    // Stable callbacks so the memoized sidebars only re-render when their data changes
+    const customerClickRef = useRef(null);
+    const editClickRef = useRef(null);
+    const stableCustomerClick = useCallback((...args) => customerClickRef.current?.(...args), []);
+    const setPrintedSearch = useCallback((value) => setState(prev => ({ ...prev, searchQueries: { ...prev.searchQueries, printed: value } })), []);
+    const setUnprintedSearch = useCallback((value) => setState(prev => ({ ...prev, searchQueries: { ...prev.searchQueries, unprinted: value } })), []);
+    const toggleCashFilterStable = useCallback(() => setState(prev => ({ ...prev, isCashFilterActive: !prev.isCashFilterActive })), []);
 
     // --- Logic for Farmer Lists (Admin View) ---
     const printedFarmers = useMemo(() => {
@@ -971,26 +955,6 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 setFormData(prev => ({ ...prev, kuliya: instantKuliya }));
             }
 
-            try {
-                // Find the selected item to get bag_real_weight
-                const selectedItem = items.find(i => i.no === formData.item_code);
-                const bagRealWeight = selectedItem?.bag_real_price || 0;
-
-                const response = await api.post('/sales/calculate-kuliya', {
-                    item_code: formData.item_code,
-                    item_name: formData.item_name,
-                    weight: parseFloat(formData.weight) || 0,
-                    packs: parseInt(formData.packs) || 0,
-                    bag_real_weight: bagRealWeight
-                });
-
-                if (response.data.kuliya !== undefined && !state.isKuliyaManuallyChanged) {
-                    setFormData(prev => ({ ...prev, kuliya: response.data.kuliya }));
-                }
-            } catch (error) {
-                console.error("Failed to calculate Kuliya:", error);
-                // Local value set above already stands as the fallback
-            }
         };
 
         fetchKuliya();
@@ -1284,12 +1248,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         return "";
     }, [selectedPrintedCustomer, printedSales]);
 
-    const formatDecimal = (value) => {
-        return new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(Number(value || 0));
-    };
+    const formatDecimal = formatDecimalShared;
 
 
     const fetchLoanAmount = async (customerCode) => {
@@ -1307,6 +1266,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 api.get(routes.sales), api.get(routes.customers), api.get(routes.items), api.get(routes.suppliers)
             ]);
             const salesData = resSales.data.data || resSales.data.sales || resSales.data || [];
+            salesVersionRef.current = resSales.data.version || null;
             const customersData = resCustomers.data.data || resCustomers.data.customers || resCustomers.data || [];
             const itemsData = resItems.data.data || resItems.data.items || resItems.data || [];
             const suppliersData = resSuppliers.data.data || resSuppliers.data.suppliers || resSuppliers.data || [];
@@ -1324,22 +1284,52 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     };
 
     // Lightweight refresh of just the sales list (used for real-time sidebar sync, no full page reload)
-    const fetchSalesOnly = async () => {
+    // Polls send the version we hold: when the database has not changed the server answers
+    // {unchanged: true} and nothing re-renders. force=true always downloads the full list.
+    // Returns the newest sales list.
+    const fetchSalesOnly = async ({ force = false } = {}) => {
+        if (!force && salesFetchRef.current) return salesFetchRef.current;
+        const run = (async () => {
+            try {
+                const listAtStart = allSalesRef.current;
+                const params = !force && salesVersionRef.current ? { version: salesVersionRef.current } : {};
+                const res = await api.get(routes.sales, { params });
+                if (res.data?.unchanged) return allSalesRef.current;
+                // A save/delete updated the list while this poll was in flight: this answer may
+                // be older than that change, so drop it and ask again instead of hiding records
+                if (!force && allSalesRef.current !== listAtStart) {
+                    setTimeout(() => fetchSalesOnly(), 300);
+                    return allSalesRef.current;
+                }
+                const salesData = res.data.data || res.data.sales || (Array.isArray(res.data) ? res.data : []);
+                salesVersionRef.current = res.data.version || null;
+                allSalesRef.current = salesData;
+                updateState({ allSales: salesData });
+                return salesData;
+            } catch (error) {
+                console.error("Failed to refresh sales data:", error);
+                return allSalesRef.current;
+            }
+        })();
+        if (!force) salesFetchRef.current = run;
         try {
-            const res = await api.get(routes.sales);
-            const salesData = res.data.data || res.data.sales || res.data || [];
-            updateState({ allSales: salesData });
-        } catch (error) {
-            console.error("Failed to refresh sales data:", error);
+            return await run;
+        } finally {
+            if (salesFetchRef.current === run) salesFetchRef.current = null;
         }
     };
 
     // Poll the database periodically so the printed/unprinted sidebars stay live without reloading the page
     useEffect(() => {
         const interval = setInterval(() => {
-            fetchSalesOnly();
-        }, 5000);
-        return () => clearInterval(interval);
+            if (!document.hidden) fetchSalesOnly();
+        }, 3000);
+        const onVisible = () => { if (!document.hidden) fetchSalesOnly(); };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
     }, []);
 
     useEffect(() => {
@@ -1451,10 +1441,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     }, [formData.weight, formData.price_per_kg, formData.packs, formData.pack_due]);
 
     useEffect(() => {
-        const handleWindowFocus = () => {
-            updateState({ windowFocused: Date.now() });
-            fetchSalesOnly();
-        };
+        const handleWindowFocus = () => { fetchSalesOnly(); };
         window.addEventListener('focus', handleWindowFocus);
         return () => window.removeEventListener('focus', handleWindowFocus);
     }, []);
@@ -1696,25 +1683,6 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                     setFormData(prev => ({ ...prev, kuliya: instantKuliya }));
                 }
 
-                const fetchKuliyaDirectly = async () => {
-                    try {
-                        const bagRealWeight = item?.bag_real_price || 0;
-                        const response = await api.post('/sales/calculate-kuliya', {
-                            item_code: item.no,
-                            item_name: item.type,
-                            weight: parsedWeight,
-                            packs: parsedPacks,
-                            bag_real_weight: bagRealWeight
-                        });
-
-                        if (response.data.kuliya !== undefined) {
-                            setFormData(prev => ({ ...prev, kuliya: response.data.kuliya }));
-                        }
-                    } catch (error) {
-                        // Local value set above already stands as the fallback
-                    }
-                };
-                fetchKuliyaDirectly();
             }
 
             refs.weight.current?.focus();
@@ -1762,6 +1730,101 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             });
         }
     };
+
+    // Rows of the "All Sales Records" table are rebuilt only when the data or the selected
+    // record changes, not on every keystroke in the entry form
+    const allSalesRows = useMemo(() => (
+        sortedAllSalesRecords.map((sale, index) => (
+                                                            <tr
+                                                                key={sale.id || index}
+                                                                onClick={() => editClickRef.current?.(sale)}
+                                                                style={{
+                                                                    borderBottom: "1px solid #2a2a3e",
+                                                                    cursor: "pointer",
+                                                                    backgroundColor:
+                                                                        editingSaleId === sale.id
+                                                                            ? "#1e3a5f"
+                                                                            : "transparent",
+                                                                    transition: "background-color 0.2s"
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    if (editingSaleId !== sale.id) {
+                                                                        e.currentTarget.style.backgroundColor = "#252540";
+                                                                    }
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    if (editingSaleId !== sale.id) {
+                                                                        e.currentTarget.style.backgroundColor = "transparent";
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <td style={{ padding: "8px" }}>
+                                                                    {sale.bill_no || "-"}
+                                                                </td>
+
+                                                                <td style={{ padding: "8px", fontWeight: "500" }}>
+                                                                    {sale.customer_code || "-"}
+                                                                </td>
+
+                                                                <td style={{ padding: "8px" }}>
+                                                                    {sale.supplier_code || "-"}
+                                                                </td>
+
+                                                                <td style={{ padding: "8px" }}>
+                                                                    {sale.item_code || "-"}
+                                                                </td>
+
+                                                                <td
+                                                                    style={{
+                                                                        padding: "8px",
+                                                                        maxWidth: "150px",
+                                                                        overflow: "hidden",
+                                                                        textOverflow: "ellipsis",
+                                                                        whiteSpace: "nowrap"
+                                                                    }}
+                                                                    title={sale.item_name}
+                                                                >
+                                                                    {sale.item_name || "-"}
+                                                                </td>
+
+                                                                <td style={{ padding: "8px", textAlign: "right" }}>
+                                                                    {formatDecimal(sale.weight)}
+                                                                </td>
+
+                                                                <td style={{ padding: "8px", textAlign: "right" }}>
+                                                                    {formatDecimal(sale.price_per_kg)}
+                                                                </td>
+
+                                                                <td style={{ padding: "8px", textAlign: "right" }}>
+                                                                    {sale.packs || "0"}
+                                                                </td>
+
+                                                                <td
+                                                                    style={{
+                                                                        padding: "8px",
+                                                                        textAlign: "right",
+                                                                        color:
+                                                                            sale.Kuliya > 0
+                                                                                ? "#ffd700"
+                                                                                : "#888"
+                                                                    }}
+                                                                >
+                                                                    {formatDecimal(sale.Kuliya || 0)}
+                                                                </td>
+
+                                                                <td
+                                                                    style={{
+                                                                        padding: "8px",
+                                                                        textAlign: "right",
+                                                                        fontWeight: "bold",
+                                                                        color: "#4ade80"
+                                                                    }}
+                                                                >
+                                                                    {formatDecimal(sale.total || 0)}
+                                                                </td>
+                                                            </tr>
+                                                        ))
+    ), [sortedAllSalesRecords, editingSaleId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleEditClick = (sale) => {
         // If same record clicked again → clear fields EXCEPT customer/contact fields
@@ -1861,6 +1924,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             }
         }, 0);
     };
+
+    editClickRef.current = handleEditClick;
 
     const handleClearForm = (clearBillNo = false) => {
         setFormData(initialFormData);
@@ -2169,6 +2234,10 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         }
     };
     const handleCustomerClick = async (type, customerCode, billNo = null, salesRecords = []) => {
+        return handleCustomerClickImpl(type, customerCode, billNo, salesRecords);
+    };
+    customerClickRef.current = handleCustomerClick;
+    const handleCustomerClickImpl = async (type, customerCode, billNo = null, salesRecords = []) => {
         if (state.isPrinting) return;
 
         if (currentUser?.role === 'Admin') {
@@ -2366,14 +2435,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
         // Re-sync with the server rather than trusting the local `allSales` snapshot —
         // this closure's `allSales` can still be stale relative to saves that just resolved.
-        let freshAllSales = allSales;
-        try {
-            const freshRes = await api.get(routes.sales);
-            freshAllSales = freshRes.data.data || freshRes.data.sales || freshRes.data || [];
-            updateState({ allSales: freshAllSales });
-        } catch (e) {
-            console.warn("Failed to refresh sales before printing, using local data:", e);
-        }
+        const freshAllSales = await fetchSalesOnly({ force: true });
 
         // Recompute the same selection the sidebar/table currently shows, against fresh data
         const freshNewSales = freshAllSales.filter(s => s.id && s.bill_printed !== 'Y' && s.bill_printed !== 'N');
@@ -2408,20 +2470,12 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         const shouldCombine = state.isBulkPrintEnabled;
         let printData = salesData;
 
-        console.log('[handlePrintAndClear] salesData before combine, Kuliya check:', salesData.map(s => ({
-            id: s.id, item_name: s.item_name, weight: s.weight, packs: s.packs, Kuliya: s.Kuliya
-        })));
-
         if (shouldCombine) {
             printData = combineSalesForPrinting(salesData);
             if (printData.length < salesData.length) {
                 console.log(`Combined ${salesData.length} records into ${printData.length} records for printing`);
             }
         }
-
-        console.log('[handlePrintAndClear] printData after combine, Kuliya check:', printData.map(s => ({
-            id: s.id, item_name: s.item_name, weight: s.weight, packs: s.packs, Kuliya: s.Kuliya
-        })));
 
         // --- ZERO PRICE VALIDATION ---
         const hasZeroPrice = printData.some(s => parseFloat(s.price_per_kg) === 0);
@@ -2655,7 +2709,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             <div className="three-column-layout" style={{ opacity: isLoading ? 0.7 : 1, display: 'grid', gridTemplateColumns: '200px 1fr 200px', gap: '16px', padding: '10px', marginTop: '-149px' }}>
                 <div className="left-sidebar" style={{ backgroundColor: '#1ec139ff', borderRadius: '0.75rem', maxHeight: '80.5vh', overflowY: 'auto' }}>
                     {hasData ? (
-                        <CustomerList customers={printedCustomers} type="printed" searchQuery={searchQueries.printed} onSearchChange={(value) => updateState({ searchQueries: { ...searchQueries, printed: value } })} selectedPrintedCustomer={selectedPrintedCustomer} selectedUnprintedCustomer={selectedUnprintedCustomer} handleCustomerClick={handleCustomerClick} formatDecimal={formatDecimal} allSales={allSales} lastUpdate={state.forceUpdate || state.windowFocused} isCashFilterActive={state.isCashFilterActive} toggleCashFilter={() => updateState({ isCashFilterActive: !state.isCashFilterActive })} />
+                        <CustomerList customers={printedCustomers} type="printed" searchQuery={searchQueries.printed} onSearchChange={setPrintedSearch} selectedPrintedCustomer={selectedPrintedCustomer} selectedUnprintedCustomer={selectedUnprintedCustomer} handleCustomerClick={stableCustomerClick} formatDecimal={formatDecimal} allSales={allSales} isCashFilterActive={state.isCashFilterActive} toggleCashFilter={toggleCashFilterStable} />
                     ) : (
                         <div className="w-full shadow-xl rounded-xl overflow-y-auto border border-black p-4 text-center" style={{ backgroundColor: "#1ec139ff", maxHeight: "80.5vh" }}>
                             <div style={{ backgroundColor: "#006400" }} className="p-1 rounded-t-xl">
@@ -3163,96 +3217,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                             </td>
                                                         </tr>
                                                     ) : (
-                                                        sortedAllSalesRecords.map((sale, index) => (
-                                                            <tr
-                                                                key={sale.id || index}
-                                                                onClick={() => handleEditClick(sale)}
-                                                                style={{
-                                                                    borderBottom: "1px solid #2a2a3e",
-                                                                    cursor: "pointer",
-                                                                    backgroundColor:
-                                                                        editingSaleId === sale.id
-                                                                            ? "#1e3a5f"
-                                                                            : "transparent",
-                                                                    transition: "background-color 0.2s"
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    if (editingSaleId !== sale.id) {
-                                                                        e.currentTarget.style.backgroundColor = "#252540";
-                                                                    }
-                                                                }}
-                                                                onMouseLeave={(e) => {
-                                                                    if (editingSaleId !== sale.id) {
-                                                                        e.currentTarget.style.backgroundColor = "transparent";
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <td style={{ padding: "8px" }}>
-                                                                    {sale.bill_no || "-"}
-                                                                </td>
-
-                                                                <td style={{ padding: "8px", fontWeight: "500" }}>
-                                                                    {sale.customer_code || "-"}
-                                                                </td>
-
-                                                                <td style={{ padding: "8px" }}>
-                                                                    {sale.supplier_code || "-"}
-                                                                </td>
-
-                                                                <td style={{ padding: "8px" }}>
-                                                                    {sale.item_code || "-"}
-                                                                </td>
-
-                                                                <td
-                                                                    style={{
-                                                                        padding: "8px",
-                                                                        maxWidth: "150px",
-                                                                        overflow: "hidden",
-                                                                        textOverflow: "ellipsis",
-                                                                        whiteSpace: "nowrap"
-                                                                    }}
-                                                                    title={sale.item_name}
-                                                                >
-                                                                    {sale.item_name || "-"}
-                                                                </td>
-
-                                                                <td style={{ padding: "8px", textAlign: "right" }}>
-                                                                    {formatDecimal(sale.weight)}
-                                                                </td>
-
-                                                                <td style={{ padding: "8px", textAlign: "right" }}>
-                                                                    {formatDecimal(sale.price_per_kg)}
-                                                                </td>
-
-                                                                <td style={{ padding: "8px", textAlign: "right" }}>
-                                                                    {sale.packs || "0"}
-                                                                </td>
-
-                                                                <td
-                                                                    style={{
-                                                                        padding: "8px",
-                                                                        textAlign: "right",
-                                                                        color:
-                                                                            sale.Kuliya > 0
-                                                                                ? "#ffd700"
-                                                                                : "#888"
-                                                                    }}
-                                                                >
-                                                                    {formatDecimal(sale.Kuliya || 0)}
-                                                                </td>
-
-                                                                <td
-                                                                    style={{
-                                                                        padding: "8px",
-                                                                        textAlign: "right",
-                                                                        fontWeight: "bold",
-                                                                        color: "#4ade80"
-                                                                    }}
-                                                                >
-                                                                    {formatDecimal(sale.total || 0)}
-                                                                </td>
-                                                            </tr>
-                                                        ))
+                                                        allSalesRows
                                                     )}
                                                 </tbody>
                                             </table>
@@ -3312,7 +3277,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
                 <div className="right-sidebar" style={{ backgroundColor: '#1ec139ff', borderRadius: '0.75rem', maxHeight: '80.5vh', overflowY: 'auto', gridColumnStart: 3, gridColumnEnd: 4 }}>
                     {hasData ? (
-                        <CustomerList customers={unprintedCustomers} type="unprinted" searchQuery={searchQueries.unprinted} onSearchChange={(value) => updateState({ searchQueries: { ...searchQueries, unprinted: value } })} selectedPrintedCustomer={selectedPrintedCustomer} selectedUnprintedCustomer={selectedUnprintedCustomer} handleCustomerClick={handleCustomerClick} formatDecimal={formatDecimal} allSales={allSales} lastUpdate={state.forceUpdate || state.windowFocused} />
+                        <CustomerList customers={unprintedCustomers} type="unprinted" searchQuery={searchQueries.unprinted} onSearchChange={setUnprintedSearch} selectedPrintedCustomer={selectedPrintedCustomer} selectedUnprintedCustomer={selectedUnprintedCustomer} handleCustomerClick={stableCustomerClick} formatDecimal={formatDecimal} allSales={allSales} />
                     ) : (
                         <div className="w-full shadow-xl rounded-xl overflow-y-auto border border-black p-4 text-center" style={{ backgroundColor: "#1ec139ff", maxHeight: "80.5vh" }}>
                             <div style={{ backgroundColor: "#006400" }} className="p-1 rounded-t-xl">
