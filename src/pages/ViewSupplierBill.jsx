@@ -77,7 +77,8 @@ const ViewSupplierBill = () => {
     const totalsupplierSales = items.reduce((s, i) => s + (parseFloat(i.SupplierTotal) || 0), 0);
     const totalPacksSum = items.reduce((s, i) => s + (parseInt(i.packs) || 0), 0);
     const totalCustomerPackCost = items.reduce((s, i) => s + (parseFloat(i.CustomerPackCost) || 0), 0);
-    const netPayable = totalsupplierSales - advanceAmount + totalCustomerPackCost;
+    const hireAmount = parseFloat(bill.hire_amount || 0);
+    const netPayable = totalsupplierSales - advanceAmount - hireAmount + totalCustomerPackCost;
     const date = new Date().toLocaleDateString('si-LK');
     const time = new Date().toLocaleTimeString('si-LK', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 
@@ -213,6 +214,13 @@ const ViewSupplierBill = () => {
                 - ${advanceAmount.toFixed(2)}
             </td>
         </tr>
+        ${hireAmount > 0 ? `
+        <tr style="font-size:18px;">
+            <td style="font-size:15px; padding-top:5px;">${tr('Hire', 'කුලී')}</td>
+            <td style="text-align:right; padding-top:5px; color:#000;">
+                - ${hireAmount.toFixed(2)}
+            </td>
+        </tr>` : ''}
 
         <tr style="font-weight:900;">
             <td style="font-size:18px; padding-top:10px;">${tr('Net Remaining Balance', 'ශුද්ධ ඉතිරි ශේෂය')}:</td>

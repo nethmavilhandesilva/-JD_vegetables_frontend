@@ -545,6 +545,7 @@ const SupplierReport = () => {
     const [selectedSupplier, setSelectedSupplier] = useState(null);
     const [selectedBillNo, setSelectedBillNo] = useState(null);
     const [isUnprintedBill, setIsUnprintedBill] = useState(false);
+    // (kept in a ref too, for the auto-refresh callbacks)
     const [supplierDetails, setSupplierDetails] = useState([]);
     const [isDetailsLoading, setIsDetailsLoading] = useState(false);
 
@@ -560,6 +561,13 @@ const SupplierReport = () => {
     const [advancePayload, setAdvancePayload] = useState({ code: '', advance_amount: '' });
     const [advanceLoading, setAdvanceLoading] = useState(false);
     const [advanceStatus, setAdvanceStatus] = useState({ type: '', text: '' });
+    // Hire (transport) amount: saved on the supplier like the advance, deducted on the next
+    // printed bill and then cleared. A printed bill shows the amounts it was printed with.
+    const [hireAmount, setHireAmount] = useState(0);
+    const [hireInput, setHireInput] = useState('');
+    const [hireLoading, setHireLoading] = useState(false);
+    const [hireStatus, setHireStatus] = useState({ type: '', text: '' });
+    const isUnprintedBillRef = useRef(false);
 
     // 🚀 NEW STATE: For Editing Records
     const [editingRecord, setEditingRecord] = useState(null);
@@ -638,7 +646,11 @@ const SupplierReport = () => {
             const supRes = await api.get(`/suppliers/search-by-code/${supplierCode}`);
             setFarmerLoanTotal(await fetchFarmerLoanTotal(supplierCode));
             if (supRes.data) {
-                setAdvanceAmount(parseFloat(supRes.data.advance_amount) || 0);
+                // Printed bills keep the advance/hire they were printed with (loaded in loadBill)
+                if (isUnprintedBillRef.current) {
+                    setAdvanceAmount(parseFloat(supRes.data.advance_amount) || 0);
+                    setHireAmount(parseFloat(supRes.data.hire_amount) || 0);
+                }
                 setProfilePic(supRes.data.profile_pic);
 
                 // Only update phone number if it hasn't been manually changed by user
@@ -718,6 +730,19 @@ const SupplierReport = () => {
     // 🚀 NEW: Handle Advance Entry Form Submission
     const handleAdvanceSubmit = async (e) => {
         e.preventDefault();
+        const amount = parseFloat(advancePayload.advance_amount);
+        if (!advancePayload.code) {
+            setAdvanceStatus({ type: 'error', text: tr('Select a supplier bill first.', 'පළමුව සැපයුම්කරු බිලක් තෝරන්න.') });
+            return;
+        }
+        if (!isUnprintedBill) {
+            setAdvanceStatus({ type: 'error', text: tr('This bill is already printed. Open an unprinted bill to add an advance.', 'මෙම බිල දැනටමත් මුද්‍රණය කර ඇත. අත්තිකාරම් එක් කිරීමට මුද්‍රණය නොකළ බිලක් විවෘත කරන්න.') });
+            return;
+        }
+        if (advancePayload.advance_amount === '' || !Number.isFinite(amount) || amount < 0) {
+            setAdvanceStatus({ type: 'error', text: tr('Enter a valid amount (0 or more).', 'වලංගු මුදලක් ඇතුළත් කරන්න (0 හෝ වැඩි).') });
+            return;
+        }
         setAdvanceLoading(true);
         setAdvanceStatus({ type: '', text: '' });
 
@@ -725,7 +750,7 @@ const SupplierReport = () => {
         isPrintingOrUpdatingRef.current = true;
 
         try {
-            const response = await api.post('/suppliers/advance', advancePayload);
+            const response = await api.post('/suppliers/advance', { code: advancePayload.code, advance_amount: amount });
             setAdvanceStatus({ type: 'success', text: tr('Success! Advance updated.', 'සාර්ථකයි! අත්තිකාරම් යාවත්කාලීන විය.') });
 
             // Immediately update the display advance amount
@@ -739,12 +764,45 @@ const SupplierReport = () => {
             }
         } catch (error) {
             console.error("Advance Update Error:", error);
-            setAdvanceStatus({ type: 'error', text: tr('Update failed.', 'යාවත්කාලීන කිරීම අසාර්ථක විය.') });
+            setAdvanceStatus({ type: 'error', text: `${tr('Update failed', 'යාවත්කාලීන කිරීම අසාර්ථක විය')}: ${extractApiErrorMessage(error, '')}` });
         } finally {
             setAdvanceLoading(false);
             setTimeout(() => {
                 isPrintingOrUpdatingRef.current = false;
             }, 500);
+        }
+    };
+
+    // Hire Entry: saves the hire amount on the supplier (deducted on the next printed bill)
+    const handleHireSubmit = async (e) => {
+        e.preventDefault();
+        const amount = parseFloat(hireInput);
+        if (!selectedSupplier) {
+            setHireStatus({ type: 'error', text: tr('Select a supplier bill first.', 'පළමුව සැපයුම්කරු බිලක් තෝරන්න.') });
+            return;
+        }
+        if (!isUnprintedBill) {
+            setHireStatus({ type: 'error', text: tr('This bill is already printed. Open an unprinted bill to add hire.', 'මෙම බිල දැනටමත් මුද්‍රණය කර ඇත. කුලී එක් කිරීමට මුද්‍රණය නොකළ බිලක් විවෘත කරන්න.') });
+            return;
+        }
+        if (hireInput === '' || !Number.isFinite(amount) || amount < 0) {
+            setHireStatus({ type: 'error', text: tr('Enter a valid amount (0 or more).', 'වලංගු මුදලක් ඇතුළත් කරන්න (0 හෝ වැඩි).') });
+            return;
+        }
+        setHireLoading(true);
+        setHireStatus({ type: '', text: '' });
+        isPrintingOrUpdatingRef.current = true;
+        try {
+            const response = await api.post('/suppliers/hire', { code: selectedSupplier, hire_amount: amount });
+            setHireAmount(parseFloat(response.data?.data?.hire_amount) || 0);
+            setHireInput('');
+            setHireStatus({ type: 'success', text: tr('Success! Hire amount updated.', 'සාර්ථකයි! කුලී මුදල යාවත්කාලීන විය.') });
+        } catch (error) {
+            console.error("Hire Update Error:", error);
+            setHireStatus({ type: 'error', text: `${tr('Update failed', 'යාවත්කාලීන කිරීම අසාර්ථක විය')}: ${extractApiErrorMessage(error, '')}` });
+        } finally {
+            setHireLoading(false);
+            setTimeout(() => { isPrintingOrUpdatingRef.current = false; }, 500);
         }
     };
 
@@ -831,6 +889,11 @@ const SupplierReport = () => {
         setSelectedSupplier(supplierCode);
         setSelectedBillNo(billNo);
         setIsUnprintedBill(isUnprinted);
+        isUnprintedBillRef.current = isUnprinted;
+        setHireAmount(0);
+        setHireInput('');
+        setHireStatus({ type: '', text: '' });
+        setAdvanceStatus({ type: '', text: '' });
         setSupplierDetails([]);
         setSelectedTransactionIds([]); // Ticks belong to the previous bill's rows
         setSelectionCriteria(null);
@@ -860,7 +923,10 @@ const SupplierReport = () => {
         const profilePromise = api.get(`/suppliers/search-by-code/${supplierCode}`)
             .then(supRes => {
                 if (isStale() || !supRes.data) return;
-                setAdvanceAmount(parseFloat(supRes.data.advance_amount) || 0);
+                if (isUnprinted) {
+                    setAdvanceAmount(parseFloat(supRes.data.advance_amount) || 0);
+                    setHireAmount(parseFloat(supRes.data.hire_amount) || 0);
+                }
                 setProfilePic(supRes.data.profile_pic);
                 // 🚀 MATCHING & FETCHING: This gets the phone from the DB record
                 setPhoneNo(supRes.data.telephone_no || '');
@@ -877,7 +943,16 @@ const SupplierReport = () => {
         const loanPromise = fetchFarmerLoanTotal(supplierCode)
             .then(total => { if (!isStale()) setFarmerLoanTotal(total); });
 
-        await Promise.allSettled([detailsPromise, profilePromise, loanPromise]);
+        // Printed bill: the advance and hire it was printed with
+        const chargesPromise = isUnprinted ? Promise.resolve() : api.get(`/suppliers/bill/${encodeURIComponent(billNo)}/charges`)
+            .then(res => {
+                if (isStale()) return;
+                setAdvanceAmount(parseFloat(res.data?.advance_amount) || 0);
+                setHireAmount(parseFloat(res.data?.hire_amount) || 0);
+            })
+            .catch(error => console.error('❌ Error fetching bill charges:', error.message));
+
+        await Promise.allSettled([detailsPromise, profilePromise, loanPromise, chargesPromise]);
         setTimeout(() => {
             if (!isStale()) isPrintingOrUpdatingRef.current = false;
         }, 500);
@@ -895,8 +970,11 @@ const SupplierReport = () => {
         setSelectedSupplier(null);
         setSelectedBillNo(null);
         setIsUnprintedBill(false);
+        isUnprintedBillRef.current = false;
         setSupplierDetails([]);
         setAdvanceAmount(0);
+        setHireAmount(0);
+        setHireInput('');
         setFarmerLoanTotal(0);
         setAdvancePayload({ code: '', advance_amount: '' });
         setProfilePic(null);
@@ -1259,7 +1337,7 @@ const SupplierReport = () => {
         const date = new Date().toLocaleDateString('si-LK');
         const time = new Date().toLocaleTimeString('si-LK', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
         const paidAmountValue = parseFloat(payingAmount) || 0;
-        const netPayable = totalsupplierSales - advanceAmount - paidAmountValue + totalCustomerPackCost;
+        const netPayable = totalsupplierSales - advanceAmount - hireAmount - paidAmountValue + totalCustomerPackCost;
 
         // Format numbers WITHOUT unnecessary decimal places
         const formatNumber = (num) => {
@@ -1442,6 +1520,7 @@ const SupplierReport = () => {
                 <div class="total-row"><span>${tr('Grand Total', 'මුළු එකතුව')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalSales)}</span></div>
                 <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalPackCost)}</span></div>
                 <div class="total-row"><span>${tr('Advance', 'අත්තිකාරම්')}:</span><span style="color: red !important;">${tr('Rs.', 'රු.')} -${formatNumber(grandAdvanceAmount)}</span></div>
+                ${hireAmount > 0 ? `<div class="total-row"><span>${tr('Hire', 'කුලී')}:</span><span style="color: red !important;">${tr('Rs.', 'රු.')} -${formatNumber(hireAmount)}</span></div>` : ''}
                 ${grandPaidAmount > 0 ? `<div class="total-row"><span>${tr('Paid Amount', 'ගෙවූ මුදල')}:</span><span>${tr('Rs.', 'රු.')} -${formatNumber(grandPaidAmount)}</span></div>` : ''}
                 <div class="net-total">
                     <span>${tr('Amount Payable', 'ගෙවිය යුතු මුදල')}:</span>
@@ -1652,7 +1731,7 @@ const SupplierReport = () => {
     ${allPagesHTML}
 </body>
 </html>`;
-    }, [selectedSupplier, supplierDetails, totalsupplierSales, advanceAmount, payingAmount, totalPacksSum, totalWeight, totalCustomerPackCost, farmerLoanTotal, isBulkPrintEnabled]);
+    }, [selectedSupplier, supplierDetails, totalsupplierSales, advanceAmount, hireAmount, payingAmount, totalPacksSum, totalWeight, totalCustomerPackCost, farmerLoanTotal, isBulkPrintEnabled]);
 
     const getBillContent = useCallback((currentBillNo) => {
         const date = new Date().toLocaleDateString('si-LK');
@@ -1718,7 +1797,7 @@ const SupplierReport = () => {
 
         // 🚀 CALCULATION FOR FINAL NET AMOUNT
         // We subtract both Advance and any current payment made
-        const netPayable = totalsupplierSales - advanceAmount - paidAmountValue + totalCustomerPackCost;
+        const netPayable = totalsupplierSales - advanceAmount - hireAmount - paidAmountValue + totalCustomerPackCost;
 
         return `
 <!DOCTYPE html>
@@ -1816,6 +1895,13 @@ const SupplierReport = () => {
             - ${advanceAmount.toFixed(2)}
            </td>
           </tr>
+        ${hireAmount > 0 ? `
+        <tr style="font-size:18px;">
+          <td style="font-size:15px; padding-top:5px;">${tr('Hire', 'කුලී')}</td>
+          <td style="text-align:right; padding-top:5px; color:#000;">
+            - ${hireAmount.toFixed(2)}
+           </td>
+          </tr>` : ''}
 
         <tr style="font-weight:900;">
           <td style="font-size:18px; padding-top:10px;">${tr('Net Remaining Balance', 'ශුද්ධ ඉතිරි ශේෂය')}:</td>
@@ -1838,7 +1924,7 @@ const SupplierReport = () => {
 </div>
 </body>
 </html>`;
-    }, [selectedSupplier, supplierDetails, totalPacksSum, totalsupplierSales, itemSummaryData, billSize, advanceAmount, payingAmount, totalCustomerPackCost, farmerLoanTotal, isBulkPrintEnabled]);
+    }, [selectedSupplier, supplierDetails, totalPacksSum, totalsupplierSales, itemSummaryData, billSize, advanceAmount, hireAmount, payingAmount, totalCustomerPackCost, farmerLoanTotal, isBulkPrintEnabled]);
 
     // F4: open the app's own print window. Nothing is marked printed until Print is pressed.
     const handlePrint = useCallback(() => {
@@ -1916,12 +2002,13 @@ const SupplierReport = () => {
             transactionIds: supplierDetails.map(r => r.id),
             phoneNo,
             advanceAmount,
+            hireAmount,
             supplierCode: selectedSupplier,
             isA4,
             busy: false,
             error: '',
         });
-    }, [supplierDetails, selectedBillNo, isUnprintedBill, phoneNo, advanceAmount, selectedSupplier, getBillContent, getA4Content, printFormat]);
+    }, [supplierDetails, selectedBillNo, isUnprintedBill, phoneNo, advanceAmount, hireAmount, selectedSupplier, getBillContent, getA4Content, printFormat]);
 
     // Cancel in the print window: nothing was marked, the bill stays unprinted
     const handleCancelPrintJob = () => {
@@ -1943,6 +2030,7 @@ const SupplierReport = () => {
                     transaction_ids: job.transactionIds,
                     telephone_no: job.phoneNo,
                     advance_amount: job.advanceAmount,
+                    hire_amount: job.hireAmount,
                     supplier_code: job.supplierCode
                 });
                 finalBillNo = response.data.new_bill_no;
@@ -1965,6 +2053,7 @@ const SupplierReport = () => {
                     supplier_code: job.supplierCode,
                     transaction_ids: job.transactionIds,
                     advance_amount: job.advanceAmount,
+                    hire_amount: job.hireAmount,
                     is_reprint: true
                 });
             } catch (err) {
@@ -2427,22 +2516,75 @@ const SupplierReport = () => {
                                         name="advance_amount"
                                         value={advancePayload.advance_amount}
                                         onChange={(e) => setAdvancePayload({ ...advancePayload, advance_amount: e.target.value })}
+                                        disabled={!isUnprintedBill}
+                                        min="0"
+                                        step="any"
                                         style={{ width: '100%', padding: '10px', borderRadius: '4px', border: 'none', color: '#000' }}
-                                        placeholder="0.00"
-                                        required
+                                        placeholder={advanceAmount > 0 ? advanceAmount.toFixed(2) : '0.00'}
                                     />
                                 </div>
                                 <button
                                     type="submit"
-                                    disabled={advanceLoading || !selectedSupplier}
+                                    disabled={advanceLoading || !selectedSupplier || !isUnprintedBill}
                                     style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', height: '40px' }}
                                 >
-                                    {advanceLoading ? 'Saving...' : 'Update Advance'}
+                                    {advanceLoading ? tr('Saving...', 'සුරකිමින්...') : tr('Update Advance', 'අත්තිකාරම් යාවත්කාලීන')}
                                 </button>
                             </form>
+                            <p style={{ color: '#ddd', margin: '8px 0 0', fontSize: '0.85rem' }}>
+                                {isUnprintedBill
+                                    ? tr(`Advance on this bill: Rs. ${advanceAmount.toFixed(2)} (deducted once, when this bill is printed)`, `මෙම බිලේ අත්තිකාරම්: රු. ${advanceAmount.toFixed(2)} (බිල මුද්‍රණය කරන විට එක් වරක් අඩු කෙරේ)`)
+                                    : tr(`Printed bill: advance Rs. ${advanceAmount.toFixed(2)} was deducted on this bill.`, `මුද්‍රිත බිල: අත්තිකාරම් රු. ${advanceAmount.toFixed(2)} මෙම බිලෙන් අඩු කෙරිණි.`)}
+                            </p>
                             {advanceStatus.text && (
                                 <p style={{ color: advanceStatus.type === 'success' ? '#28a745' : '#ff4444', marginTop: '10px', fontWeight: 'bold' }}>
                                     {advanceStatus.text}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Hire Entry: hire (transport) amount deducted on this bill */}
+                        <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #ffffff33', borderRadius: '8px', backgroundColor: '#ffffff11' }}>
+                            <h3 style={{ color: '#ffc107', marginTop: 0, fontSize: '1.2rem' }}>{tr('Hire Entry', 'කුලී ඇතුලත් කරන්න (Hire Entry)')}</h3>
+                            <form onSubmit={handleHireSubmit} style={{ display: 'flex', gap: '15px', alignItems: 'flex-end' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ fontSize: '0.8rem', color: '#eee', display: 'block', marginBottom: '5px' }}>{tr('Supplier Code', 'සැපයුම්කරු කේතය')}</label>
+                                    <input
+                                        type="text"
+                                        value={selectedSupplier || ''}
+                                        readOnly
+                                        style={{ width: '100%', padding: '10px', borderRadius: '4px', border: 'none', backgroundColor: '#eee', color: '#000' }}
+                                    />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ fontSize: '0.8rem', color: '#eee', display: 'block', marginBottom: '5px' }}>{tr('Hire Amount (Rs:)', 'කුලී මුදල (රු:)')}</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        value={hireInput}
+                                        onChange={(e) => setHireInput(e.target.value)}
+                                        disabled={!isUnprintedBill}
+                                        style={{ width: '100%', padding: '10px', borderRadius: '4px', border: 'none', color: '#000' }}
+                                        placeholder={hireAmount > 0 ? hireAmount.toFixed(2) : '0.00'}
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={hireLoading || !selectedSupplier || !isUnprintedBill}
+                                    style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', height: '40px', opacity: (!selectedSupplier || !isUnprintedBill) ? 0.6 : 1 }}
+                                >
+                                    {hireLoading ? tr('Saving...', 'සුරකිමින්...') : tr('Update Hire', 'කුලී යාවත්කාලීන')}
+                                </button>
+                            </form>
+                            <p style={{ color: '#ddd', margin: '8px 0 0', fontSize: '0.85rem' }}>
+                                {isUnprintedBill
+                                    ? tr(`Hire on this bill: Rs. ${hireAmount.toFixed(2)} (deducted when this bill is printed)`, `මෙම බිලේ කුලී: රු. ${hireAmount.toFixed(2)} (බිල මුද්‍රණය කරන විට අඩු කෙරේ)`)
+                                    : tr(`Printed bill: hire Rs. ${hireAmount.toFixed(2)} was deducted on this bill.`, `මුද්‍රිත බිල: කුලී රු. ${hireAmount.toFixed(2)} මෙම බිලෙන් අඩු කෙරිණි.`)}
+                            </p>
+                            {hireStatus.text && (
+                                <p style={{ color: hireStatus.type === 'success' ? '#28a745' : '#ff4444', marginTop: '10px', fontWeight: 'bold' }}>
+                                    {hireStatus.text}
                                 </p>
                             )}
                         </div>
