@@ -159,16 +159,37 @@ export default function NewSupplierBillDashboard() {
     const commissionFetching = useRef(new Set());
     const supplierCode = form.supplier?.value || '';
     const rateKey = (itemCode, price) => `${String(itemCode || '').toUpperCase()}|${supplierCode.toUpperCase()}|${num(price)}`;
-    const commissionPerKg = (l) => commissionRates[rateKey(l.item?.value, l.price_per_kg)] ?? 0;
-    const lineCommission = (l) => round2(num(l.weight) * commissionPerKg(l));
+    const rateFor = (itemCode, price) => commissionRates[rateKey(itemCode, price)] ?? 0;
+    // Pack lines: each pack keeps its own price, so value and commission add up pack by pack
+    const isPackLine = (l) => Array.isArray(l.pack_weights) && l.pack_weights.length > 0;
+    const pricesOf = (l) => (Array.isArray(l.pack_prices) && l.pack_prices.length === l.pack_weights.length
+        ? l.pack_prices.map(num) : l.pack_weights.map(() => num(l.price_per_kg)));
+    const lineValue = (l) => (isPackLine(l)
+        ? round2(l.pack_weights.reduce((s, w, j) => s + num(w) * pricesOf(l)[j], 0))
+        : round2(num(l.weight) * num(l.price_per_kg)));
+    const lineCommission = (l) => (isPackLine(l)
+        ? round2(l.pack_weights.reduce((s, w, j) => s + num(w) * rateFor(l.item?.value, pricesOf(l)[j]), 0))
+        : round2(num(l.weight) * rateFor(l.item?.value, l.price_per_kg)));
+    const commissionPerKg = (l) => (num(l.weight) > 0 ? lineCommission(l) / num(l.weight) : 0);
+    const mixedPrices = (l) => isPackLine(l) && new Set(pricesOf(l)).size > 1;
+    // Price shown for a line: its price, or the average per kg when its packs have different prices
+    const linePrice = (l) => (mixedPrices(l) && num(l.weight) > 0 ? round2(lineValue(l) / num(l.weight)) : num(l.price_per_kg));
+    const packText = (l) => (mixedPrices(l)
+        ? l.pack_weights.map((w, j) => `${kg(w)}kg@${money(pricesOf(l)[j])}`).join(' + ')
+        : `${l.pack_weights.map((w) => kg(w)).join(' + ')} kg`);
 
     useEffect(() => {
-        const wanted = [...lines, line].filter((l) => l.item?.value && l.price_per_kg !== '' && num(l.price_per_kg) > 0);
-        wanted.forEach((l) => {
-            const key = rateKey(l.item.value, l.price_per_kg);
+        const wanted = [];
+        [...lines, line].forEach((l) => {
+            if (!l.item?.value) return;
+            if (isPackLine(l)) pricesOf(l).forEach((p) => wanted.push({ code: l.item.value, price: p }));
+            if (l.price_per_kg !== '') wanted.push({ code: l.item.value, price: num(l.price_per_kg) });
+        });
+        wanted.filter((w) => w.price > 0).forEach(({ code, price }) => {
+            const key = rateKey(code, price);
             if (key in commissionRates || commissionFetching.current.has(key)) return;
             commissionFetching.current.add(key);
-            api.get('/new-supplier-bills/commission', { params: { item_code: l.item.value, supplier_code: supplierCode, price_per_kg: num(l.price_per_kg) } })
+            api.get('/new-supplier-bills/commission', { params: { item_code: code, supplier_code: supplierCode, price_per_kg: price } })
                 .then((res) => setCommissionRates((prev) => ({ ...prev, [key]: num(res.data?.commission_per_kg) })))
                 .catch(() => { /* shown as 0 until saved; the server always calculates it */ })
                 .finally(() => commissionFetching.current.delete(key));
@@ -176,7 +197,7 @@ export default function NewSupplierBillDashboard() {
     }, [lines, line.item, line.price_per_kg, supplierCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const totals = useMemo(() => {
-        const gross = round2(lines.reduce((s, l) => s + round2(num(l.weight) * num(l.price_per_kg)), 0));
+        const gross = round2(lines.reduce((s, l) => s + lineValue(l), 0));
         const commission = round2(lines.reduce((s, l) => s + lineCommission(l), 0));
         const weight = lines.reduce((s, l) => s + num(l.weight), 0);
         const packs = lines.reduce((s, l) => s + num(l.packs), 0);
@@ -220,22 +241,27 @@ export default function NewSupplierBillDashboard() {
         setTimeout(() => weightRef.current?.focus(), 0);
     };
 
-    // Pack by pack: one line per item. A new price does not start a new line; it becomes the
-    // price of that item's line (the line keeps one price per kg).
+    // Pack by pack: one line per item. Every Enter adds one pack (Packs 1, 2, 3 ...) to that line,
+    // even when the price is different; each pack keeps its own weight and price.
     const sameLine = (l, item) => Array.isArray(l.pack_weights) && !!item && l.item?.value === item?.value;
+
+    const withPacks = (l, weights, prices) => ({
+        ...l,
+        pack_weights: weights,
+        pack_prices: prices,
+        packs: String(weights.length),
+        weight: String(Math.round(weights.reduce((a, b) => a + b, 0) * 1000) / 1000),
+    });
 
     // Lines after adding one pack (weight) to this item's pack line (created if new)
     const linesWithPack = (current, item, price, weight) => {
         const w = Math.round(num(weight) * 1000) / 1000;
-        const idx = current.findIndex((l) => sameLine(l, item, price));
-        const withWeights = (l, weights) => ({
-            ...l,
-            pack_weights: weights,
-            packs: String(weights.length),
-            weight: String(Math.round(weights.reduce((a, b) => a + b, 0) * 1000) / 1000),
-        });
-        if (idx === -1) return [...current, withWeights({ item, price_per_kg: String(price) }, [w])];
-        return current.map((l, i) => (i === idx ? withWeights({ ...l, price_per_kg: String(price) }, [...l.pack_weights, w]) : l));
+        const p = num(price);
+        const idx = current.findIndex((l) => sameLine(l, item));
+        if (idx === -1) return [...current, withPacks({ item, price_per_kg: String(price) }, [w], [p])];
+        return current.map((l, i) => (i === idx
+            ? withPacks({ ...l, price_per_kg: String(price) }, [...l.pack_weights, w], [...pricesOf(l), p])
+            : l));
     };
 
     const addPack = () => {
@@ -254,7 +280,7 @@ export default function NewSupplierBillDashboard() {
             if (i !== lineIdx) return [l];
             const weights = l.pack_weights.filter((_, j) => j !== packIdx);
             if (weights.length === 0) return [];
-            return [{ ...l, pack_weights: weights, packs: String(weights.length), weight: String(Math.round(weights.reduce((a, b) => a + b, 0) * 1000) / 1000) }];
+            return [withPacks(l, weights, pricesOf(l).filter((_, j) => j !== packIdx))];
         }));
     };
 
@@ -341,7 +367,7 @@ export default function NewSupplierBillDashboard() {
         if (!form.bill_date) { setFormError(tr('Select the bill date.', 'බිල්පත් දිනය තෝරන්න.')); return; }
         if (pendingPartial) { setFormError(tr('Finish or clear the item line first.', 'පළමුව භාණ්ඩ පේළිය සම්පූර්ණ කරන්න හෝ හිස් කරන්න.')); return; }
         if (allLines.length === 0) { setFormError(tr('Add at least one item.', 'අවම වශයෙන් එක් භාණ්ඩයක් එක් කරන්න.')); return; }
-        const gross = round2(allLines.reduce((sum, l) => sum + round2(num(l.weight) * num(l.price_per_kg)), 0));
+        const gross = round2(allLines.reduce((sum, l) => sum + lineValue(l), 0));
         const commissionTotal = round2(allLines.reduce((sum, l) => sum + lineCommission(l), 0));
         if (gross - commissionTotal - num(form.deductions) < 0) { setFormError(tr('Deductions cannot be more than the bill amount.', 'අඩු කිරීම් බිල්පත් මුදලට වඩා වැඩි විය නොහැක.')); return; }
 
@@ -362,7 +388,8 @@ export default function NewSupplierBillDashboard() {
                 packs: num(l.packs),
                 weight: num(l.weight),
                 price_per_kg: num(l.price_per_kg),
-                pack_weights: Array.isArray(l.pack_weights) && l.pack_weights.length ? l.pack_weights : null,
+                pack_weights: isPackLine(l) ? l.pack_weights : null,
+                pack_prices: isPackLine(l) ? pricesOf(l) : null,
             })),
         };
 
@@ -436,7 +463,11 @@ export default function NewSupplierBillDashboard() {
                 packs: num(it.packs) ? String(it.packs) : '',
                 weight: String(it.weight),
                 price_per_kg: String(it.price_per_kg),
-                ...(Array.isArray(it.pack_weights) && it.pack_weights.length ? { pack_weights: it.pack_weights.map(Number) } : {}),
+                ...(Array.isArray(it.pack_weights) && it.pack_weights.length ? {
+                    pack_weights: it.pack_weights.map(Number),
+                    pack_prices: Array.isArray(it.pack_prices) && it.pack_prices.length === it.pack_weights.length
+                        ? it.pack_prices.map(Number) : it.pack_weights.map(() => num(it.price_per_kg)),
+                } : {}),
             })));
             setLine(emptyLine);
             setEditIndex(null);
@@ -484,7 +515,7 @@ export default function NewSupplierBillDashboard() {
             <tr>
                 <td>${i + 1}</td>
                 <td>${escapeHtml(it.item_code)} ${escapeHtml(it.item_name || '')}${Array.isArray(it.pack_weights) && it.pack_weights.length
-                    ? `<div class="packs">${escapeHtml(tr('Packs', 'මලු'))}: ${it.pack_weights.map((w) => kg(w)).join(' + ')} kg</div>` : ''}</td>
+                    ? `<div class="packs">${escapeHtml(tr('Packs', 'මලු'))}: ${escapeHtml(packText({ ...it, pack_weights: it.pack_weights.map(Number) }))}</div>` : ''}</td>
                 <td class="r">${num(it.packs) ? kg(it.packs) : ''}</td>
                 <td class="r">${kg(it.weight)}</td>
                 <td class="r">${money(it.price_per_kg)}</td>
@@ -535,7 +566,8 @@ export default function NewSupplierBillDashboard() {
         if (shown.length === 0) { setFormError(tr('Add at least one item.', 'අවම වශයෙන් එක් භාණ්ඩයක් එක් කරන්න.')); return; }
         const items = shown.map((l) => ({
             item_code: l.item?.value, item_name: l.item?.name, packs: num(l.packs), weight: num(l.weight),
-            price_per_kg: num(l.price_per_kg), amount: round2(num(l.weight) * num(l.price_per_kg)), pack_weights: l.pack_weights || null,
+            price_per_kg: linePrice(l), amount: lineValue(l), pack_weights: l.pack_weights || null,
+            pack_prices: isPackLine(l) ? pricesOf(l) : null,
             commission_amount: lineCommission(l),
         }));
         const gross = round2(items.reduce((a, it) => a + it.amount, 0));
@@ -759,7 +791,7 @@ export default function NewSupplierBillDashboard() {
                             <label style={label}>{tr('Value', 'අගය')}</label>
                             <div style={{ ...darkInput, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1f2937' }}>
                                 {money(packMode && activePackLine
-                                    ? (num(activePackLine.weight) + num(line.weight)) * num(line.price_per_kg !== '' ? line.price_per_kg : activePackLine.price_per_kg)
+                                    ? lineValue(activePackLine) + num(line.weight) * num(line.price_per_kg !== '' ? line.price_per_kg : activePackLine.price_per_kg)
                                     : lineAmount)}
                             </div>
                         </div>
@@ -776,13 +808,13 @@ export default function NewSupplierBillDashboard() {
                             {activePackLine ? (
                                 <>
                                     <div style={{ fontSize: 13, color: '#facc15', marginBottom: 6, fontWeight: 'bold' }}>
-                                        {activePackLine.item?.name || activePackLine.item?.value} @ {money(activePackLine.price_per_kg)} —
-                                        {' '}{activePackLine.pack_weights.length} {tr('packs', 'මලු')} · {kg(activePackLine.weight)} kg
+                                        {activePackLine.item?.name || activePackLine.item?.value} —
+                                        {' '}{activePackLine.pack_weights.length} {tr('packs', 'මලු')} · {kg(activePackLine.weight)} kg · {money(lineValue(activePackLine))}
                                     </div>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                         {activePackLine.pack_weights.map((w, j) => (
                                             <span key={j} style={{ background: '#374151', borderRadius: 6, padding: '3px 8px', fontSize: 13 }}>
-                                                #{j + 1}: <b>{kg(w)} kg</b>
+                                                #{j + 1}: <b>{kg(w)} kg</b> @ {money(pricesOf(activePackLine)[j])}
                                                 <button type="button" title={tr('Remove this pack', 'මෙම මල්ල ඉවත් කරන්න')} onClick={() => removePack(activePackIndex, j)}
                                                     style={{ marginLeft: 6, background: 'transparent', border: 'none', color: '#f87171', fontWeight: 'bold', cursor: 'pointer' }}>×</button>
                                             </span>
@@ -835,13 +867,13 @@ export default function NewSupplierBillDashboard() {
                                             <td style={cell}>
                                                 {l.item?.name}
                                                 {Array.isArray(l.pack_weights) && (
-                                                    <div style={{ fontSize: 11, color: '#facc15' }}>{l.pack_weights.map((w) => kg(w)).join(' + ')} kg</div>
+                                                    <div style={{ fontSize: 11, color: '#facc15' }}>{packText(l)}</div>
                                                 )}
                                             </td>
                                             <td style={cell}>{num(l.packs) ? kg(l.packs) : ''}</td>
                                             <td style={cell}>{kg(l.weight)}</td>
-                                            <td style={cell}>{money(l.price_per_kg)}</td>
-                                            <td style={cell}>{money(num(l.weight) * num(l.price_per_kg))}</td>
+                                            <td style={cell} title={mixedPrices(l) ? tr('Average price per kg', 'කිලෝවක සාමාන්‍ය මිල') : undefined}>{money(linePrice(l))}{mixedPrices(l) ? '*' : ''}</td>
+                                            <td style={cell}>{money(lineValue(l))}</td>
                                             <td style={{ ...cell, color: '#f87171' }} title={`${money(commissionPerKg(l))} / kg`}>{lineCommission(l) ? `-${money(lineCommission(l))}` : '0.00'}</td>
                                             <td style={cell}>
                                                 <button type="button" onClick={(e) => { e.stopPropagation(); removeLine(i); }}
