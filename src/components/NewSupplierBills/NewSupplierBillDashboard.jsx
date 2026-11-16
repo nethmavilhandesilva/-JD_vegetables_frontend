@@ -220,9 +220,11 @@ export default function NewSupplierBillDashboard() {
         setTimeout(() => weightRef.current?.focus(), 0);
     };
 
-    const sameLine = (l, item, price) => Array.isArray(l.pack_weights) && l.item?.value === item?.value && num(l.price_per_kg) === num(price);
+    // Pack by pack: one line per item. A new price does not start a new line; it becomes the
+    // price of that item's line (the line keeps one price per kg).
+    const sameLine = (l, item) => Array.isArray(l.pack_weights) && !!item && l.item?.value === item?.value;
 
-    // Lines after adding one pack (weight) to the pack line of this item + price (created if new)
+    // Lines after adding one pack (weight) to this item's pack line (created if new)
     const linesWithPack = (current, item, price, weight) => {
         const w = Math.round(num(weight) * 1000) / 1000;
         const idx = current.findIndex((l) => sameLine(l, item, price));
@@ -233,7 +235,7 @@ export default function NewSupplierBillDashboard() {
             weight: String(Math.round(weights.reduce((a, b) => a + b, 0) * 1000) / 1000),
         });
         if (idx === -1) return [...current, withWeights({ item, price_per_kg: String(price) }, [w])];
-        return current.map((l, i) => (i === idx ? withWeights(l, [...l.pack_weights, w]) : l));
+        return current.map((l, i) => (i === idx ? withWeights({ ...l, price_per_kg: String(price) }, [...l.pack_weights, w]) : l));
     };
 
     const addPack = () => {
@@ -257,7 +259,7 @@ export default function NewSupplierBillDashboard() {
     };
 
     // Pack line of the item + price being entered (its pack weights are listed under the inputs)
-    const activePackIndex = packMode ? lines.findIndex((l) => sameLine(l, line.item, line.price_per_kg)) : -1;
+    const activePackIndex = packMode ? lines.findIndex((l) => sameLine(l, line.item)) : -1;
     const activePackLine = activePackIndex >= 0 ? lines[activePackIndex] : null;
 
     // Weight -> Enter -> price (in pack mode the last price stays filled and selected, so one
@@ -756,7 +758,9 @@ export default function NewSupplierBillDashboard() {
                         <div style={{ gridColumn: 'span 2' }}>
                             <label style={label}>{tr('Value', 'අගය')}</label>
                             <div style={{ ...darkInput, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1f2937' }}>
-                                {money(packMode && activePackLine ? num(activePackLine.weight) * num(activePackLine.price_per_kg) + lineAmount : lineAmount)}
+                                {money(packMode && activePackLine
+                                    ? (num(activePackLine.weight) + num(line.weight)) * num(line.price_per_kg !== '' ? line.price_per_kg : activePackLine.price_per_kg)
+                                    : lineAmount)}
                             </div>
                         </div>
                     </div>
