@@ -134,7 +134,7 @@ const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAm
     <body>
         <div class="receipt-main">
             <div class="header">
-                <div style="font-size: 22px; font-weight: bold;">${SHOP_NAME}</div>
+                <div style="font-size: 22px; font-weight: bold;">${SHOP_NAME} (${SHOP_STALL_NO})</div>
                 <div style="margin: 10px 0;">
                     <span class="badge">${SHOP_STALL_NO}</span>
                     <span class="badge">${customerName.toUpperCase()}</span>

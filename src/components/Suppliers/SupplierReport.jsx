@@ -1450,7 +1450,7 @@ const SupplierReport = () => {
         <div class="bill-border" style="page-break-after: ${isLastPage ? 'avoid' : 'always'};">
             ${pageNumber === 1 ? `
             <div class="header">
-                <div class="shop-name">${SHOP_NAME}</div>
+                <div class="shop-name">${SHOP_NAME} (${SHOP_STALL_NO})</div>
                 <div class="shop-address">${SHOP_ADDRESS}</div>
                 <div class="shop-phone">${tr('Tel', 'දුරකථන')}: ${SHOP_PHONE}</div>
             </div>
@@ -1548,7 +1548,7 @@ const SupplierReport = () => {
             allPagesHTML = `
         <div class="bill-border">
             <div class="header">
-                <div class="shop-name">${SHOP_NAME}</div>
+                <div class="shop-name">${SHOP_NAME} (${SHOP_STALL_NO})</div>
                 <div class="shop-address">${SHOP_ADDRESS}</div>
                 <div class="shop-phone">${tr('Tel', 'දුරකථන')}: ${SHOP_PHONE}</div>
             </div>
@@ -1829,7 +1829,7 @@ const SupplierReport = () => {
 <body>
 <div style="width:${receiptMaxWidth}; margin:0 auto; padding:10px; font-family:'Courier New', monospace; color:#000; background:#fff;">
     <div style="text-align:center; font-weight:bold;">
-        <div style="font-size:24px;">${SHOP_NAME}</div>
+        <div style="font-size:24px;">${SHOP_NAME} (${SHOP_STALL_NO})</div>
         <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;">
             <span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">${SHOP_STALL_NO}</span>
             <div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${selectedSupplier}</span></div>

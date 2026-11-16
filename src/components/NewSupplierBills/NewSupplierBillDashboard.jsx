@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Select from 'react-select';
 import api from '../../api';
 import { tr } from '../../i18n/language';
-import { SHOP_NAME } from '../../config/shop';
+import { SHOP_NAME, SHOP_STALL_NO } from '../../config/shop';
 import { printHtml } from '../../utils/printHtml';
 
 // New Supplier Bills dashboard.
@@ -362,7 +362,7 @@ export default function NewSupplierBillDashboard() {
                 th{background:#eee} .r{text-align:right} .tot td{border:none;padding:2px 6px}
                 .tot{width:auto;margin-left:auto;margin-top:10px} .b{font-weight:bold}
             </style></head><body>
-            <h2>${escapeHtml(SHOP_NAME)}</h2>
+            <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
             <div class="sub">${escapeHtml(tr('Supplier Bill', 'සැපයුම්කරු බිල්පත'))}</div>
             <div class="meta">
                 <div><b>${escapeHtml(tr('Supplier', 'සැපයුම්කරු'))}:</b> ${escapeHtml(bill.supplier_code)} ${escapeHtml(bill.supplier_name || '')}

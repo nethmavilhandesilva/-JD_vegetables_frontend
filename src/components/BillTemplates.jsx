@@ -139,7 +139,7 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
             <div class="header">
          <span class="badge" style="position: relative; top: 3px;">${SHOP_STALL_NO}</span>
              <div style="margin-top: 8px; font-size: 22px; font-weight: bold;">
-    ${SHOP_NAME}
+    ${SHOP_NAME} (${SHOP_STALL_NO})
 </div>
 
 <div style="margin: 5px 0 10px 0;">
@@ -390,7 +390,7 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
         <div class="receipt-container" style="page-break-after: ${isLastPage ? 'avoid' : 'always'};">
             ${pageNumber === 1 ? `
             <div class="header">
-                <div class="shop-name">${SHOP_NAME}</div>
+                <div class="shop-name">${SHOP_NAME} (${SHOP_STALL_NO})</div>
                 <div class="shop-address">${SHOP_ADDRESS}</div>
                 <div class="shop-phone">${tr('Tel', 'දුරකථන')}: ${SHOP_PHONE}</div>
             </div>
@@ -479,7 +479,7 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
         allPagesHTML = `
             <div class="receipt-container">
                 <div class="header">
-                    <div class="shop-name">${SHOP_NAME}</div>
+                    <div class="shop-name">${SHOP_NAME} (${SHOP_STALL_NO})</div>
                     <div class="shop-address">${SHOP_ADDRESS}</div>
                     <div class="shop-phone">${tr('Tel', 'දුරකථන')}: ${SHOP_PHONE}</div>
                 </div>
