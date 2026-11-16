@@ -6,7 +6,7 @@
 
 /* Apply background to both html and body to ensure it covers the full viewport */
 html, body {
-    background-color: #99ff99 !important;
+    background-color: #99ccff !important; /* light blue page background */
     margin: 0;
     padding: 0;
     /* This ensures the background color stretches with the content */
