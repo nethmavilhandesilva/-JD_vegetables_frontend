@@ -97,6 +97,54 @@ const speakSinhalaBillTotal = async (amount, times = 3) => {
     }
 };
 
+// --- Dashboard grouping ---
+// Every entry is saved as its own sales record, so bills print each entry on its own line.
+// The table on this page still shows entries of the same customer, item, supplier and price
+// (same bill status) as one row, like before; the breakdown box lists the separate entries.
+const parseHistory = (sale) => {
+    try {
+        const h = typeof sale.breakdown_history === 'string' ? JSON.parse(sale.breakdown_history) : sale.breakdown_history;
+        return Array.isArray(h) ? h : [];
+    } catch { return []; }
+};
+const entryTime = (sale) => {
+    const d = new Date(sale.created_at || sale.timestamp || '');
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+};
+const groupSalesForTable = (sales) => {
+    const groups = new Map();
+    sales.forEach((s) => {
+        const key = [
+            (s.customer_code || '').toUpperCase(), s.item_code || '', (s.supplier_code || '').toUpperCase(),
+            parseFloat(s.price_per_kg) || 0, s.bill_printed || 'N', s.bill_no || '',
+        ].join('|');
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(s);
+    });
+    // Rows keep the table's order (position of the first record seen in each group)
+    return Array.from(groups.values()).map((members) => {
+        if (members.length === 1) return members[0];
+        const ordered = members.slice().sort((a, b) => (a.id || 0) - (b.id || 0));
+        const add = (k) => ordered.reduce((t, m) => t + (parseFloat(m[k]) || 0), 0);
+        const history = ordered.flatMap((m) => {
+            const h = parseHistory(m);
+            return h.length > 0 ? h : [{ time: entryTime(m), weight: parseFloat(m.weight) || 0, packs: parseInt(m.packs) || 0 }];
+        });
+        return {
+            ...ordered[0],
+            weight: add('weight'),
+            packs: add('packs'),
+            Kuliya: add('Kuliya'),
+            total: add('total'),
+            SupplierTotal: add('SupplierTotal'),
+            breakdown_history: history,
+            group_ids: ordered.map((m) => m.id),
+            group_members: ordered,
+        };
+    });
+};
+const rowIds = (row) => row.group_ids || [row.id];
+
 // --- Sub-Components  ---
 const BreakdownDisplay = ({ sale, formatDecimal }) => {
     if (!sale?.breakdown_history) return null;
@@ -1001,6 +1049,23 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         }));
     };
 
+    // Checkbox of a grouped table row ticks/unticks every record in that group
+    const toggleRowSelection = (row) => {
+        const ids = rowIds(row);
+        if (ids.length === 1) { toggleSaleSelection(ids[0]); return; }
+        const allSelected = ids.every(id => state.selectedSalesIds.includes(id));
+        setState(prev => {
+            const next = allSelected
+                ? prev.selectedSalesIds.filter(id => !ids.includes(id))
+                : [...new Set([...prev.selectedSalesIds, ...ids])];
+            return {
+                ...prev,
+                selectedSalesIds: next,
+                selectionCriteria: next.length === 0 ? null : (prev.selectionCriteria || { customer_code: row.customer_code, item_code: row.item_code })
+            };
+        });
+    };
+
     // Select-all checkbox: ticks/unticks every record currently shown in the table
     const toggleSelectAllSales = () => {
         const allDisplayedSelected = displayedSales.length > 0 && displayedSales.every(s => state.selectedSalesIds.includes(s.id));
@@ -1030,12 +1095,13 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         e.preventDefault();
         e.stopPropagation();
 
-        const isSelected = state.selectedSalesIds.includes(sale.id);
+        const ids = rowIds(sale);
+        const isSelected = ids.every(id => state.selectedSalesIds.includes(id));
 
         if (!isSelected) {
             setState(prev => ({
                 ...prev,
-                selectedSalesIds: [...prev.selectedSalesIds, sale.id],
+                selectedSalesIds: [...new Set([...prev.selectedSalesIds, ...ids])],
                 selectionCriteria: prev.selectionCriteria || {
                     customer_code: sale.customer_code,
                     item_code: sale.item_code
@@ -1206,6 +1272,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
         return sales.slice().reverse();
     }, [newSales, unprintedSales, printedSales, selectedUnprintedCustomer, selectedPrintedCustomer]);
+
+    const tableRows = useMemo(() => groupSalesForTable(displayedSales), [displayedSales]);
 
     const allDisplayedSelected = displayedSales.length > 0 && displayedSales.every(s => state.selectedSalesIds.includes(s.id));
     // Customers/items across every ticked record, for the bulk-update modal's "Current Selection" card
@@ -1726,6 +1794,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 priceManuallyChanged: false,
                 gridPricePerKg: "",
                 selectedSaleForBreakdown: null,
+                editingGroup: null,
                 isKuliyaManuallyChanged: false  // ← ADD THIS
             });
 
@@ -1765,6 +1834,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             priceManuallyChanged: false,
             gridPricePerKg: sale.price_per_kg || "",
             selectedSaleForBreakdown: sale,
+            editingGroup: sale.group_members && sale.group_members.length > 1 ? sale.group_members : null,
             isKuliyaManuallyChanged: false  // ← ADD THIS
         });
 
@@ -1812,16 +1882,21 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             gridPricePerKg: "",
             isGivenAmountManuallyTouched: false,
             selectedSaleForBreakdown: null,
+            editingGroup: null,
             ...(clearBillNo && { currentBillNo: null })
         });
     };
-    const handleDeleteRecord = async (saleId) => {
-        if (!saleId || !window.confirm("Are you sure you want to delete this sales record?")) return;
+    const handleDeleteRecord = async (saleId, groupIds = null) => {
+        const ids = groupIds && groupIds.length > 0 ? groupIds : [saleId];
+        const question = ids.length > 1
+            ? tr(`Delete all ${ids.length} entries in this row?`, `මෙම පේළියේ ඇතුළත් කිරීම් ${ids.length} ම මකන්නද?`)
+            : "Are you sure you want to delete this sales record?";
+        if (!saleId || !window.confirm(question)) return;
         try {
-            await api.delete(`${routes.sales}/${saleId}`);
+            for (const id of ids) await api.delete(`${routes.sales}/${id}`);
             await fetchAllSalesRecords();
-            updateState({ allSales: allSales.filter(s => s.id !== saleId) });
-            if (editingSaleId === saleId) handleClearForm();
+            updateState({ allSales: allSales.filter(s => !ids.includes(s.id)) });
+            if (ids.includes(editingSaleId)) handleClearForm();
         } catch (error) { updateState({ errors: { form: error.response?.data?.message || error.message } }); }
     };
 
@@ -1882,6 +1957,94 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             return null;
         }
     };
+    // Save an edit made on a grouped table row. The entries stay separate records:
+    //  - price / item / supplier / customer changes go to every entry
+    //  - a change in total weight, bags or kuliya goes onto the first entry, so the
+    //    row total matches what was typed (the admin SMS is sent for that entry only)
+    const handleGroupSubmit = async (members) => {
+        const ordered = members.slice().sort((a, b) => (a.id || 0) - (b.id || 0));
+        const [first, ...rest] = ordered;
+        const sumOf = (list, k) => list.reduce((t, m) => t + (parseFloat(m[k]) || 0), 0);
+        const round3 = (v) => Math.round(v * 1000) / 1000;
+
+        const customerCode = (formData.customer_code || autoCustomerCode).toUpperCase();
+        const newWeight = parseFloat(formData.weight) || 0;
+        const newPacks = parseFloat(formData.packs) || 0;
+        const price = parseFloat(formData.price_per_kg) || 0;
+        const packDue = parseFloat(formData.pack_due) || 0;
+
+        const firstWeight = round3(newWeight - sumOf(rest, 'weight'));
+        const firstPacks = newPacks - sumOf(rest, 'packs');
+        if (firstWeight < 0 || firstPacks < 0) {
+            updateState({ errors: { form: tr('Weight or bags cannot be less than the other entries in this row. Delete entries instead.', 'බර හෝ මලු මෙම පේළියේ අනෙක් ඇතුළත් කිරීම් වලට වඩා අඩු විය නොහැක. ඒ වෙනුවට ඇතුළත් කිරීම් මකන්න.') } });
+            return;
+        }
+
+        const totalsChanged = Math.abs(newWeight - sumOf(ordered, 'weight')) > 0.0005 || newPacks !== sumOf(ordered, 'packs');
+        let firstKuliya;
+        if (state.isKuliyaManuallyChanged && formData.kuliya !== '' && formData.kuliya !== null) {
+            firstKuliya = Math.round(((parseFloat(formData.kuliya) || 0) - sumOf(rest, 'Kuliya')) * 100) / 100;
+            if (firstKuliya < 0) {
+                updateState({ errors: { form: tr('Kuliya cannot be less than the other entries in this row.', 'කුලිය මෙම පේළියේ අනෙක් ඇතුළත් කිරීම් වලට වඩා අඩු විය නොහැක.') } });
+                return;
+            }
+        } else {
+            firstKuliya = totalsChanged ? null : (parseFloat(first.Kuliya) || 0); // null = server recalculates
+        }
+
+        const shared = {
+            supplier_code: (formData.supplier_code || '').toUpperCase(),
+            customer_code: customerCode,
+            customer_name: formData.customer_name,
+            item_code: formData.item_code,
+            item_name: formData.item_name,
+            price_per_kg: price,
+            pack_due: packDue,
+            given_amount: formData.given_amount ? parseFloat(formData.given_amount) : null,
+            update_related_price: false,
+        };
+        const sharedChanged = price !== (parseFloat(first.price_per_kg) || 0)
+            || shared.item_code !== first.item_code
+            || shared.supplier_code !== (first.supplier_code || '').toUpperCase()
+            || shared.customer_code !== (first.customer_code || '').toUpperCase();
+
+        const requests = [api.put(`${routes.sales}/${first.id}`, {
+            ...shared, weight: firstWeight, packs: firstPacks, kuliya: firstKuliya,
+            total: firstWeight * price + firstPacks * packDue,
+        })];
+        if (sharedChanged) {
+            rest.forEach(m => {
+                const w = parseFloat(m.weight) || 0, p = parseFloat(m.packs) || 0;
+                requests.push(api.put(`${routes.sales}/${m.id}`, {
+                    ...shared, weight: w, packs: p, kuliya: parseFloat(m.Kuliya) || 0,
+                    total: w * price + p * packDue, group_follow_up: true,
+                }));
+            });
+        }
+
+        setFormData({ ...initialFormData, customer_code: customerCode, customer_name: formData.customer_name, telephone_no: formData.telephone_no, supplier_code: formData.supplier_code });
+        updateState({ errors: {}, editingSaleId: null, editingGroup: null, isManualClear: false, priceManuallyChanged: false, gridPricePerKg: "", selectedSaleForBreakdown: null, isKuliyaManuallyChanged: false });
+        refs.supplier_code.current?.focus();
+        refs.supplier_code.current?.select();
+
+        const tracked = Promise.allSettled(requests);
+        pendingSaveRequestsRef.current.push(tracked);
+        try {
+            const results = await tracked;
+            const updated = results.filter(r => r.status === 'fulfilled')
+                .flatMap(r => r.value.data.sales || [r.value.data.sale || r.value.data.data].filter(Boolean));
+            const updatedIds = updated.map(s => s.id);
+            setState(prev => ({ ...prev, allSales: prev.allSales.filter(s => !updatedIds.includes(s.id)).concat(updated) }));
+            const failed = results.find(r => r.status === 'rejected');
+            if (failed) {
+                updateState({ errors: { form: failed.reason?.response?.data?.message || failed.reason?.message || tr('Some entries could not be updated', 'සමහර ඇතුළත් කිරීම් යාවත්කාලීන කළ නොහැකි විය') } });
+            }
+            fetchAllSalesRecords();
+        } finally {
+            pendingSaveRequestsRef.current = pendingSaveRequestsRef.current.filter(p => p !== tracked);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         // NOTE: no isSubmitting guard here — each Enter press is a distinct, legitimate
@@ -1915,6 +2078,12 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         // --- 2. PRE-FLIGHT PREPARATION ---
         // Capture these now so they are available for the reset after the async gap
         const isEditing = editingSaleId !== null;
+
+        // Editing a grouped row (several entries shown as one) updates each entry
+        if (isEditing && state.editingGroup && state.editingGroup.length > 1) {
+            await handleGroupSubmit(state.editingGroup);
+            return;
+        }
 
         // Printed bills are closed: existing records can still be edited, but no new ones added
         if (!isEditing && selectedPrintedCustomer) {
@@ -2837,12 +3006,12 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {displayedSales.map((s, idx) => {
-                                                    const isSelected = state.selectedSalesIds.includes(s.id);
+                                                {tableRows.map((s, idx) => {
+                                                    const isSelected = rowIds(s).every(id => state.selectedSalesIds.includes(id));
                                                     return (
                                                         <tr key={idx} tabIndex={0} className={`text-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${isSelected ? 'bg-blue-900' : ''}`} onClick={() => handleEditClick(s)} onContextMenu={(e) => handleRightClick(e, s)} style={{ backgroundColor: isSelected ? '#1e40af' : 'transparent' }}>
                                                             <td className="px-2 py-2 border text-center" onClick={(e) => e.stopPropagation()}>
-                                                                <input type="checkbox" checked={isSelected} onChange={() => toggleSaleSelection(s.id)} onClick={(e) => e.stopPropagation()} style={{ cursor: 'pointer' }} />
+                                                                <input type="checkbox" checked={isSelected} onChange={() => toggleRowSelection(s)} onClick={(e) => e.stopPropagation()} style={{ cursor: 'pointer' }} />
                                                             </td>
                                                             <td className="px-4 py-2 border">{s.supplier_code}</td>
                                                             <td className="px-4 py-2 border">{s.item_code}</td>
@@ -2854,7 +3023,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                             </td>
                                                             <td className="px-2 py-2 border">{s.packs}</td>
                                                             <td className="px-2 py-2 border text-center">
-                                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteRecord(s.id); }} className="text-black font-bold p-1 rounded-full bg-white hover:bg-gray-200">🗑️</button>
+                                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteRecord(s.id, s.group_ids); }} className="text-black font-bold p-1 rounded-full bg-white hover:bg-gray-200">🗑️</button>
                                                             </td>
                                                         </tr>
                                                     );
