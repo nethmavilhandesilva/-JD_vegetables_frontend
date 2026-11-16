@@ -154,14 +154,36 @@ export default function NewSupplierBillDashboard() {
     useEffect(() => { loadSidebars(); }, [loadSidebars]);
 
     // ---------- totals (server recomputes the same values on save) ----------
+    // ---------- commission (same rules as Sales Entry; the server recalculates on save) ----------
+    const [commissionRates, setCommissionRates] = useState({}); // "ITEM|SUPPLIER|price" -> per kg
+    const commissionFetching = useRef(new Set());
+    const supplierCode = form.supplier?.value || '';
+    const rateKey = (itemCode, price) => `${String(itemCode || '').toUpperCase()}|${supplierCode.toUpperCase()}|${num(price)}`;
+    const commissionPerKg = (l) => commissionRates[rateKey(l.item?.value, l.price_per_kg)] ?? 0;
+    const lineCommission = (l) => round2(num(l.weight) * commissionPerKg(l));
+
+    useEffect(() => {
+        const wanted = [...lines, line].filter((l) => l.item?.value && l.price_per_kg !== '' && num(l.price_per_kg) > 0);
+        wanted.forEach((l) => {
+            const key = rateKey(l.item.value, l.price_per_kg);
+            if (key in commissionRates || commissionFetching.current.has(key)) return;
+            commissionFetching.current.add(key);
+            api.get('/new-supplier-bills/commission', { params: { item_code: l.item.value, supplier_code: supplierCode, price_per_kg: num(l.price_per_kg) } })
+                .then((res) => setCommissionRates((prev) => ({ ...prev, [key]: num(res.data?.commission_per_kg) })))
+                .catch(() => { /* shown as 0 until saved; the server always calculates it */ })
+                .finally(() => commissionFetching.current.delete(key));
+        });
+    }, [lines, line.item, line.price_per_kg, supplierCode]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const totals = useMemo(() => {
         const gross = round2(lines.reduce((s, l) => s + round2(num(l.weight) * num(l.price_per_kg)), 0));
+        const commission = round2(lines.reduce((s, l) => s + lineCommission(l), 0));
         const weight = lines.reduce((s, l) => s + num(l.weight), 0);
         const packs = lines.reduce((s, l) => s + num(l.packs), 0);
-        const net = round2(gross - num(form.deductions));
+        const net = round2(gross - commission - num(form.deductions));
         const balance = round2(net - num(form.paid_amount));
-        return { gross, weight, packs, net, balance };
-    }, [lines, form.deductions, form.paid_amount]);
+        return { gross, commission, weight, packs, net, balance };
+    }, [lines, form.deductions, form.paid_amount, commissionRates, supplierCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const lineAmount = round2(num(line.weight) * num(line.price_per_kg));
 
@@ -243,6 +265,13 @@ export default function NewSupplierBillDashboard() {
     const onWeightEnter = (e) => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
+        if (packMode && !line.item) {
+            // A pack is counted for an item: ask for it right away instead of after the price
+            setFormError(tr('Pick the item first, then type the pack weight.', 'පළමුව භාණ්ඩය තෝරා, පසුව මල්ලේ බර ටයිප් කරන්න.'));
+            itemRef.current?.focus();
+            return;
+        }
+        setFormError('');
         priceRef.current?.focus();
         priceRef.current?.select();
     };
@@ -311,7 +340,8 @@ export default function NewSupplierBillDashboard() {
         if (pendingPartial) { setFormError(tr('Finish or clear the item line first.', 'පළමුව භාණ්ඩ පේළිය සම්පූර්ණ කරන්න හෝ හිස් කරන්න.')); return; }
         if (allLines.length === 0) { setFormError(tr('Add at least one item.', 'අවම වශයෙන් එක් භාණ්ඩයක් එක් කරන්න.')); return; }
         const gross = round2(allLines.reduce((sum, l) => sum + round2(num(l.weight) * num(l.price_per_kg)), 0));
-        if (gross - num(form.deductions) < 0) { setFormError(tr('Deductions cannot be more than the bill amount.', 'අඩු කිරීම් බිල්පත් මුදලට වඩා වැඩි විය නොහැක.')); return; }
+        const commissionTotal = round2(allLines.reduce((sum, l) => sum + lineCommission(l), 0));
+        if (gross - commissionTotal - num(form.deductions) < 0) { setFormError(tr('Deductions cannot be more than the bill amount.', 'අඩු කිරීම් බිල්පත් මුදලට වඩා වැඩි විය නොහැක.')); return; }
 
 
         const payload = {
@@ -484,6 +514,7 @@ export default function NewSupplierBillDashboard() {
             <table class="tot">
                 <tr><td>${escapeHtml(tr('Total weight', 'මුළු බර'))}</td><td class="r">${kg(bill.total_weight)} kg</td></tr>
                 <tr><td>${escapeHtml(tr('Gross amount', 'දළ මුදල'))}</td><td class="r">${money(bill.gross_amount)}</td></tr>
+                ${num(bill.commission_amount) ? `<tr><td>${escapeHtml(tr('Commission', 'කොමිස්'))}</td><td class="r">-${money(bill.commission_amount)}</td></tr>` : ''}
                 ${num(bill.deductions) ? `<tr><td>${escapeHtml(tr('Deductions', 'අඩු කිරීම්'))}${bill.deduction_note ? ` (${escapeHtml(bill.deduction_note)})` : ''}</td><td class="r">-${money(bill.deductions)}</td></tr>` : ''}
                 <tr class="b"><td>${escapeHtml(tr('Net amount', 'ශුද්ධ මුදල'))}</td><td class="r">${money(bill.net_amount)}</td></tr>
                 <tr><td>${escapeHtml(tr('Paid', 'ගෙවූ'))}</td><td class="r">${money(bill.paid_amount)}</td></tr>
@@ -503,15 +534,17 @@ export default function NewSupplierBillDashboard() {
         const items = shown.map((l) => ({
             item_code: l.item?.value, item_name: l.item?.name, packs: num(l.packs), weight: num(l.weight),
             price_per_kg: num(l.price_per_kg), amount: round2(num(l.weight) * num(l.price_per_kg)), pack_weights: l.pack_weights || null,
+            commission_amount: lineCommission(l),
         }));
         const gross = round2(items.reduce((a, it) => a + it.amount, 0));
-        const net = round2(gross - num(form.deductions));
+        const commission = round2(items.reduce((a, it) => a + it.commission_amount, 0));
+        const net = round2(gross - commission - num(form.deductions));
         setPreviewHtml(buildBillHtml({
             bill_no: editingBill?.bill_no || tr('(new)', '(නව)'),
             bill_date: form.bill_date,
             supplier_code: form.supplier?.value || '', supplier_name: form.supplier?.name || '',
             reference_no: form.reference_no, notes: form.notes, deduction_note: form.deduction_note,
-            items, total_weight: items.reduce((a, it) => a + it.weight, 0), gross_amount: gross,
+            items, total_weight: items.reduce((a, it) => a + it.weight, 0), gross_amount: gross, commission_amount: commission,
             deductions: num(form.deductions), net_amount: net, paid_amount: num(form.paid_amount), balance_amount: round2(net - num(form.paid_amount)),
         }));
     };
@@ -731,6 +764,11 @@ export default function NewSupplierBillDashboard() {
                     {/* pack weights of the item being entered */}
                     {packMode && (
                         <div style={{ marginTop: 8, padding: '8px 10px', border: '1px solid #facc15', borderRadius: '0.5rem', background: '#1c1917' }}>
+                            {formError && (
+                                <div style={{ background: '#fee2e2', color: '#b91c1c', borderRadius: '0.4rem', padding: '4px 8px', marginBottom: 6, fontWeight: 700 }}>
+                                    ⚠ {formError}
+                                </div>
+                            )}
                             {activePackLine ? (
                                 <>
                                     <div style={{ fontSize: 13, color: '#facc15', marginBottom: 6, fontWeight: 'bold' }}>
@@ -749,7 +787,8 @@ export default function NewSupplierBillDashboard() {
                                 </>
                             ) : (
                                 <div style={{ fontSize: 13, color: '#cbd5e1' }}>
-                                    {tr('Pack by pack: pick the item, type the price, then type each pack\'s weight and press Enter.', 'මල්ලෙන් මල්ල: භාණ්ඩය තෝරා මිල ටයිප් කර, එක් එක් මල්ලේ බර ටයිප් කර Enter ඔබන්න.')}
+                                    {tr('Pack by pack: 1) pick the Item  2) type the pack weight, Enter  3) type the price, Enter = Packs 1. Then the next weight, Enter, Enter = Packs 2 …',
+                                        'මල්ලෙන් මල්ල: 1) භාණ්ඩය තෝරන්න 2) මල්ලේ බර ටයිප් කර Enter 3) මිල ටයිප් කර Enter = මලු 1. ඊළඟ බර, Enter, Enter = මලු 2 …')}
                                 </div>
                             )}
                         </div>
@@ -779,7 +818,7 @@ export default function NewSupplierBillDashboard() {
                             <table style={{ width: '100%', backgroundColor: '#000', color: 'white', borderCollapse: 'collapse', fontSize: 14, textAlign: 'center' }}>
                                 <thead>
                                     <tr>
-                                        {['#', tr('Code', 'කේතය'), tr('Item', 'අයිතමය'), tr('Bags', 'මලු'), tr('Weight(kg)', 'බර(kg)'), tr('Price', 'මිල'), tr('Value', 'අගය'), tr('Actions', 'Actions')].map((h) => (
+                                        {['#', tr('Code', 'කේතය'), tr('Item', 'අයිතමය'), tr('Bags', 'මලු'), tr('Weight(kg)', 'බර(kg)'), tr('Price', 'මිල'), tr('Value', 'අගය'), tr('Comm.', 'කොමිස්'), tr('Actions', 'Actions')].map((h) => (
                                             <th key={h} style={headCell}>{h}</th>
                                         ))}
                                     </tr>
@@ -799,6 +838,7 @@ export default function NewSupplierBillDashboard() {
                                             <td style={cell}>{kg(l.weight)}</td>
                                             <td style={cell}>{money(l.price_per_kg)}</td>
                                             <td style={cell}>{money(num(l.weight) * num(l.price_per_kg))}</td>
+                                            <td style={{ ...cell, color: '#f87171' }} title={`${money(commissionPerKg(l))} / kg`}>{lineCommission(l) ? `-${money(lineCommission(l))}` : '0.00'}</td>
                                             <td style={cell}>
                                                 <button type="button" onClick={(e) => { e.stopPropagation(); removeLine(i); }}
                                                     style={{ background: 'white', border: 'none', borderRadius: '50%', padding: '2px 6px', fontWeight: 'bold' }}>🗑️</button>
@@ -819,6 +859,7 @@ export default function NewSupplierBillDashboard() {
                         {[
                             [tr('Weight:', 'බර:'), `${kg(totals.weight)} kg`, 'white'],
                             [tr('Total:', 'එකතුව:'), money(totals.gross), 'white'],
+                            [tr('Commission:', 'කොමිස්:'), `-${money(totals.commission)}`, '#f87171'],
                             [tr('Deductions:', 'අඩු කිරීම්:'), `-${money(form.deductions)}`, '#f87171'],
                             [tr('Net:', 'ශුද්ධ:'), money(totals.net), '#facc15'],
                             [tr('Balance:', 'ශේෂය:'), money(totals.balance), totals.balance > 0 ? '#f87171' : '#4ade80'],
