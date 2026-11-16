@@ -771,6 +771,7 @@ const ContextMenu = React.memo(({ show, onClose, onUpdate, selectionCriteria, se
     );
 });
 
+const KULIYA_PER_BAG = 40;
 const initialFormData = { customer_code: "", customer_name: "", supplier_code: "", code: "", item_code: "", item_name: "", weight: "", price_per_kg: "", pack_due: "", total: "", packs: "", given_amount: "", pack_cost: "", telephone_no: "", kuliya: "", };
 const fieldOrder = ["telephone_no", "customer_code_input", "customer_code_select", "supplier_code", "item_code_select", "weight", "price_per_kg_grid_item", "packs", "kuliya"];
 const skipMap = { telephone_no: "customer_code_input", customer_code_input: "supplier_code", customer_code_select: "supplier_code", given_amount: "supplier_code", supplier_code: "item_code_select", item_code_select: "weight", price_per_kg: "packs", price_per_kg_grid_item: "packs", packs: "kuliya", kuliya: null };
@@ -838,6 +839,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     // Tracks in-flight /sales save requests so printing (F1) can wait for them to land
     // before snapshotting what to print — otherwise a record entered a split second
     // before F1 could still be mid-request and get left out of the bill.
+    const kuliyaBaseRef = useRef(null); // { packs, item_code } of the record being edited
     const pendingSaveRequestsRef = useRef([]);
 
     const [state, setState] = useState({
@@ -940,12 +942,19 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     useEffect(() => {
         const fetchKuliya = async () => {
             // Don't calculate if required fields are missing
-            if (!formData.item_code || !formData.weight || !formData.packs) {
+            if (!formData.item_code || formData.packs === "" || formData.packs === null || formData.packs === undefined) {
                 return;
             }
 
             // Don't override if user manually changed the value
             if (state.isKuliyaManuallyChanged) {
+                return;
+            }
+
+            // A record opened for editing keeps its saved Kuliya (which may have been typed
+            // in by hand) until its bags or item are changed
+            const base = kuliyaBaseRef.current;
+            if (editingSaleId && base && String(formData.packs) === base.packs && formData.item_code === base.item_code) {
                 return;
             }
 
@@ -985,27 +994,12 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         };
 
         fetchKuliya();
-    }, [formData.item_code, formData.item_name, formData.weight, formData.packs, items, state.isKuliyaManuallyChanged]);
-    const calculateKuliyaLocally = (itemCode, itemName, weight, packs, items) => {
-        // Find item to get bag_real_weight
-        const selectedItem = items.find(i => i.no === itemCode);
-        const bagWeightPerUnit = selectedItem?.bag_real_price || 0;
-        const totalBagWeight = bagWeightPerUnit * packs;
-        const incomingNetWeight = weight - totalBagWeight;
-
-        if (itemCode && itemCode.startsWith('/')) {
-            return 50;
-        } else if (itemName && (itemName.includes('කෙසෙල්') || /banana/i.test(itemName))) {
-            // Bananas: Sinhala ("කෙසෙල්") or English ("Banana") item names
-            return 1.50;
-        } else {
-            if (incomingNetWeight >= 1 && incomingNetWeight <= 9) return 0;
-            if (incomingNetWeight >= 10 && incomingNetWeight <= 19) return 20;
-            if (incomingNetWeight >= 20 && incomingNetWeight <= 49) return 40;
-            if (incomingNetWeight >= 50 && incomingNetWeight <= 99) return 50;
-            if (incomingNetWeight >= 100) return incomingNetWeight;
-            return 0;
-        }
+    }, [formData.item_code, formData.item_name, formData.weight, formData.packs, items, state.isKuliyaManuallyChanged, editingSaleId]);
+    // Kuliya = bags x 40 for every item (same rule as the backend). The Kuliya box can
+    // still be typed over; a typed value is saved as-is.
+    const calculateKuliyaLocally = (itemCode, itemName, weight, packs) => {
+        const bags = Math.max(0, parseInt(packs) || 0);
+        return bags * KULIYA_PER_BAG;
     };
     const handleKuliyaChange = (value) => {
         // Allow only numbers and decimal point
@@ -1828,6 +1822,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             packs: sale.packs || "",
             kuliya: sale.Kuliya || ""  // ← ADD THIS
         }));
+        kuliyaBaseRef.current = { packs: String(sale.packs ?? ""), item_code: sale.item_code };
         updateState({
             editingSaleId: sale.id,
             isManualClear: false,
