@@ -11,6 +11,7 @@ import GrnSalesOverviewReport2 from '../GrnSalesOverview/GrnSalesOverviewReport2
 import SalesReportModal from '../SalesReport/SalesReportModal';
 import DayProcessModal from '../Modals/DayProcessModal';
 import TodaysKuliyaModal from '../Kuliya/TodaysKuliyaModal';
+import AccountsModal from '../Accounts/AccountsModal';
 import { SHOP_NAME } from '../../config/shop';
 import { APP_BASE } from '../../config/paths';
 import { tr, LanguageToggle } from '../../i18n/language';
@@ -44,6 +45,7 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
     const [isGrnReportModalOpen, setIsGrnReportModalOpen] = useState(false);
     const [isDayProcessModalOpen, setIsDayProcessModalOpen] = useState(false);
     const [isTodaysKuliyaModalOpen, setIsTodaysKuliyaModalOpen] = useState(false);
+    const [isAccountsModalOpen, setIsAccountsModalOpen] = useState(false);
 
     // === Mobile nav collapse ===
     const [isNavOpen, setIsNavOpen] = useState(false);
@@ -329,6 +331,13 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
                         >
                             {tr('Supplier Report', 'සැපයුම් වාර්තාව')}
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsAccountsModalOpen(true)}
+                            style={navTextBtn}
+                        >
+                            {tr('Accounts', 'ගිණුම්')}
+                        </button>
                     </div>
                 </nav>
             )}
@@ -344,6 +353,7 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
             <GrnReportModal isOpen={isGrnReportModalOpen} onClose={closeGrnReportModal} />
             <DayProcessModal isOpen={isDayProcessModalOpen} onClose={closeDayProcessModal} />
             <TodaysKuliyaModal isOpen={isTodaysKuliyaModalOpen} onClose={closeTodaysKuliyaModal} />
+            <AccountsModal isOpen={isAccountsModalOpen} onClose={() => setIsAccountsModalOpen(false)} />
         </div>
     );
 };
