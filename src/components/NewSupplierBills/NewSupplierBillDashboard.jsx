@@ -521,6 +521,41 @@ export default function NewSupplierBillDashboard() {
                 <td class="r">${money(it.price_per_kg)}</td>
                 <td class="r">${money(it.amount)}</td>
             </tr>`).join('');
+
+        // Second page: every pack with its weight, price and value
+        const packItems = (bill.items || []).filter((it) => Array.isArray(it.pack_weights) && it.pack_weights.length)
+            .map((it) => ({ ...it, pack_weights: it.pack_weights.map(Number) }));
+        const packRows = packItems.map((it) => {
+            const prices = pricesOf(it);
+            const rowsHtml = it.pack_weights.map((w, j) => `
+                <tr>
+                    <td>${j === 0 ? `${escapeHtml(it.item_code)} ${escapeHtml(it.item_name || '')}` : ''}</td>
+                    <td class="r">${j + 1}</td>
+                    <td class="r">${kg(w)}</td>
+                    <td class="r">${money(prices[j])}</td>
+                    <td class="r">${money(w * prices[j])}</td>
+                </tr>`).join('');
+            return `${rowsHtml}
+                <tr class="b">
+                    <td>${escapeHtml(tr('Total', 'එකතුව'))}</td>
+                    <td class="r">${it.pack_weights.length}</td>
+                    <td class="r">${kg(it.pack_weights.reduce((a, b) => a + b, 0))}</td>
+                    <td></td>
+                    <td class="r">${money(lineValue(it))}</td>
+                </tr>`;
+        }).join('');
+        const packsPage = packItems.length ? `
+            <div class="page2">
+                <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
+                <div class="sub">${escapeHtml(tr('Pack details', 'මලු විස්තර'))} — ${escapeHtml(tr('Bill No', 'බිල් අංකය'))}: ${escapeHtml(bill.bill_no)}
+                · ${escapeHtml(bill.supplier_code)} ${escapeHtml(bill.supplier_name || '')} · ${escapeHtml(bill.bill_date)}</div>
+                <table><thead><tr>
+                    <th>${escapeHtml(tr('Item', 'භාණ්ඩය'))}</th><th class="r">${escapeHtml(tr('Pack', 'මල්ල'))}</th>
+                    <th class="r">${escapeHtml(tr('Weight (kg)', 'බර (kg)'))}</th><th class="r">${escapeHtml(tr('Price/kg', 'මිල/kg'))}</th>
+                    <th class="r">${escapeHtml(tr('Value', 'අගය'))}</th>
+                </tr></thead><tbody>${packRows}</tbody></table>
+            </div>` : '';
+
         const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(bill.bill_no)}</title>
             <style>
                 body{font-family:Arial,sans-serif;font-size:13px;margin:20px;color:#000}
@@ -530,6 +565,8 @@ export default function NewSupplierBillDashboard() {
                 th{background:#eee} .r{text-align:right} .tot td{border:none;padding:2px 6px}
                 .tot{width:auto;margin-left:auto;margin-top:10px} .b{font-weight:bold}
                 .packs{font-size:11px;font-weight:normal;margin-top:2px}
+                .page2{page-break-before:always;break-before:page;padding-top:10px}
+                @media screen{.page2{margin-top:30px;border-top:2px dashed #999}}
             </style></head><body>
             <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
             <div class="sub">${escapeHtml(tr('Supplier Bill', 'සැපයුම්කරු බිල්පත'))}</div>
@@ -554,6 +591,7 @@ export default function NewSupplierBillDashboard() {
                 <tr class="b"><td>${escapeHtml(tr('Balance', 'ශේෂය'))}</td><td class="r">${money(bill.balance_amount)}</td></tr>
             </table>
             ${bill.notes ? `<p><b>${escapeHtml(tr('Notes', 'සටහන්'))}:</b> ${escapeHtml(bill.notes)}</p>` : ''}
+            ${packsPage}
             </body></html>`;
         return html;
     }
@@ -883,7 +921,46 @@ export default function NewSupplierBillDashboard() {
                                     ))}
                                 </tbody>
                             </table>
-                        ) : (
+                        ) : null}
+
+                        {/* pack details: the weight, price and value of every pack entered */}
+                        {lines.some(isPackLine) && (
+                            <div style={{ marginTop: 10 }}>
+                                <div style={{ color: '#facc15', fontWeight: 'bold', marginBottom: 4 }}>{tr('Pack details', 'මලු විස්තර')}</div>
+                                <table style={{ width: '100%', backgroundColor: '#000', color: 'white', borderCollapse: 'collapse', fontSize: 14, textAlign: 'center' }}>
+                                    <thead>
+                                        <tr>
+                                            {[tr('Item', 'අයිතමය'), tr('Pack', 'මල්ල'), tr('Weight(kg)', 'බර(kg)'), tr('Price', 'මිල'), tr('Value', 'අගය')].map((h) => (
+                                                <th key={h} style={headCell}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {lines.map((l, i) => (isPackLine(l) ? (
+                                            <React.Fragment key={i}>
+                                                {l.pack_weights.map((w, j) => (
+                                                    <tr key={j}>
+                                                        <td style={cell}>{j === 0 ? `${l.item?.value || ''} ${l.item?.name || ''}` : ''}</td>
+                                                        <td style={cell}>#{j + 1}</td>
+                                                        <td style={cell}>{kg(w)}</td>
+                                                        <td style={cell}>{money(pricesOf(l)[j])}</td>
+                                                        <td style={cell}>{money(num(w) * pricesOf(l)[j])}</td>
+                                                    </tr>
+                                                ))}
+                                                <tr style={{ color: '#facc15', fontWeight: 'bold' }}>
+                                                    <td style={cell}>{tr('Total', 'එකතුව')}</td>
+                                                    <td style={cell}>{l.pack_weights.length}</td>
+                                                    <td style={cell}>{kg(l.weight)}</td>
+                                                    <td style={cell}></td>
+                                                    <td style={cell}>{money(lineValue(l))}</td>
+                                                </tr>
+                                            </React.Fragment>
+                                        ) : null))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                        {lines.length === 0 && (
                             <div style={{ textAlign: 'center', color: '#94a3b8', padding: '30px 0', border: '1px dashed #4b5563', borderRadius: '0.75rem' }}>
                                 {tr('No items added yet. Pick a supplier, then add items.', 'තවම භාණ්ඩ එක් කර නැත. සැපයුම්කරු තෝරා භාණ්ඩ එක් කරන්න.')}
                             </div>
