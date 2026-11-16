@@ -3,6 +3,7 @@ import Select from 'react-select';
 import api from '../../api';
 import { tr } from '../../i18n/language';
 import { SHOP_NAME } from '../../config/shop';
+import { printHtml } from '../../utils/printHtml';
 
 // New Supplier Bills dashboard.
 // Bills entered here are stored in the new tables new_supplier_bills /
@@ -221,13 +222,6 @@ export default function NewSupplierBillDashboard() {
         const gross = round2(allLines.reduce((sum, l) => sum + round2(num(l.weight) * num(l.price_per_kg)), 0));
         if (gross - num(form.deductions) < 0) { setFormError(tr('Deductions cannot be more than the bill amount.', 'අඩු කිරීම් බිල්පත් මුදලට වඩා වැඩි විය නොහැක.')); return; }
 
-        // Open the print window now, while the key press still counts as a user action,
-        // otherwise the browser blocks it as a pop-up once the save request returns.
-        let printWin = null;
-        if (printAfter) {
-            printWin = window.open('', '_blank', 'width=800,height=900');
-            if (printWin) printWin.document.write(`<p style="font-family:Arial">${escapeHtml(tr('Preparing bill...', 'බිල්පත සූදානම් කරමින්...'))}</p>`);
-        }
 
         const payload = {
             bill_date: form.bill_date,
@@ -260,12 +254,11 @@ export default function NewSupplierBillDashboard() {
                 : saved.is_printed
                 ? tr(`Bill ${saved.bill_no} updated.`, `බිල්පත ${saved.bill_no} යාවත්කාලීන කළා.`)
                 : tr(`Bill ${saved.bill_no} held. Open it from Held bills and press F4 to print.`, `බිල්පත ${saved.bill_no} රඳවා ඇත. රඳවා ඇති බිල්පත් වලින් විවෘත කර F4 ඔබා මුද්‍රණය කරන්න.`));
-            if (printAfter) printBill(saved, printWin);
+            if (printAfter) printBill(saved);
             resetForm();
             refreshLists();
             setTimeout(() => supplierRef.current?.focus(), 0);
         } catch (err) {
-            if (printWin) printWin.close();
             const errors = err.response?.data?.errors;
             setFormError(errors
                 ? Object.values(errors).flat().join(' ')
@@ -337,21 +330,20 @@ export default function NewSupplierBillDashboard() {
     };
 
     const printSaved = async (bill) => {
-        const win = window.open('', '_blank', 'width=800,height=900');
         try {
             // Printing a held bill from the list also marks it as printed.
             const full = bill.is_printed
                 ? await fetchBill(bill.id)
                 : (await api.post(`/new-supplier-bills/${bill.id}/mark-printed`)).data;
-            printBill(full, win);
+            printBill(full);
             if (!bill.is_printed) refreshLists();
         } catch {
-            if (win) win.close();
             setListError(tr('Could not open the bill.', 'බිල්පත විවෘත කළ නොහැක.'));
         }
     };
 
-    function printBill(bill, existingWin = null) {
+    // Prints straight away through a hidden frame (same as Sales Entry), no preview window.
+    function printBill(bill) {
         const rows = (bill.items || []).map((it, i) => `
             <tr>
                 <td>${i + 1}</td>
@@ -392,13 +384,8 @@ export default function NewSupplierBillDashboard() {
                 <tr class="b"><td>${escapeHtml(tr('Balance', 'ශේෂය'))}</td><td class="r">${money(bill.balance_amount)}</td></tr>
             </table>
             ${bill.notes ? `<p><b>${escapeHtml(tr('Notes', 'සටහන්'))}:</b> ${escapeHtml(bill.notes)}</p>` : ''}
-            <script>window.onload=function(){window.print();}</script>
             </body></html>`;
-        const w = existingWin || window.open('', '_blank', 'width=800,height=900');
-        if (!w) { setListError(tr('Allow pop-ups to print the bill.', 'බිල්පත මුද්‍රණය කිරීමට pop-ups ඉඩ දෙන්න.')); return; }
-        w.document.open();
-        w.document.write(html);
-        w.document.close();
+        printHtml(html);
     }
 
     const openReport = () => { setShowReport(true); loadBills(filters); };
