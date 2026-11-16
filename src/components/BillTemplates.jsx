@@ -370,7 +370,7 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
             return `
             <tr style="page-break-inside: avoid;">
                 <td style="text-align: center; padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.id}</td>
-                <td style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.name}<br><span style="font-size: ${parseFloat(styles.tableDataFontSize) * 0.9}mm;">${item.code}</span></td>
+                <td style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.name}</td>
                 <td class="text-right" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${formatNumber(item.weight)}</td>
                 <td class="text-right" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${formatNumber(item.price)}</td>
                 <td class="text-center" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.packs}</td>

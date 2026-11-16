@@ -2832,7 +2832,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                         options={currentFilteredOptions}
                                                         placeholder={tr('Item', 'භාණ්ඩය')}
                                                         defaultMenuIsOpen={false}
-                                                        value={formData.item_code ? { value: formData.item_code, label: `${formData.item_code} - ${formData.item_name}` } : null}
+                                                        value={formData.item_code ? { value: formData.item_code, label: formData.item_name || formData.item_code } : null}
                                                         onInputChange={(value, meta) => { if (meta.action === "input-change") { updateState({ itemSearchInput: value.toUpperCase() }); } }}
                                                         onChange={(selectedOption) => {
                                                             if (!selectedOption) return;
