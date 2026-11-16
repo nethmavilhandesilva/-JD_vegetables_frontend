@@ -7,6 +7,8 @@ import { SHOP_NAME } from '../../config/shop';
 // New Supplier Bills dashboard.
 // Bills entered here are stored in the new tables new_supplier_bills /
 // new_supplier_bill_items. Nothing in the existing sales/supplier flow is touched.
+// Shortcuts (same idea as Sales Entry): F5 = hold the bill (save, not printed),
+// F4 = save and print. Held bills wait in the "Held bills" panel until printed.
 
 const today = () => {
     const d = new Date();
@@ -64,17 +66,21 @@ export default function NewSupplierBillDashboard() {
     const [message, setMessage] = useState('');
 
     // ---------- list ----------
-    const [filters, setFilters] = useState({ start_date: today(), end_date: today(), supplier: null, status: '', search: '' });
+    const [filters, setFilters] = useState({ start_date: today(), end_date: today(), supplier: null, status: '', print_status: '', search: '' });
     const [bills, setBills] = useState([]);
     const [summary, setSummary] = useState(null);
     const [truncated, setTruncated] = useState(false);
     const [loadingList, setLoadingList] = useState(false);
     const [listError, setListError] = useState('');
+    const [heldBills, setHeldBills] = useState([]);
 
     const itemRef = useRef(null);
     const packsRef = useRef(null);
     const weightRef = useRef(null);
     const priceRef = useRef(null);
+    const supplierRef = useRef(null);
+    const savingRef = useRef(false);
+    const saveRef = useRef(null);
 
     const supplierOptions = useMemo(
         () => suppliers.map((s) => ({ value: s.code, label: `${s.code} - ${s.name ?? ''}`, name: s.name })),
@@ -103,6 +109,7 @@ export default function NewSupplierBillDashboard() {
             if (f.end_date) params.end_date = f.end_date;
             if (f.supplier) params.supplier_code = f.supplier.value;
             if (f.status) params.status = f.status;
+            if (f.print_status) params.print_status = f.print_status;
             if (f.search.trim()) params.search = f.search.trim();
             const res = await api.get('/new-supplier-bills', { params });
             setBills(res.data?.bills || []);
@@ -116,7 +123,17 @@ export default function NewSupplierBillDashboard() {
         }
     }, []);
 
-    useEffect(() => { loadBills(filters); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // Held bills of every date, so nothing waiting to be printed is missed.
+    const loadHeld = useCallback(async () => {
+        try {
+            const res = await api.get('/new-supplier-bills', { params: { print_status: 'held' } });
+            setHeldBills(res.data?.bills || []);
+        } catch { /* the main list shows load errors */ }
+    }, []);
+
+    const refreshLists = () => { loadBills(filters); loadHeld(); };
+
+    useEffect(() => { loadBills(filters); loadHeld(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ---------- totals (server recomputes the same values on save) ----------
     const totals = useMemo(() => {
@@ -172,13 +189,34 @@ export default function NewSupplierBillDashboard() {
     };
 
     // ---------- save ----------
+    // printAfter=false -> F5 Hold, printAfter=true -> F4 Print
     const saveBill = async (printAfter = false) => {
+        if (savingRef.current) return;
         setFormError('');
         setMessage('');
+
+        // A fully typed line that was not added yet is included, so F4/F5 never drops it.
+        const pendingComplete = line.item && num(line.weight) > 0 && line.price_per_kg !== '';
+        const pendingPartial = !pendingComplete && (line.item || line.weight !== '' || line.price_per_kg !== '');
+        let allLines = lines;
+        if (pendingComplete) {
+            allLines = editIndex === null ? [...lines, line] : lines.map((l, i) => (i === editIndex ? line : l));
+        }
+
         if (!form.supplier) { setFormError(tr('Select a supplier.', 'සැපයුම්කරුවෙකු තෝරන්න.')); return; }
         if (!form.bill_date) { setFormError(tr('Select the bill date.', 'බිල්පත් දිනය තෝරන්න.')); return; }
-        if (lines.length === 0) { setFormError(tr('Add at least one item.', 'අවම වශයෙන් එක් භාණ්ඩයක් එක් කරන්න.')); return; }
-        if (totals.net < 0) { setFormError(tr('Deductions cannot be more than the bill amount.', 'අඩු කිරීම් බිල්පත් මුදලට වඩා වැඩි විය නොහැක.')); return; }
+        if (pendingPartial) { setFormError(tr('Finish or clear the item line first.', 'පළමුව භාණ්ඩ පේළිය සම්පූර්ණ කරන්න හෝ හිස් කරන්න.')); return; }
+        if (allLines.length === 0) { setFormError(tr('Add at least one item.', 'අවම වශයෙන් එක් භාණ්ඩයක් එක් කරන්න.')); return; }
+        const gross = round2(allLines.reduce((sum, l) => sum + round2(num(l.weight) * num(l.price_per_kg)), 0));
+        if (gross - num(form.deductions) < 0) { setFormError(tr('Deductions cannot be more than the bill amount.', 'අඩු කිරීම් බිල්පත් මුදලට වඩා වැඩි විය නොහැක.')); return; }
+
+        // Open the print window now, while the key press still counts as a user action,
+        // otherwise the browser blocks it as a pop-up once the save request returns.
+        let printWin = null;
+        if (printAfter) {
+            printWin = window.open('', '_blank', 'width=800,height=900');
+            if (printWin) printWin.document.write(`<p style="font-family:Arial">${escapeHtml(tr('Preparing bill...', 'බිල්පත සූදානම් කරමින්...'))}</p>`);
+        }
 
         const payload = {
             bill_date: form.bill_date,
@@ -189,7 +227,8 @@ export default function NewSupplierBillDashboard() {
             deduction_note: form.deduction_note.trim() || null,
             paid_amount: num(form.paid_amount),
             notes: form.notes.trim() || null,
-            items: lines.map((l) => ({
+            print: printAfter,
+            items: allLines.map((l) => ({
                 item_code: l.item.value,
                 item_name: l.item.name || null,
                 packs: num(l.packs),
@@ -198,27 +237,46 @@ export default function NewSupplierBillDashboard() {
             })),
         };
 
+        savingRef.current = true;
         setSaving(true);
         try {
             const res = editingBill
                 ? await api.put(`/new-supplier-bills/${editingBill.id}`, payload)
                 : await api.post('/new-supplier-bills', payload);
             const saved = res.data;
-            setMessage(editingBill
+            setMessage(printAfter
+                ? tr(`Bill ${saved.bill_no} saved and sent to print.`, `බිල්පත ${saved.bill_no} සුරැක මුද්‍රණයට යැව්වා.`)
+                : saved.is_printed
                 ? tr(`Bill ${saved.bill_no} updated.`, `බිල්පත ${saved.bill_no} යාවත්කාලීන කළා.`)
-                : tr(`Bill ${saved.bill_no} saved.`, `බිල්පත ${saved.bill_no} සුරැකුවා.`));
-            if (printAfter) printBill(saved);
+                : tr(`Bill ${saved.bill_no} held. Open it from Held bills and press F4 to print.`, `බිල්පත ${saved.bill_no} රඳවා ඇත. රඳවා ඇති බිල්පත් වලින් විවෘත කර F4 ඔබා මුද්‍රණය කරන්න.`));
+            if (printAfter) printBill(saved, printWin);
             resetForm();
-            loadBills(filters);
+            refreshLists();
+            setTimeout(() => supplierRef.current?.focus(), 0);
         } catch (err) {
+            if (printWin) printWin.close();
             const errors = err.response?.data?.errors;
             setFormError(errors
                 ? Object.values(errors).flat().join(' ')
                 : err.response?.data?.message || tr('Could not save the bill.', 'බිල්පත සුරැකිය නොහැක.'));
         } finally {
+            savingRef.current = false;
             setSaving(false);
         }
     };
+    saveRef.current = saveBill;
+
+    // F5 = hold, F4 = print (also stops F5 from reloading the page and losing the bill)
+    useEffect(() => {
+        const onKey = (e) => {
+            if (e.key === 'F5' || e.key === 'F4') {
+                e.preventDefault();
+                saveRef.current?.(e.key === 'F4');
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, []);
 
     // ---------- list actions ----------
     const fetchBill = async (id) => (await api.get(`/new-supplier-bills/${id}`)).data;
@@ -260,21 +318,28 @@ export default function NewSupplierBillDashboard() {
         try {
             await api.delete(`/new-supplier-bills/${bill.id}`);
             if (editingBill?.id === bill.id) resetForm();
-            loadBills(filters);
+            refreshLists();
         } catch {
             setListError(tr('Could not delete the bill.', 'බිල්පත මැකිය නොහැක.'));
         }
     };
 
     const printSaved = async (bill) => {
+        const win = window.open('', '_blank', 'width=800,height=900');
         try {
-            printBill(await fetchBill(bill.id));
+            // Printing a held bill from the list also marks it as printed.
+            const full = bill.is_printed
+                ? await fetchBill(bill.id)
+                : (await api.post(`/new-supplier-bills/${bill.id}/mark-printed`)).data;
+            printBill(full, win);
+            if (!bill.is_printed) refreshLists();
         } catch {
+            if (win) win.close();
             setListError(tr('Could not open the bill.', 'බිල්පත විවෘත කළ නොහැක.'));
         }
     };
 
-    function printBill(bill) {
+    function printBill(bill, existingWin = null) {
         const rows = (bill.items || []).map((it, i) => `
             <tr>
                 <td>${i + 1}</td>
@@ -317,15 +382,16 @@ export default function NewSupplierBillDashboard() {
             ${bill.notes ? `<p><b>${escapeHtml(tr('Notes', 'සටහන්'))}:</b> ${escapeHtml(bill.notes)}</p>` : ''}
             <script>window.onload=function(){window.print();}</script>
             </body></html>`;
-        const w = window.open('', '_blank', 'width=800,height=900');
+        const w = existingWin || window.open('', '_blank', 'width=800,height=900');
         if (!w) { setListError(tr('Allow pop-ups to print the bill.', 'බිල්පත මුද්‍රණය කිරීමට pop-ups ඉඩ දෙන්න.')); return; }
+        w.document.open();
         w.document.write(html);
         w.document.close();
     }
 
     const applyFilters = (e) => { e?.preventDefault(); loadBills(filters); };
     const clearFilters = () => {
-        const f = { start_date: today(), end_date: today(), supplier: null, status: '', search: '' };
+        const f = { start_date: today(), end_date: today(), supplier: null, status: '', print_status: '', search: '' };
         setFilters(f);
         loadBills(f);
     };
@@ -380,6 +446,8 @@ export default function NewSupplierBillDashboard() {
                                 <div className="col-sm-8">
                                     <label className="form-label small mb-1">{tr('Supplier', 'සැපයුම්කරු')}</label>
                                     <Select
+                                        ref={supplierRef}
+                                        autoFocus
                                         options={supplierOptions}
                                         value={form.supplier}
                                         onChange={(opt) => { setForm({ ...form, supplier: opt }); setTimeout(() => itemRef.current?.focus(), 0); }}
@@ -429,7 +497,7 @@ export default function NewSupplierBillDashboard() {
                                 </div>
                                 <div className="d-flex justify-content-between align-items-center mt-2">
                                     <small className="text-muted">
-                                        {tr('Amount', 'මුදල')}: <b>{money(lineAmount)}</b> · {tr('Press Enter to move / add', 'ඊළඟට / එක් කිරීමට Enter ඔබන්න')}
+                                        {tr('Amount', 'මුදල')}: <b>{money(lineAmount)}</b> · {tr('Enter = next / add · F5 = hold · F4 = print', 'Enter = ඊළඟ / එක් කරන්න · F5 = රඳවන්න · F4 = මුද්‍රණය')}
                                     </small>
                                     <div>
                                         {editIndex !== null && (
@@ -521,11 +589,11 @@ export default function NewSupplierBillDashboard() {
 
                             <div className="d-flex gap-2 justify-content-end">
                                 <button type="button" className="btn btn-outline-secondary btn-sm" onClick={resetForm} disabled={saving}>{tr('Clear', 'හිස් කරන්න')}</button>
-                                <button type="button" className="btn btn-primary btn-sm" onClick={() => saveBill(true)} disabled={saving}>
-                                    {tr('Save & Print', 'සුරකින්න සහ මුද්‍රණය')}
+                                <button type="button" className="btn btn-warning btn-sm fw-bold" onClick={() => saveBill(false)} disabled={saving}>
+                                    {saving ? tr('Saving...', 'සුරකිමින්...') : tr('Hold (F5)', 'රඳවන්න (F5)')}
                                 </button>
-                                <button type="button" className="btn btn-success btn-sm" onClick={() => saveBill(false)} disabled={saving}>
-                                    {saving ? tr('Saving...', 'සුරකිමින්...') : editingBill ? tr('Update Bill', 'බිල්පත යාවත්කාලීන') : tr('Save Bill', 'බිල්පත සුරකින්න')}
+                                <button type="button" className="btn btn-success btn-sm fw-bold" onClick={() => saveBill(true)} disabled={saving}>
+                                    🖨️ {tr('Print (F4)', 'මුද්‍රණය (F4)')}
                                 </button>
                             </div>
                         </div>
@@ -534,6 +602,29 @@ export default function NewSupplierBillDashboard() {
 
                 {/* ================= BILLS LIST ================= */}
                 <div className="col-12 col-xl-7">
+                    <div className="card shadow-sm mb-3" style={{ borderColor: '#f9a825' }}>
+                        <div className="card-header d-flex justify-content-between align-items-center" style={{ background: '#f9a825', color: '#000' }}>
+                            <span>{tr('Held bills (waiting to print)', 'රඳවා ඇති බිල්පත් (මුද්‍රණයට ඇති)')}</span>
+                            <span className="badge bg-dark">{heldBills.length}</span>
+                        </div>
+                        <div className="card-body py-2">
+                            {heldBills.length === 0 ? (
+                                <div className="text-muted small">{tr('No held bills. Press F5 while entering a bill to hold it.', 'රඳවා ඇති බිල්පත් නැත. බිල්පතක් ඇතුළත් කරන විට F5 ඔබා එය රඳවන්න.')}</div>
+                            ) : (
+                                <div className="d-flex flex-wrap gap-2">
+                                    {heldBills.map((b) => (
+                                        <button key={b.id} type="button"
+                                            className={`btn btn-sm ${editingBill?.id === b.id ? 'btn-dark' : 'btn-outline-dark'}`}
+                                            title={tr('Open this bill, then press F4 to print', 'මෙම බිල්පත විවෘත කර F4 ඔබා මුද්‍රණය කරන්න')}
+                                            onClick={() => startEdit(b)}>
+                                            <b>{b.supplier_code}</b> · {b.bill_no} · {b.bill_date} · {money(b.net_amount)}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="card shadow-sm">
                         <div className="card-header">{tr('Saved bills', 'සුරැකි බිල්පත්')}</div>
                         <div className="card-body">
@@ -548,7 +639,7 @@ export default function NewSupplierBillDashboard() {
                                     <input type="date" className="form-control form-control-sm" value={filters.end_date}
                                         onChange={(e) => setFilters({ ...filters, end_date: e.target.value })} />
                                 </div>
-                                <div className="col-12 col-md-3">
+                                <div className="col-12 col-md-4">
                                     <label className="form-label small mb-1">{tr('Supplier', 'සැපයුම්කරු')}</label>
                                     <Select options={supplierOptions} value={filters.supplier} isClearable
                                         onChange={(opt) => setFilters({ ...filters, supplier: opt })}
@@ -564,7 +655,16 @@ export default function NewSupplierBillDashboard() {
                                         <option value="paid">{statusLabel('paid')}</option>
                                     </select>
                                 </div>
-                                <div className="col-6 col-md-3">
+                                <div className="col-6 col-md-2">
+                                    <label className="form-label small mb-1">{tr('Printed?', 'මුද්‍රිතද?')}</label>
+                                    <select className="form-select form-select-sm" value={filters.print_status}
+                                        onChange={(e) => setFilters({ ...filters, print_status: e.target.value })}>
+                                        <option value="">{tr('All', 'සියල්ල')}</option>
+                                        <option value="held">{tr('Held', 'රඳවා ඇති')}</option>
+                                        <option value="printed">{tr('Printed', 'මුද්‍රිත')}</option>
+                                    </select>
+                                </div>
+                                <div className="col-6 col-md-4">
                                     <label className="form-label small mb-1">{tr('Search', 'සොයන්න')}</label>
                                     <input type="text" className="form-control form-control-sm" value={filters.search}
                                         placeholder={tr('Bill no / ref', 'බිල් අංකය / යොමු')}
@@ -627,7 +727,12 @@ export default function NewSupplierBillDashboard() {
                                                 <td className="text-end">{money(b.net_amount)}</td>
                                                 <td className="text-end">{money(b.paid_amount)}</td>
                                                 <td className="text-end fw-semibold">{money(b.balance_amount)}</td>
-                                                <td><span className={`badge ${STATUS_BADGE[b.status] || 'bg-secondary'}`}>{statusLabel(b.status)}</span></td>
+                                                <td className="text-nowrap">
+                                                    <span className={`badge ${STATUS_BADGE[b.status] || 'bg-secondary'}`}>{statusLabel(b.status)}</span>{' '}
+                                                    {b.is_printed
+                                                        ? <span className="badge bg-secondary">{tr('Printed', 'මුද්‍රිත')}</span>
+                                                        : <span className="badge bg-warning text-dark">{tr('Held', 'රඳවා ඇති')}</span>}
+                                                </td>
                                                 <td className="text-nowrap">
                                                     <button type="button" className="btn btn-link btn-sm p-0 me-2" title={tr('Print', 'මුද්‍රණය')} onClick={() => printSaved(b)}>
                                                         <i className="material-icons" style={{ fontSize: 18 }}>print</i>
