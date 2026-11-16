@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Select from 'react-select';
+import CreatableSelect from 'react-select/creatable';
 import api from '../../api';
 import { tr } from '../../i18n/language';
 import { SHOP_NAME, SHOP_STALL_NO } from '../../config/shop';
@@ -524,13 +525,26 @@ export default function NewSupplierBillDashboard() {
                         </div>
                         <div style={{ gridColumn: 'span 5' }}>
                             <label style={label}>{tr('Supplier', 'සැපයුම්කරු')}</label>
-                            <Select
+                            {/* Pick an existing supplier, or type a new code and press Enter */}
+                            <CreatableSelect
                                 ref={supplierRef}
                                 autoFocus
                                 options={supplierOptions}
                                 value={form.supplier}
                                 onChange={(opt) => { setForm({ ...form, supplier: opt }); if (opt) setTimeout(() => itemRef.current?.focus(), 0); }}
-                                placeholder={tr('Supplier code or name...', 'සැපයුම්කරු කේතය හෝ නම...')}
+                                onCreateOption={(input) => {
+                                    const code = input.trim().toUpperCase();
+                                    if (!code) return;
+                                    const existing = supplierOptions.find(o => o.value.toUpperCase() === code);
+                                    setForm({ ...form, supplier: existing || { value: code, label: code, name: null, isNew: true } });
+                                    setTimeout(() => itemRef.current?.focus(), 0);
+                                }}
+                                isValidNewOption={(input) => {
+                                    const code = input.trim().toUpperCase();
+                                    return code.length > 0 && code.length <= 50 && !supplierOptions.some(o => o.value.toUpperCase() === code);
+                                }}
+                                formatCreateLabel={(input) => `${tr('New supplier code', 'නව සැපයුම්කරු කේතය')}: ${input.trim().toUpperCase()}`}
+                                placeholder={tr('Type or pick a supplier code...', 'සැපයුම්කරු කේතය ටයිප් කරන්න හෝ තෝරන්න...')}
                                 styles={whiteSelect}
                                 menuPortalTarget={document.body}
                                 isClearable
