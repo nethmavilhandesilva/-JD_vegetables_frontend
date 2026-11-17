@@ -102,15 +102,19 @@ export default function AccountsModal({ isOpen, onClose }) {
     const customerBills = useMemo(() => {
         if (!customerDetail) return [];
         const groups = new Map();
+        // Records come from today's sales and the sales history; a bill number can repeat on
+        // different days, so a bill is date + bill no. Today's unprinted lines are one group.
         (customerDetail.records || []).forEach(r => {
-            const key = r.bill_no ? String(r.bill_no) : '';
+            const key = r.bill_no ? `${r.Date || ''}|${r.bill_no}` : '';
             if (!groups.has(key)) groups.set(key, []);
             groups.get(key).push(r);
         });
         return Array.from(groups.entries())
-            .map(([billNo, lines]) => ({
-                billNo: billNo || null,
-                printed: !!billNo && lines.some(l => l.bill_printed === 'Y'),
+            .map(([key, lines]) => ({
+                key: key || 'unprinted',
+                billNo: lines[0].bill_no ? String(lines[0].bill_no) : null,
+                date: lines[0].Date || null,
+                printed: !!key && lines.some(l => l.bill_printed === 'Y'),
                 credit: lines.some(l => l.credit_transaction === 'Y'),
                 lines,
                 weight: lines.reduce((s, l) => s + num(l.weight), 0),
@@ -118,7 +122,10 @@ export default function AccountsModal({ isOpen, onClose }) {
                 kuliya: lines.reduce((s, l) => s + num(l.Kuliya), 0),
                 total: lines.reduce((s, l) => s + customerLineTotal(l), 0),
             }))
-            .sort((a, b) => (a.billNo === null) - (b.billNo === null) || (parseInt(a.billNo) || 0) - (parseInt(b.billNo) || 0));
+            // Unprinted first, then newest day first, then bill number
+            .sort((a, b) => (b.billNo === null) - (a.billNo === null)
+                || String(b.date || '').localeCompare(String(a.date || ''))
+                || (parseInt(a.billNo) || 0) - (parseInt(b.billNo) || 0));
     }, [customerDetail]);
 
     // ---------- suppliers ----------
@@ -242,9 +249,10 @@ export default function AccountsModal({ isOpen, onClose }) {
                                             <th className="text-end">{tr('Bills', 'බිල්පත්')}</th>
                                             <th className="text-end">{tr('Records', 'වාර්තා')}</th>
                                             <th className="text-end">{tr('Total (Rs.)', 'එකතුව (රු.)')}</th>
+                                            <th>{tr('Last sale', 'අවසන් විකිණීම')}</th>
                                         </tr></thead>
                                         <tbody>
-                                            {filteredCustomers.length === 0 && <tr><td colSpan={5} className="text-center text-muted py-3">{tr('No customers in the sales table.', 'විකුණුම් වගුවේ පාරිභෝගිකයින් නැත.')}</td></tr>}
+                                            {filteredCustomers.length === 0 && <tr><td colSpan={6} className="text-center text-muted py-3">{tr('No customers in sales or sales history.', 'විකුණුම් හෝ විකුණුම් ඉතිහාසයේ පාරිභෝගිකයින් නැත.')}</td></tr>}
                                             {filteredCustomers.map(c => (
                                                 <tr key={c.customer_code} className="clickable" onClick={() => go('customer', c.customer_code)}>
                                                     <td className="fw-bold text-primary">{c.customer_code}</td>
@@ -252,6 +260,7 @@ export default function AccountsModal({ isOpen, onClose }) {
                                                     <td className="text-end">{c.bills}{c.unprinted_records > 0 && <span className="badge bg-warning text-dark ms-1">{tr('+ unprinted', '+ මුද්‍රණය නොකළ')}</span>}</td>
                                                     <td className="text-end">{c.records}</td>
                                                     <td className="text-end fw-semibold">{money(c.total)}</td>
+                                                    <td>{c.in_today ? <span className="badge bg-success">{tr('Today', 'අද')}</span> : (c.last_date || '—')}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -271,12 +280,15 @@ export default function AccountsModal({ isOpen, onClose }) {
                                 </div>
                                 {customerBills.length === 0 && <div className="text-muted text-center py-3">{tr('No records.', 'වාර්තා නොමැත.')}</div>}
                                 {customerBills.map(b => (
-                                    <div className="bill-card" key={b.billNo || 'unprinted'}>
+                                    <div className="bill-card" key={b.key}>
                                         <div className="bill-head">
                                             <span>
                                                 {b.billNo ? `${tr('Bill No', 'බිල් අංකය')}: ${b.billNo}` : tr('Not printed yet', 'තවම මුද්‍රණය කර නැත')}{' '}
+                                                {b.date && <span className="text-muted fw-normal me-1">{b.date}</span>}
                                                 <span className={`badge ${b.printed ? 'bg-success' : 'bg-warning text-dark'}`}>{b.printed ? tr('Printed', 'මුද්‍රිත') : tr('Unprinted', 'මුද්‍රණය නොකළ')}</span>{' '}
-                                                {b.credit && <span className="badge bg-info text-dark">{tr('Credit', 'ණය')}</span>}
+                                                {b.credit
+                                                    ? <span className="badge bg-info text-dark">{tr('Credit', 'ණය')}</span>
+                                                    : <span className="badge bg-success">{tr('Cash', 'මුදල්')}</span>}
                                             </span>
                                             <span>{tr('Bill Total', 'බිල් එකතුව')}: Rs. {money(b.total)}</span>
                                         </div>
@@ -290,7 +302,7 @@ export default function AccountsModal({ isOpen, onClose }) {
                                                 </tr></thead>
                                                 <tbody>
                                                     {b.lines.map((l, i) => (
-                                                        <tr key={l.id}>
+                                                        <tr key={`${l.source || ''}-${l.id}`}>
                                                             <td>{i + 1}</td>
                                                             <td>{l.item_name}</td>
                                                             <td>{l.supplier_code}</td>
@@ -329,9 +341,10 @@ export default function AccountsModal({ isOpen, onClose }) {
                                             <th className="text-end">{tr('Bills', 'බිල්පත්')}</th>
                                             <th className="text-end">{tr('Records', 'වාර්තා')}</th>
                                             <th className="text-end">{tr('Total (Rs.)', 'එකතුව (රු.)')}</th>
+                                            <th>{tr('Last sale', 'අවසන් විකිණීම')}</th>
                                         </tr></thead>
                                         <tbody>
-                                            {filteredSuppliers.length === 0 && <tr><td colSpan={5} className="text-center text-muted py-3">{tr('No suppliers in the sales table.', 'විකුණුම් වගුවේ සැපයුම්කරුවන් නැත.')}</td></tr>}
+                                            {filteredSuppliers.length === 0 && <tr><td colSpan={6} className="text-center text-muted py-3">{tr('No suppliers in sales or sales history.', 'විකුණුම් හෝ විකුණුම් ඉතිහාසයේ සැපයුම්කරුවන් නැත.')}</td></tr>}
                                             {filteredSuppliers.map(s => (
                                                 <tr key={s.supplier_code} className="clickable" onClick={() => go('supplier', s.supplier_code)}>
                                                     <td className="fw-bold text-primary">{s.supplier_code}</td>
@@ -339,6 +352,7 @@ export default function AccountsModal({ isOpen, onClose }) {
                                                     <td className="text-end">{s.bills}</td>
                                                     <td className="text-end">{s.records}</td>
                                                     <td className="text-end fw-semibold">{money(s.total)}</td>
+                                                    <td>{s.in_today ? <span className="badge bg-success">{tr('Today', 'අද')}</span> : (s.last_date || '—')}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -385,7 +399,7 @@ export default function AccountsModal({ isOpen, onClose }) {
                                                                 <table className="table table-sm mb-0" style={{ background: '#f9fbe7' }}>
                                                                     <tbody>
                                                                         {b.lines.map(l => (
-                                                                            <tr key={l.id}>
+                                                                            <tr key={`${l.source || ''}-${l.id}`}>
                                                                                 <td className="ps-4">{l.item_name}</td>
                                                                                 <td>{tr('Customer', 'පාරිභෝගික')}: {l.customer_code}</td>
                                                                                 <td className="text-end">{kg(l.SupplierWeight ?? l.weight)} kg</td>

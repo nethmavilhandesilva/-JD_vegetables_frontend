@@ -124,6 +124,7 @@ const SalesReportView = ({ onClose }) => {
 
     const [view, setView] = useState('customer');
     const [search, setSearch] = useState('');
+    const [payView, setPayView] = useState('all'); // all | credit | cash
     const [sort, setSort] = useState({ key: 'Date', dir: 'desc' });
     const [recordsPage, setRecordsPage] = useState(1);
     const [customersPage, setCustomersPage] = useState(1);
@@ -194,19 +195,32 @@ const SalesReportView = ({ onClose }) => {
     const findOption = (opts, value) => opts.find((o) => o.value === value) || (value ? { value, label: value } : null);
 
     // ---- quick search (client side, over the loaded rows) -----------------
-    const visibleRows = useMemo(() => {
+    const searchedRows = useMemo(() => {
         const q = search.trim().toLowerCase();
         if (!q) return rows;
         return rows.filter((r) => [r.customer, r.customer_name, r.bill, r.item_code, r.item_name, r.supplier_code, r.Date]
             .some((v) => String(v || '').toLowerCase().includes(q)));
     }, [rows, search]);
 
-    // Server summary covers every matching record; when a quick search narrows the
-    // rows, the cards switch to totals of the visible rows.
+    // Credit / Cash shown separately: credit_transaction 'Y' = credit, anything else = cash
+    const isCreditRow = (r) => r.credit_transaction === 'Y';
+    const payTotals = useMemo(() => {
+        const credit = summarise(searchedRows.filter(isCreditRow));
+        const cash = summarise(searchedRows.filter((r) => !isCreditRow(r)));
+        return { credit, cash };
+    }, [searchedRows]);
+    const visibleRows = useMemo(() => {
+        if (payView === 'credit') return searchedRows.filter(isCreditRow);
+        if (payView === 'cash') return searchedRows.filter((r) => !isCreditRow(r));
+        return searchedRows;
+    }, [searchedRows, payView]);
+
+    // Server summary covers every matching record; when a quick search or the Credit / Cash
+    // switch narrows the rows, the cards switch to totals of the visible rows.
     const summary = useMemo(() => {
-        if (!search.trim() && serverSummary) return serverSummary;
+        if (!search.trim() && payView === 'all' && serverSummary) return serverSummary;
         return summarise(visibleRows);
-    }, [search, serverSummary, visibleRows]);
+    }, [search, payView, serverSummary, visibleRows]);
 
     // ---- grouped / aggregated views ---------------------------------------
     const byCustomer = useMemo(() => {
@@ -267,7 +281,7 @@ const SalesReportView = ({ onClose }) => {
 
     const recordsPageCount = Math.max(1, Math.ceil(sortedRecords.length / RECORDS_PAGE_SIZE));
     const customersPageCount = Math.max(1, Math.ceil(byCustomer.length / CUSTOMERS_PAGE_SIZE));
-    useEffect(() => { setRecordsPage(1); setCustomersPage(1); }, [search]);
+    useEffect(() => { setRecordsPage(1); setCustomersPage(1); }, [search, payView]);
 
     const toggleSort = (key) => setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: typeof rows[0]?.[key] === 'number' ? 'desc' : 'asc' }));
     const toggleCustomer = (code) => setCollapsed((prev) => {
@@ -456,6 +470,11 @@ const SalesReportView = ({ onClose }) => {
         { label: tr('Bills', 'බිල්පත්'), value: num(summary.bill_count).toLocaleString(), accent: '#ef6c00' },
         { label: tr('Customers', 'පාරිභෝගිකයින්'), value: num(summary.customer_count).toLocaleString(), accent: '#455a64' },
     ];
+    // Credit and cash bills side by side (click a card to show only those bills)
+    const payCards = [
+        { key: 'credit', label: tr('Credit bills', 'ණය බිල්පත්'), data: payTotals.credit, accent: '#b45309' },
+        { key: 'cash', label: tr('Cash bills', 'මුදල් බිල්පත්'), data: payTotals.cash, accent: '#15803d' },
+    ];
 
     const tabs = [
         ['customer', tr('By Customer', 'පාරිභෝගිකයා අනුව')],
@@ -619,6 +638,28 @@ const SalesReportView = ({ onClose }) => {
                     ))}
                 </div>
 
+                {/* Credit / Cash totals, shown separately */}
+                <div className="row g-2 mb-3">
+                    {payCards.map((c) => (
+                        <div key={c.key} className="col-12 col-md-6">
+                            <div role="button" onClick={() => setPayView(payView === c.key ? 'all' : c.key)}
+                                className="card shadow-sm h-100"
+                                style={{ borderLeft: `4px solid ${c.accent}`, outline: payView === c.key ? `2px solid ${c.accent}` : 'none' }}>
+                                <div className="card-body py-2 px-3 d-flex align-items-center gap-3">
+                                    <div>
+                                        <div className="small text-uppercase fw-bold" style={{ fontSize: 11, color: c.accent }}>{c.label}</div>
+                                        <div className="fw-bold" style={{ fontSize: 20, color: c.accent }}>{money(c.data.grand_total)}</div>
+                                    </div>
+                                    <div className="ms-auto text-end small text-muted">
+                                        <div>{num(c.data.bill_count).toLocaleString()} {tr('bill(s)', 'බිල්පත්')} · {num(c.data.customer_count).toLocaleString()} {tr('customer(s)', 'පාරිභෝගිකයින්')}</div>
+                                        <div>{kg(c.data.total_weight)} kg · {num(c.data.total_packs).toLocaleString()} {tr('bags', 'මලු')}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
                 {meta.truncated && !search.trim() && (
                     <div className="alert alert-warning py-2 small">
                         ⚠️ {tr(
@@ -644,6 +685,17 @@ const SalesReportView = ({ onClose }) => {
                                 </li>
                             ))}
                         </ul>
+                        <div className="btn-group btn-group-sm" role="group">
+                            {[
+                                ['all', tr('All', 'සියල්ල'), 'secondary'],
+                                ['credit', tr('Credit', 'ණය'), 'warning'],
+                                ['cash', tr('Cash', 'මුදල්'), 'success'],
+                            ].map(([key, label, color]) => (
+                                <button key={key} type="button"
+                                    className={`btn ${payView === key ? `btn-${color}` : `btn-outline-${color}`}`}
+                                    onClick={() => setPayView(key)}>{label}</button>
+                            ))}
+                        </div>
                         <input type="search" className="form-control form-control-sm" style={{ maxWidth: 280 }} value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder={tr('🔎 Quick search: customer, item, bill…', '🔎 ඉක්මන් සෙවීම: පාරිභෝගිකයා, අයිතමය, බිල…')} />
@@ -689,7 +741,9 @@ const SalesReportView = ({ onClose }) => {
                                                         <div className="d-flex flex-wrap gap-2 align-items-center small fw-bold mb-1">
                                                             <span>🧾 {tr('Bill', 'බිල')} {b.bill}</span>
                                                             {b.date && <span className="text-muted fw-normal">{b.date}</span>}
-                                                            {b.credit && <span className="badge text-bg-warning">{tr('Credit', 'ණය')}</span>}
+                                                            {b.credit
+                                                                ? <span className="badge text-bg-warning">{tr('Credit', 'ණය')}</span>
+                                                                : <span className="badge text-bg-success">{tr('Cash', 'මුදල්')}</span>}
                                                         </div>
                                                         <div className="table-responsive">
                                                             <table className="table table-sm table-hover align-middle mb-2">

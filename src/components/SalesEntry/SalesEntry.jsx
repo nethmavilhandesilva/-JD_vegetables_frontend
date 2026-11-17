@@ -2377,8 +2377,9 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         });
     };
 
-    const buildFullReceiptHTML = (salesData, billNo, customerName, mobile, globalLoanAmount = 0, billSize = '3inch') => {
-        return ThermalBillHTML({ salesData, billNo, customerName, mobile, globalLoanAmount, billSize });
+    // paymentType: the Credit / Cash choice ('Y' / 'N'), printed small at the bottom of the bill
+    const buildFullReceiptHTML = (salesData, billNo, customerName, mobile, globalLoanAmount = 0, billSize = '3inch', paymentType = creditFlag) => {
+        return ThermalBillHTML({ salesData, billNo, customerName, mobile, globalLoanAmount, billSize, paymentType });
     };
 
     const formatReceiptValue = (value) => {
@@ -2387,8 +2388,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         if (isNaN(num)) return '0.00';
         return num.toFixed(2);
     };
-    const buildA4ReceiptHTML = (salesData, billNo, customerName, mobile, globalLoanAmount = 0) => {
-        return A4BillHTML({ salesData, billNo, customerName, mobile, globalLoanAmount });
+    const buildA4ReceiptHTML = (salesData, billNo, customerName, mobile, globalLoanAmount = 0, paymentType = creditFlag) => {
+        return A4BillHTML({ salesData, billNo, customerName, mobile, globalLoanAmount, paymentType });
     };
 
     // F2 quick preview: shows the bill exactly as F1 would print it, built straight from

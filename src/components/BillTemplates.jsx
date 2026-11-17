@@ -2,6 +2,19 @@ import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/sh
 import { tr } from '../i18n/language';
 // src/components/BillTemplates.jsx
 
+// Small "Credit" / "Cash" note at the bottom of the bill. paymentType 'Y' = credit,
+// 'N' = cash; when not given it is read from the records (credit_transaction).
+const paymentLabel = (paymentType, salesData = []) => {
+    let flag = paymentType;
+    if (flag !== 'Y' && flag !== 'N') {
+        if (salesData.some(s => s.credit_transaction === 'Y')) flag = 'Y';
+        else if (salesData.length && salesData.every(s => s.credit_transaction === 'N')) flag = 'N';
+    }
+    if (flag === 'Y') return tr('Credit', 'ණය');
+    if (flag === 'N') return tr('Cash', 'මුදල්');
+    return '';
+};
+
 // Pack by pack: a separate page printed after the bill, listing every pack of each item
 // with its weight and amount (only items entered as more than one pack). The bill itself
 // stays as is: one line per item.
@@ -51,7 +64,8 @@ const packDetailsPage = (salesData, billNo, customerName, width) => {
     </div>`;
 };
 
-export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAmount = 0, billSize = '3inch' }) => {
+export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAmount = 0, billSize = '3inch', paymentType }) => {
+    const payment = paymentLabel(paymentType, salesData);
     const formatNumber = (num) => {
         if (typeof num !== 'number' && typeof num !== 'string') return '0';
         const number = parseFloat(num);
@@ -273,6 +287,7 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
                     <tbody>${summaryHtmlContent}</tbody>
                 </table>
             </div>
+            ${payment ? `<div style="text-align:center; font-size:12px; font-weight:bold; margin-top:6px;">${payment}</div>` : ''}
         </div>
         ${packDetailsPage(salesData, billNo, customerName, receiptMaxWidth)}
     </body>
@@ -281,7 +296,8 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
 
 // src/components/BillTemplates.jsx
 
-export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAmount = 0, billWidth = '98mm', topMargin = '10mm' }) => {
+export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAmount = 0, billWidth = '98mm', topMargin = '10mm', paymentType }) => {
+    const payment = paymentLabel(paymentType, salesData);
     const formatNumber = (num) => {
         if (typeof num !== 'number' && typeof num !== 'string') return '0.00';
         const number = parseFloat(num);
@@ -514,6 +530,7 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
             <div class="footer">
                 ${tr('*** Thank you! Please come again ***', '*** ස්තුතියි! නැවත පැමිණෙන්න ***')}
                 <div style="margin-top: 1mm; font-size: ${styles.tinyFontSize};">${date} | ${time}</div>
+                ${payment ? `<div style="margin-top: 1mm; font-size: ${styles.tinyFontSize};">${payment}</div>` : ''}
             </div>
             ` : `
             <div class="footer" style="margin-top: 2.6mm; text-align: center; font-size: ${styles.smallFontSize}; border-top: 0.3mm dashed #000; padding-top: 1.6mm;">
