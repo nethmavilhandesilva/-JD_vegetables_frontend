@@ -6,7 +6,8 @@
 // Each line keeps `original_ids` = the record ids it stands for (used to mark them printed).
 //
 // options.packWeights (Pack by pack): each line also gets `pack_weights` = the weight typed
-// for every record on that line, in entry order, so the bill can list each pack's weight.
+// for every record on that line, in entry order, and `pack_amounts` = each record's amount
+// (its weight after bags x price), so the pack details page can list every pack.
 
 // Weight typed for a record (before the bag weight is taken off), from its entry history
 export const enteredWeight = (sale) => {
@@ -14,6 +15,9 @@ export const enteredWeight = (sale) => {
     const typed = history.reduce((sum, h) => sum + (parseFloat(h?.weight) || 0), 0);
     return typed > 0 ? typed : (parseFloat(sale.weight) || 0);
 };
+
+// Amount of one record on the bill: weight (after bags) x price, same as the bill's Total
+const recordAmount = (sale) => (parseFloat(sale.weight) || 0) * (parseFloat(sale.price_per_kg) || 0);
 
 export const combineCustomerBillLines = (sales = [], options = {}) => {
     const lines = new Map();
@@ -26,7 +30,7 @@ export const combineCustomerBillLines = (sales = [], options = {}) => {
             lines.set(key, {
                 ...sale,
                 original_ids: [sale.id],
-                ...(options.packWeights && { pack_weights: [enteredWeight(sale)] }),
+                ...(options.packWeights && { pack_weights: [enteredWeight(sale)], pack_amounts: [recordAmount(sale)] }),
             });
             return;
         }
@@ -35,7 +39,10 @@ export const combineCustomerBillLines = (sales = [], options = {}) => {
         line.Kuliya = (parseFloat(line.Kuliya) || 0) + (parseFloat(sale.Kuliya) || 0);
         line.total = line.weight * price;
         line.original_ids.push(sale.id);
-        if (options.packWeights) line.pack_weights.push(enteredWeight(sale));
+        if (options.packWeights) {
+            line.pack_weights.push(enteredWeight(sale));
+            line.pack_amounts.push(recordAmount(sale));
+        }
     });
     return Array.from(lines.values());
 };

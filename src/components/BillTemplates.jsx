@@ -3,25 +3,32 @@ import { tr } from '../i18n/language';
 // src/components/BillTemplates.jsx
 
 // Pack by pack: a separate page printed after the bill, listing every pack of each item
-// with its weight (only items entered as more than one pack). The bill itself stays as is.
+// with its weight and amount (only items entered as more than one pack). The bill itself
+// stays as is: one line per item.
 const packDetailsPage = (salesData, billNo, customerName, width) => {
     const lines = salesData.filter(s => Array.isArray(s.pack_weights) && s.pack_weights.length > 1);
     if (lines.length === 0) return '';
     const fmt = (w) => (parseFloat(w) || 0).toFixed(2);
+    const money = (v) => (parseFloat(v) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const cell = 'border:1px solid #000; padding:3px 4px;';
     const rows = lines.map(s => {
+        const price = parseFloat(s.price_per_kg) || 0;
+        const amounts = Array.isArray(s.pack_amounts) ? s.pack_amounts : s.pack_weights.map(w => (parseFloat(w) || 0) * price);
         const packRows = s.pack_weights.map((w, j) => `
             <tr>
-                <td style="${cell}">${j === 0 ? (s.item_name || s.item_code || '') : ''}</td>
+                <td style="${cell}">${j === 0 ? `${s.item_name || s.item_code || ''}<div style="font-size:11px;">@ ${money(price)}</div>` : ''}</td>
                 <td style="${cell} text-align:center;">${j + 1}</td>
                 <td style="${cell} text-align:right;">${fmt(w)}</td>
+                <td style="${cell} text-align:right;">${money(amounts[j])}</td>
             </tr>`).join('');
-        const total = s.pack_weights.reduce((a, w) => a + (parseFloat(w) || 0), 0);
+        const totalWeight = s.pack_weights.reduce((a, w) => a + (parseFloat(w) || 0), 0);
+        const totalAmount = amounts.reduce((a, v) => a + (parseFloat(v) || 0), 0);
         return `${packRows}
             <tr style="font-weight:bold;">
                 <td style="${cell}">${tr('Total', 'එකතුව')}</td>
                 <td style="${cell} text-align:center;">${s.pack_weights.length}</td>
-                <td style="${cell} text-align:right;">${fmt(total)}</td>
+                <td style="${cell} text-align:right;">${fmt(totalWeight)}</td>
+                <td style="${cell} text-align:right;">${money(totalAmount)}</td>
             </tr>`;
     }).join('');
     return `
@@ -37,6 +44,7 @@ const packDetailsPage = (salesData, billNo, customerName, width) => {
                 <th style="${cell} text-align:left;">${tr('Item', 'භාණ්ඩය')}</th>
                 <th style="${cell} text-align:center;">${tr('Pack', 'මල්ල')}</th>
                 <th style="${cell} text-align:right;">${tr('Weight (kg)', 'බර (kg)')}</th>
+                <th style="${cell} text-align:right;">${tr('Amount', 'මුදල')}</th>
             </tr></thead>
             <tbody>${rows}</tbody>
         </table>
