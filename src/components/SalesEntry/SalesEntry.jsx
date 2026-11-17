@@ -191,13 +191,16 @@ const CustomerList = React.memo(({ customers, type, searchQuery, onSearchChange,
         allSales.filter(s => s.bill_printed === 'Y' && s.bill_no).forEach(sale => {
 
             // --- UPDATED FILTER LOGIC ---
+            // credit_transaction is only set when a given amount is entered, so a bill printed
+            // without one has it empty: treat empty as 'N' so every printed bill shows up.
             if (type === "printed") {
+                const isCredit = sale.credit_transaction === 'Y';
                 if (isCashFilterActive) {
-                    // When ticked: show only 'N' (Cash)
-                    if (sale.credit_transaction !== 'Y') return;
+                    // Ticked: only bills marked 'Y'
+                    if (!isCredit) return;
                 } else {
-                    // When unticked (Default): show only 'Y' (Credit)
-                    if (sale.credit_transaction !== 'N') return;
+                    // Unticked (default): everything else ('N' or not set)
+                    if (isCredit) return;
                 }
             }
 
