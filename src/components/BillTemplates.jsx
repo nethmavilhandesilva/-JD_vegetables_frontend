@@ -2,6 +2,17 @@ import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/sh
 import { tr } from '../i18n/language';
 // src/components/BillTemplates.jsx
 
+// Pack by pack: the weight of every pack on a bill line, e.g. "Packs: 26 + 25 + 24 kg"
+// (only when the line stands for more than one pack entry)
+const packWeightsText = (s) => {
+    if (!Array.isArray(s.pack_weights) || s.pack_weights.length < 2) return '';
+    const fmt = (w) => {
+        const n = parseFloat(w) || 0;
+        return Number.isInteger(n) ? String(n) : n.toFixed(2);
+    };
+    return `${tr('Packs', 'මලු')}: ${s.pack_weights.map(fmt).join(' + ')} kg`;
+};
+
 export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAmount = 0, billSize = '3inch' }) => {
     const formatNumber = (num) => {
         if (typeof num !== 'number' && typeof num !== 'string') return '0';
@@ -98,7 +109,10 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
                 <div style="font-size:20px;">${s.supplier_code || "ASW"}</div>
                 <div>${formatNumber(value)}</div>
             </td>
-        </tr>`;
+        </tr>${packWeightsText(s) ? `
+        <tr style="font-size:13px; color:#000;">
+            <td colspan="4" style="text-align:left; padding:0 0 6px 0;">${packWeightsText(s)}</td>
+        </tr>` : ''}`;
     }).join("");
 
     const summaryEntries = Object.entries(consolidatedSummary);
@@ -290,7 +304,8 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
             weight: weight,
             price: price,
             packs: packs,
-            total: itemTotal
+            total: itemTotal,
+            packWeights: packWeightsText(s)
         });
     });
 
@@ -370,7 +385,7 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
             return `
             <tr style="page-break-inside: avoid;">
                 <td style="text-align: center; padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.id}</td>
-                <td style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.name}</td>
+                <td style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.name}${item.packWeights ? `<div style="font-size: ${styles.tinyFontSize}; font-weight: normal;">${item.packWeights}</div>` : ''}</td>
                 <td class="text-right" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${formatNumber(item.weight)}</td>
                 <td class="text-right" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${formatNumber(item.price)}</td>
                 <td class="text-center" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.packs}</td>

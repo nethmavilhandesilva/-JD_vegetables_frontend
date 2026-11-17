@@ -9,7 +9,7 @@ import ImagePreviewModal from '../ImagePreviewModal';
 import { SHOP_PHONE } from '../../config/shop';
 import { BACKEND_URL } from '../../config/paths';
 import { printHtml } from '../../utils/printHtml';
-import { combineCustomerBillLines } from '../../utils/combineCustomerBillLines';
+import { combineCustomerBillLines, enteredWeight } from '../../utils/combineCustomerBillLines';
 import PrintPreviewDialog from '../PrintPreviewDialog';
 import { tr } from '../../i18n/language';
 
@@ -794,6 +794,15 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     // Last printed bill's final total, persisted in localStorage so it survives reloads/navigation
     // Bill waiting in the app's own print window (F1): nothing is marked printed until Print
     const [printJob, setPrintJob] = useState(null);
+    // Pack by pack: weight, price, Enter = one pack (Packs 1) saved; item + price stay for the
+    // next pack. The bill (F1) then lists the weight of every pack under its item.
+    const [packMode, setPackMode] = useState(() => {
+        try { return localStorage.getItem('salesPackMode') === '1'; } catch { return false; }
+    });
+    const togglePackMode = (on) => {
+        setPackMode(on);
+        try { localStorage.setItem('salesPackMode', on ? '1' : '0'); } catch { /* ignore */ }
+    };
     const [lastPrintedBill, setLastPrintedBill] = useState(() => {
         try {
             const saved = localStorage.getItem('lastPrintedBill');
@@ -1502,6 +1511,11 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
             // 8. Logic for PRICE field
             if (currentFieldName === "price_per_kg_grid_item") {
+                // Pack by pack: Enter on the price saves this weight as one pack
+                if (packMode && editingSaleId === null) {
+                    await handleSubmit(e, { pack: true });
+                    return;
+                }
                 if (refs.packs.current) {
                     refs.packs.current.focus();
                     refs.packs.current.select();
@@ -2065,8 +2079,12 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         }
     };
 
-    const handleSubmit = async (e) => {
+    // opts.pack (Pack by pack): this weight is saved as one pack (Packs 1, Kuliya from the
+    // server), and the item + price stay filled so the next pack is just weight, Enter, Enter.
+    const handleSubmit = async (e, opts = {}) => {
         e.preventDefault();
+        const isPackEntry = !!opts.pack;
+        const formData = isPackEntry ? { ...state.formData, packs: '1', kuliya: '' } : state.formData;
         // NOTE: no isSubmitting guard here — each Enter press is a distinct, legitimate
         // record. Rapid typing must let every one of them fire its own save request
         // concurrently; blocking on a shared flag silently drops records that were
@@ -2156,11 +2174,24 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         // --- INSTANT UI RESET: clear the form and jump the cursor to supplier_code right away
         // so data entry isn't blocked — but the table itself only updates once the record is
         // actually confirmed saved below, never before. ---
-        setFormData({ ...initialFormData, customer_code: customerCode, customer_name: currentCustomerName, telephone_no: currentTelephone, supplier_code: currentSupplierCode });
-        updateState({ errors: {}, editingSaleId: null, isManualClear: false, priceManuallyChanged: false, gridPricePerKg: "" });
-        if (refs.supplier_code.current) {
-            refs.supplier_code.current.focus();
-            refs.supplier_code.current.select();
+        if (isPackEntry) {
+            // Next pack: same supplier, item and price; only the weight is cleared
+            setFormData({
+                ...initialFormData, customer_code: customerCode, customer_name: currentCustomerName, telephone_no: currentTelephone, supplier_code: currentSupplierCode,
+                item_code: formData.item_code, item_name: formData.item_name, pack_due: formData.pack_due, price_per_kg: formData.price_per_kg,
+            });
+            updateState({ errors: {}, editingSaleId: null, isManualClear: false, priceManuallyChanged: false, gridPricePerKg: formData.price_per_kg });
+            if (refs.weight.current) {
+                refs.weight.current.focus();
+                refs.weight.current.select();
+            }
+        } else {
+            setFormData({ ...initialFormData, customer_code: customerCode, customer_name: currentCustomerName, telephone_no: currentTelephone, supplier_code: currentSupplierCode });
+            updateState({ errors: {}, editingSaleId: null, isManualClear: false, priceManuallyChanged: false, gridPricePerKg: "" });
+            if (refs.supplier_code.current) {
+                refs.supplier_code.current.focus();
+                refs.supplier_code.current.select();
+            }
         }
 
         // --- 4. SHOW IT AT ONCE: the record appears in the table straight away (marked as
@@ -2382,7 +2413,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         const onClose = () => updateState({ showBillPreview: false });
 
         const printData = state.isBulkPrintEnabled
-            ? combineSalesForPrinting(displayedSales)
+            ? combineSalesForPrinting(displayedSales, { packWeights: packMode })
             : displayedSales.map(s => ({ ...s, original_ids: [s.id] }));
         const customerName = displayedSales[0]?.customer_code || "N/A";
         const mobile = formData.telephone_no || SHOP_PHONE;
@@ -2474,7 +2505,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         // Bulk Printing ticked: records with the same item and price are one line (any
         // supplier). Unticked: every record is its own line.
         const printData = state.isBulkPrintEnabled
-            ? combineSalesForPrinting(salesData)
+            ? combineSalesForPrinting(salesData, { packWeights: packMode })
             : salesData.map(s => ({ ...s, original_ids: [s.id] }));
 
         // --- ZERO PRICE VALIDATION ---
@@ -2756,6 +2787,16 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                     />
                                                     <label htmlFor="bulkPrintCheckbox" style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                                         {tr('Bulk Printing', 'තොග මුද්‍රණය')}
+                                                    </label>
+                                                    <input
+                                                        type="checkbox"
+                                                        id="packModeCheckbox"
+                                                        checked={packMode}
+                                                        onChange={(e) => togglePackMode(e.target.checked)}
+                                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#facc15', marginLeft: '12px' }}
+                                                    />
+                                                    <label htmlFor="packModeCheckbox" style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                                        {tr('Pack by pack', 'මල්ලෙන් මල්ල')}
                                                     </label>
                                                     {lastPrintedBill && (
                                                         <div className="font-bold text-xl whitespace-nowrap" style={{ color: '#4ade80', fontSize: '1.15rem', marginLeft: '15px' }}>
@@ -3125,6 +3166,23 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                             >
                                                 📋 All Sales Records ({allSalesRecords.length} total)
                                             </span>
+
+                                            {/* Pack by pack: packs entered so far for this item + price on the open bill */}
+                                            {packMode && formData.item_code && (() => {
+                                                const price = parseFloat(formData.price_per_kg) || 0;
+                                                const packs = displayedSales.filter(s =>
+                                                    String(s.item_code).toUpperCase() === String(formData.item_code).toUpperCase()
+                                                    && (parseFloat(s.price_per_kg) || 0) === price);
+                                                if (packs.length === 0) return null;
+                                                const weights = [...packs]
+                                                    .sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
+                                                    .map(s => formatDecimal(enteredWeight(s)));
+                                                return (
+                                                    <span style={{ color: '#facc15', fontSize: '13px', fontWeight: 'bold', marginLeft: '16px' }}>
+                                                        {formData.item_name || formData.item_code} — {tr('Packs', 'මලු')} {packs.length}: {weights.join(' + ')}
+                                                    </span>
+                                                );
+                                            })()}
 
                                             {isLoadingAllSales && (
                                                 <span
