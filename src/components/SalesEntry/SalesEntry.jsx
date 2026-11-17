@@ -191,18 +191,8 @@ const CustomerList = React.memo(({ customers, type, searchQuery, onSearchChange,
         allSales.filter(s => s.bill_printed === 'Y' && s.bill_no).forEach(sale => {
 
             // --- UPDATED FILTER LOGIC ---
-            // credit_transaction is only set when a given amount is entered, so a bill printed
-            // without one has it empty: treat empty as 'N' so every printed bill shows up.
-            if (type === "printed") {
-                const isCredit = sale.credit_transaction === 'Y';
-                if (isCashFilterActive) {
-                    // Ticked: only bills marked 'Y'
-                    if (!isCredit) return;
-                } else {
-                    // Unticked (default): everything else ('N' or not set)
-                    if (isCredit) return;
-                }
-            }
+            // Unticked (default): every printed bill. Ticked: only cash bills (credit_transaction 'N').
+            if (type === "printed" && isCashFilterActive && sale.credit_transaction !== 'N') return;
 
             const groupKey = `${sale.customer_code}-${sale.bill_no}`;
             if (!groups[groupKey]) groups[groupKey] = {
@@ -799,6 +789,10 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     const [packMode, setPackMode] = useState(() => {
         try { return localStorage.getItem('salesPackMode') === '1'; } catch { return false; }
     });
+    // Credit / Cash buttons: every new bill starts as Credit. Records are saved with the choice
+    // and the whole bill gets it when printed (credit_transaction Y = credit, N = cash).
+    const [billType, setBillType] = useState('credit');
+    const creditFlag = billType === 'cash' ? 'N' : 'Y';
     const togglePackMode = (on) => {
         setPackMode(on);
         try { localStorage.setItem('salesPackMode', on ? '1' : '0'); } catch { /* ignore */ }
@@ -1948,23 +1942,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             // 1. Get the entered amount
             const currentInputAmount = parseFloat(formData.given_amount.toString().replace(/,/g, "")) || 0;
 
-            // 2. DETECT CREDIT STATUS based on your calculated logic
-            // We calculate it here to know if we should block the process before the API call
-            const totals = salesToUpdate.reduce((acc, s) => {
-                const weight = parseFloat(s.weight) || 0;
-                const price = parseFloat(s.price_per_kg) || 0;
-                const packs = parseFloat(s.packs) || 0;
-                const pCost = parseFloat(s.CustomerPackCost) || 0;
-                const pLabour = parseFloat(s.CustomerPackLabour) || 0;
-                acc.billTotal += (weight * price);
-                acc.totalBagPrice += (packs * pCost);
-                acc.totalLabour += (packs * pLabour);
-                return acc;
-            }, { billTotal: 0, totalBagPrice: 0, totalLabour: 0 });
-
-            const autoCalculatedGrandTotal = totals.billTotal + totals.totalBagPrice;
-            const isCredit = Math.abs(currentInputAmount - autoCalculatedGrandTotal) > 0.01;
-            const creditTransactionStatus = isCredit ? 'Y' : 'N';
+            // 2. Credit / Cash comes from the buttons at the top, not from the amount given
+            const creditTransactionStatus = creditFlag;
 
             // 4. PROCEED: Update database with the determined status
             const updatePromises = salesToUpdate.map(sale =>
@@ -2165,6 +2144,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             kuliya: formData.kuliya ? parseFloat(formData.kuliya) : null,
             ...(billPrintedStatus && { bill_printed: billPrintedStatus }),
             ...(billNoToUse && { bill_no: billNoToUse }),
+            // New records get the Credit / Cash choice; edits keep the record's own value
+            ...(!isEditing && { credit_transaction: creditFlag }),
             update_related_price: shouldUpdateRelatedPrice
         };
 
@@ -2290,6 +2271,11 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
         const customer = customers.find(x => String(x.short_name).toUpperCase() === String(customerCode).toUpperCase());
 
+        // An opened bill shows its own Credit / Cash setting; closing it goes back to Credit
+        const isCashBill = !isCurrentlySelected && salesRecords.length > 0
+            && salesRecords.every(s => s.credit_transaction === 'N');
+        setBillType(isCashBill ? 'cash' : 'credit');
+
         if (!isCurrentlySelected) {
             // --- NEW CALCULATION LOGIC FOR GIVEN AMOUNT ---
             // We calculate the sum of the records that are about to be displayed
@@ -2363,6 +2349,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
             commitSales(list => list.map(s => (ids.has(s.id) ? { ...s, bill_printed: "N" } : s)));
             handleClearForm();
+            setBillType('credit'); // next bill starts as Credit
             updateState({ selectedUnprintedCustomer: null, selectedPrintedCustomer: null });
             refs.customer_code_input.current?.focus();
 
@@ -2553,6 +2540,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             currentLoan,
             idsToMark,
             telephoneNo: formData.telephone_no,
+            creditFlag,
             billFinalTotal,
             busy: false,
             error: '',
@@ -2578,6 +2566,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
             const printResponse = await api.post(routes.markPrinted, {
                 sales_ids: idsToMark,
+                credit_transaction: job.creditFlag,
                 telephone_no: job.telephoneNo,
                 customer_code: job.customerCode,
                 customer_name: customerName,
@@ -2619,12 +2608,12 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             // Update local state immediately (optimistic, no page reload). Uses a functional
             // setState so this doesn't clobber any save that resolved into allSales meanwhile.
             const markedIds = new Set(idsToMark);
-            allSalesRef.current = allSalesRef.current.map(s => (markedIds.has(s.id) ? { ...s, bill_printed: "Y", bill_no: billNo } : s));
+            allSalesRef.current = allSalesRef.current.map(s => (markedIds.has(s.id) ? { ...s, bill_printed: "Y", bill_no: billNo, credit_transaction: job.creditFlag } : s));
             setState(prev => ({
                 ...prev,
                 allSales: prev.allSales.map(s =>
                     markedIds.has(s.id)
-                        ? { ...s, bill_printed: "Y", bill_no: billNo }
+                        ? { ...s, bill_printed: "Y", bill_no: billNo, credit_transaction: job.creditFlag }
                         : s
                 ),
                 selectedPrintedCustomer: null,
@@ -2634,6 +2623,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
             setPrintJob(null);
             handleClearForm(true);
+            setBillType('credit'); // next bill starts as Credit
 
             // Announce the bill total in Sinhala (x3) as it prints
             speakSinhalaBillTotal(billFinalTotal);
@@ -2770,6 +2760,31 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                         <div style={{ position: 'relative', top: '-20px', display: 'flex', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0, zIndex: 20 }}>
                                             <div className="font-bold text-lg whitespace-nowrap" style={{ color: 'red', fontSize: '1.35rem' }}>
                                                 {tr('Bill No:', 'බිල් අං:')} {currentBillNo}
+                                            </div>
+                                            {/* Credit / Cash: chosen before entering the bill (Credit by default) */}
+                                            <div style={{ display: 'flex', gap: '6px', marginLeft: '16px' }}>
+                                                {[
+                                                    { key: 'credit', label: tr('Credit', 'ණය'), color: '#dc2626' },
+                                                    { key: 'cash', label: tr('Cash', 'මුදල්'), color: '#16a34a' },
+                                                ].map(({ key, label, color }) => {
+                                                    const active = billType === key;
+                                                    return (
+                                                        <button
+                                                            key={key}
+                                                            type="button"
+                                                            tabIndex={-1}
+                                                            onClick={() => setBillType(key)}
+                                                            style={{
+                                                                padding: '4px 14px', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.95rem', cursor: 'pointer',
+                                                                border: `2px solid ${color}`,
+                                                                backgroundColor: active ? color : 'transparent',
+                                                                color: active ? 'white' : color,
+                                                            }}
+                                                        >
+                                                            {active ? '✓ ' : ''}{label}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginLeft: '100px' }}>
                                                 <div className="font-bold text-xl whitespace-nowrap" style={{ color: 'red', fontSize: '1.15rem' }}>
