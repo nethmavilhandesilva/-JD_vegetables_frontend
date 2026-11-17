@@ -530,8 +530,10 @@ export default function NewSupplierBillDashboard() {
                 <td class="r">${money(it.amount)}</td>
             </tr>`).join('');
 
-        // Same page, under the totals: every pack with its weight, price and value
-        const packItems = (bill.items || []).filter((it) => Array.isArray(it.pack_weights) && it.pack_weights.length)
+        // Second paper (printed after the bill): every pack of each item with the weight typed
+        // for it, its price and value. Only items entered as more than one pack; the bill
+        // itself shows one line per item.
+        const packItems = (bill.items || []).filter((it) => Array.isArray(it.pack_weights) && it.pack_weights.length > 1)
             .map((it) => ({ ...it, pack_weights: it.pack_weights.map(Number) }));
         const packRows = packItems.map((it) => {
             const prices = pricesOf(it);
@@ -553,8 +555,14 @@ export default function NewSupplierBillDashboard() {
                 </tr>`;
         }).join('');
         const packsPage = packItems.length ? `
-            <div class="packsec">
-                <div class="packtitle">${escapeHtml(tr('Pack details', 'මලු විස්තර'))}</div>
+            <div class="page2">
+                <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
+                <div class="sub">${escapeHtml(tr('Pack details', 'මලු විස්තර'))}</div>
+                <div class="meta">
+                    <div><b>${escapeHtml(tr('Supplier', 'සැපයුම්කරු'))}:</b> ${escapeHtml(bill.supplier_code)} ${escapeHtml(bill.supplier_name || '')}</div>
+                    <div class="r"><b>${escapeHtml(tr('Bill No', 'බිල් අංකය'))}:</b> ${escapeHtml(bill.bill_no)}<br>
+                    <b>${escapeHtml(tr('Date', 'දිනය'))}:</b> ${escapeHtml(bill.bill_date)}</div>
+                </div>
                 <table class="packtbl"><thead><tr>
                     <th>${escapeHtml(tr('Item', 'භාණ්ඩය'))}</th><th class="r">${escapeHtml(tr('Pack', 'මල්ල'))}</th>
                     <th class="r">${escapeHtml(tr('Weight (kg)', 'බර (kg)'))}</th><th class="r">${escapeHtml(tr('Price/kg', 'මිල/kg'))}</th>
@@ -570,8 +578,8 @@ export default function NewSupplierBillDashboard() {
                 table{width:100%;border-collapse:collapse} th,td{border:1px solid #444;padding:4px 6px}
                 th{background:#eee} .r{text-align:right} .tot td{border:none;padding:2px 6px}
                 .tot{width:auto;margin-left:auto;margin-top:10px} .b{font-weight:bold}
-                .packsec{margin-top:16px}
-                .packtitle{font-weight:bold;margin-bottom:4px}
+                .page2{page-break-before:always;break-before:page}
+                @media screen{.page2{margin-top:30px;padding-top:20px;border-top:2px dashed #999}}
                 .packtbl{font-size:12px} .packtbl th,.packtbl td{padding:2px 6px}
                 .packtbl tr{page-break-inside:avoid;break-inside:avoid}
             </style></head><body>
