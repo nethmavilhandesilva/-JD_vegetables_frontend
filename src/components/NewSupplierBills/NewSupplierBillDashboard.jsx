@@ -137,12 +137,21 @@ export default function NewSupplierBillDashboard() {
     }, []);
 
     // Sidebars: unprinted = held bills of every date (so nothing waiting is missed),
-    // printed = bills printed for today's date, like Sales Entry.
+    // printed = bills printed today (by print time, not bill date), so a held bill from
+    // an earlier day moves across as soon as it is printed.
     const loadSidebars = useCallback(async () => {
         try {
+            const now = new Date();
+            const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
             const [held, printed] = await Promise.all([
                 api.get('/new-supplier-bills', { params: { print_status: 'held' } }),
-                api.get('/new-supplier-bills', { params: { print_status: 'printed', start_date: today(), end_date: today() } }),
+                api.get('/new-supplier-bills', { params: {
+                    print_status: 'printed',
+                    printed_from: dayStart.toISOString(),
+                    printed_to: dayEnd.toISOString(),
+                    printed_on: today(),
+                } }),
             ]);
             setHeldBills(held.data?.bills || []);
             setPrintedBills(printed.data?.bills || []);
