@@ -514,15 +514,14 @@ export default function NewSupplierBillDashboard() {
         const rows = (bill.items || []).map((it, i) => `
             <tr>
                 <td>${i + 1}</td>
-                <td>${escapeHtml(it.item_code)} ${escapeHtml(it.item_name || '')}${Array.isArray(it.pack_weights) && it.pack_weights.length
-                    ? `<div class="packs">${escapeHtml(tr('Packs', 'මලු'))}: ${escapeHtml(packText({ ...it, pack_weights: it.pack_weights.map(Number) }))}</div>` : ''}</td>
+                <td>${escapeHtml(it.item_code)} ${escapeHtml(it.item_name || '')}</td>
                 <td class="r">${num(it.packs) ? kg(it.packs) : ''}</td>
                 <td class="r">${kg(it.weight)}</td>
                 <td class="r">${money(it.price_per_kg)}</td>
                 <td class="r">${money(it.amount)}</td>
             </tr>`).join('');
 
-        // Second page: every pack with its weight, price and value
+        // Same page, under the totals: every pack with its weight, price and value
         const packItems = (bill.items || []).filter((it) => Array.isArray(it.pack_weights) && it.pack_weights.length)
             .map((it) => ({ ...it, pack_weights: it.pack_weights.map(Number) }));
         const packRows = packItems.map((it) => {
@@ -545,11 +544,9 @@ export default function NewSupplierBillDashboard() {
                 </tr>`;
         }).join('');
         const packsPage = packItems.length ? `
-            <div class="page2">
-                <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
-                <div class="sub">${escapeHtml(tr('Pack details', 'මලු විස්තර'))} — ${escapeHtml(tr('Bill No', 'බිල් අංකය'))}: ${escapeHtml(bill.bill_no)}
-                · ${escapeHtml(bill.supplier_code)} ${escapeHtml(bill.supplier_name || '')} · ${escapeHtml(bill.bill_date)}</div>
-                <table><thead><tr>
+            <div class="packsec">
+                <div class="packtitle">${escapeHtml(tr('Pack details', 'මලු විස්තර'))}</div>
+                <table class="packtbl"><thead><tr>
                     <th>${escapeHtml(tr('Item', 'භාණ්ඩය'))}</th><th class="r">${escapeHtml(tr('Pack', 'මල්ල'))}</th>
                     <th class="r">${escapeHtml(tr('Weight (kg)', 'බර (kg)'))}</th><th class="r">${escapeHtml(tr('Price/kg', 'මිල/kg'))}</th>
                     <th class="r">${escapeHtml(tr('Value', 'අගය'))}</th>
@@ -564,9 +561,10 @@ export default function NewSupplierBillDashboard() {
                 table{width:100%;border-collapse:collapse} th,td{border:1px solid #444;padding:4px 6px}
                 th{background:#eee} .r{text-align:right} .tot td{border:none;padding:2px 6px}
                 .tot{width:auto;margin-left:auto;margin-top:10px} .b{font-weight:bold}
-                .packs{font-size:11px;font-weight:normal;margin-top:2px}
-                .page2{page-break-before:always;break-before:page;padding-top:10px}
-                @media screen{.page2{margin-top:30px;border-top:2px dashed #999}}
+                .packsec{margin-top:16px}
+                .packtitle{font-weight:bold;margin-bottom:4px}
+                .packtbl{font-size:12px} .packtbl th,.packtbl td{padding:2px 6px}
+                .packtbl tr{page-break-inside:avoid;break-inside:avoid}
             </style></head><body>
             <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
             <div class="sub">${escapeHtml(tr('Supplier Bill', 'සැපයුම්කරු බිල්පත'))}</div>
