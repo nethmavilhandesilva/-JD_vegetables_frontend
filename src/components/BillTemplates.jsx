@@ -2,15 +2,45 @@ import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/sh
 import { tr } from '../i18n/language';
 // src/components/BillTemplates.jsx
 
-// Pack by pack: the weight of every pack on a bill line, e.g. "Packs: 26 + 25 + 24 kg"
-// (only when the line stands for more than one pack entry)
-const packWeightsText = (s) => {
-    if (!Array.isArray(s.pack_weights) || s.pack_weights.length < 2) return '';
-    const fmt = (w) => {
-        const n = parseFloat(w) || 0;
-        return Number.isInteger(n) ? String(n) : n.toFixed(2);
-    };
-    return `${tr('Packs', 'මලු')}: ${s.pack_weights.map(fmt).join(' + ')} kg`;
+// Pack by pack: a separate page printed after the bill, listing every pack of each item
+// with its weight (only items entered as more than one pack). The bill itself stays as is.
+const packDetailsPage = (salesData, billNo, customerName, width) => {
+    const lines = salesData.filter(s => Array.isArray(s.pack_weights) && s.pack_weights.length > 1);
+    if (lines.length === 0) return '';
+    const fmt = (w) => (parseFloat(w) || 0).toFixed(2);
+    const cell = 'border:1px solid #000; padding:3px 4px;';
+    const rows = lines.map(s => {
+        const packRows = s.pack_weights.map((w, j) => `
+            <tr>
+                <td style="${cell}">${j === 0 ? (s.item_name || s.item_code || '') : ''}</td>
+                <td style="${cell} text-align:center;">${j + 1}</td>
+                <td style="${cell} text-align:right;">${fmt(w)}</td>
+            </tr>`).join('');
+        const total = s.pack_weights.reduce((a, w) => a + (parseFloat(w) || 0), 0);
+        return `${packRows}
+            <tr style="font-weight:bold;">
+                <td style="${cell}">${tr('Total', 'එකතුව')}</td>
+                <td style="${cell} text-align:center;">${s.pack_weights.length}</td>
+                <td style="${cell} text-align:right;">${fmt(total)}</td>
+            </tr>`;
+    }).join('');
+    return `
+    <div style="page-break-before:always; break-before:page; width:${width}; margin:0 auto; padding:5px; font-family:Arial,sans-serif; color:#000;">
+        <div style="text-align:center; font-size:16px; font-weight:bold;">${SHOP_NAME} (${SHOP_STALL_NO})</div>
+        <div style="text-align:center; font-size:14px; font-weight:bold; margin:4px 0;">${tr('Pack details', 'මලු විස්තර')}</div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:bold; margin-bottom:6px;">
+            <span>${tr('Bill No', 'බිල් අංකය')}: ${billNo}</span>
+            <span>${(customerName || '').toUpperCase()}</span>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead><tr style="font-weight:bold;">
+                <th style="${cell} text-align:left;">${tr('Item', 'භාණ්ඩය')}</th>
+                <th style="${cell} text-align:center;">${tr('Pack', 'මල්ල')}</th>
+                <th style="${cell} text-align:right;">${tr('Weight (kg)', 'බර (kg)')}</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>`;
 };
 
 export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAmount = 0, billSize = '3inch' }) => {
@@ -109,10 +139,7 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
                 <div style="font-size:20px;">${s.supplier_code || "ASW"}</div>
                 <div>${formatNumber(value)}</div>
             </td>
-        </tr>${packWeightsText(s) ? `
-        <tr style="font-size:13px; color:#000;">
-            <td colspan="4" style="text-align:left; padding:0 0 6px 0;">${packWeightsText(s)}</td>
-        </tr>` : ''}`;
+        </tr>`;
     }).join("");
 
     const summaryEntries = Object.entries(consolidatedSummary);
@@ -239,6 +266,7 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
                 </table>
             </div>
         </div>
+        ${packDetailsPage(salesData, billNo, customerName, receiptMaxWidth)}
     </body>
     </html>`;
 };
@@ -304,8 +332,7 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
             weight: weight,
             price: price,
             packs: packs,
-            total: itemTotal,
-            packWeights: packWeightsText(s)
+            total: itemTotal
         });
     });
 
@@ -385,7 +412,7 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
             return `
             <tr style="page-break-inside: avoid;">
                 <td style="text-align: center; padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.id}</td>
-                <td style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.name}${item.packWeights ? `<div style="font-size: ${styles.tinyFontSize}; font-weight: normal;">${item.packWeights}</div>` : ''}</td>
+                <td style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.name}</td>
                 <td class="text-right" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${formatNumber(item.weight)}</td>
                 <td class="text-right" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${formatNumber(item.price)}</td>
                 <td class="text-center" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.packs}</td>
@@ -685,6 +712,7 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
 </head>
 <body>
     ${allPagesHTML}
+    ${packDetailsPage(salesData, billNo, customerName, styles.containerWidth)}
 </body>
 </html>`;
 };
