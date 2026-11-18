@@ -266,7 +266,7 @@ export const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globa
 </tr>` : ''}
 
 <tr>
-    <td style="font-size:14px;">${tr('Kuliya', 'කුලිය')}:</td>
+    <td style="font-size:14px;">${tr('Bag Cost', 'මලු වියදම')}:</td>
     <td style="text-align:right;">${formatNumber(totalKuliyaSum.toFixed(2))}</td>
 </tr>
                 <tr>
@@ -522,8 +522,8 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
             ${isLastPage ? `
             <div class="totals-section">
                 <div class="total-row"><span>${tr('Items Total', 'භාණ්ඩ එකතුව')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(totalSales)}</span></div>
-                <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(totalPackCost)}</span></div>
-                <div class="total-row"><span>${tr('Kuliya', 'කුලිය')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(totalKuliya)}</span></div>
+                ${totalPackCost > 0 ? `<div class="total-row"><span>${tr('Bags', 'මලු')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(totalPackCost)}</span></div>` : ''}
+                <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(totalKuliya)}</span></div>
                 ${globalLoanAmount !== 0 ? `<div class="total-row"><span>${tr('Previous Loan', 'පෙර ණය')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(Math.abs(globalLoanAmount))}</span></div>` : ''}
                 <div class="net-total">
                     <span>${tr('Total Amount Payable', 'මුළු ගෙවිය යුතු මුදල')}:</span>

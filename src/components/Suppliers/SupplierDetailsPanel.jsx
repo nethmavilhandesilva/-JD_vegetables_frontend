@@ -2,6 +2,7 @@
 import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import api from '../../api';
 import { tr } from '../../i18n/language';
+import { billDate } from '../../utils/billDate';
 
 // Props needed: data fetched by parent (details, isLoading), identifiers (supplierCode, billNo, isUnprintedBill), and parent callback (onClose/onDone).
 const SupplierDetailsPanel = ({ 
@@ -123,7 +124,7 @@ const SupplierDetailsPanel = ({
     // --- BILL CONTENT GENERATION ---
     const getBillContent = useCallback((currentBillNo) => {
         // ... (Bill content generation logic remains the same)
-        const date = new Date().toLocaleDateString('si-LK');
+        const date = billDate();
         const time = new Date().toLocaleTimeString('si-LK');
 
         const mobile = '071XXXXXXX';
@@ -149,7 +150,7 @@ const SupplierDetailsPanel = ({
         <table style="width:100%;font-size:9px;border-collapse:collapse;">
             <tr><td style="width:50%;">${tr('Date', 'දිනය')} : ${date}</td><td style="width:50%;text-align:right;">${time}</td></tr>
             <tr><td colspan="2">${tr('Tel', 'දුර')} : ${mobile || ''}</td></tr>
-            <tr><td>${tr('Bill No', 'බිල් අංකය')} : <strong>${currentBillNo || 'N/A'}</strong></td><td style="text-align:right;"><strong style="font-size:2.0em;">${supplierCode.toUpperCase()}</strong></td></tr>
+            <tr><td>${tr('Bill No', 'බිල් අංකය')} : <strong>${currentBillNo || 'N/A'}</strong></td><td style="text-align:right;"><strong style="font-size:2.6em;">${supplierCode.toUpperCase()}</strong></td></tr>
         </table>
     </div>
     <hr style="border:1px solid #000;margin:5px 0;opacity:1;">
@@ -165,7 +166,7 @@ const SupplierDetailsPanel = ({
         </tbody>
     </table>
     <table style="width:100%;font-size:15px;border-collapse:collapse;">
-        <tr><td>${tr('Kuliya', 'කුලිය')}:</td><td style="text-align:right;font-weight:bold;">${totalPackDueCost.toFixed(2)}</td></tr>
+        <tr><td>${tr('Bag Cost', 'මලු වියදම')}:</td><td style="text-align:right;font-weight:bold;">${totalPackDueCost.toFixed(2)}</td></tr>
         <tr><td>${tr('Value', 'අගය')}:</td><td style="text-align:right;font-weight:bold;"><span style="display:inline-block; border-top:1px solid #000; border-bottom:3px double #000; padding:2px 4px; min-width:80px; text-align:right; font-size:1.5em;">${(finaltotal).toFixed(2)}</span></td></tr>
     </table>
     <div style="font-size:10px;">

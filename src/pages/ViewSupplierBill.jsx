@@ -4,6 +4,7 @@ import api from "../api";
 import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/shop';
 import { API_BASE_URL } from '../config/paths';
 import { tr } from '../i18n/language';
+import { billDate, totalKuliya } from '../utils/billDate';
 
 const ViewSupplierBill = () => {
     const { token } = useParams();
@@ -79,7 +80,7 @@ const ViewSupplierBill = () => {
     const totalCustomerPackCost = items.reduce((s, i) => s + (parseFloat(i.CustomerPackCost) || 0), 0);
     const hireAmount = parseFloat(bill.hire_amount || 0);
     const netPayable = totalsupplierSales - advanceAmount - hireAmount + totalCustomerPackCost;
-    const date = new Date().toLocaleDateString('si-LK');
+    const date = billDate();
     const time = new Date().toLocaleTimeString('si-LK', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 
     // Build item summary data
@@ -164,7 +165,7 @@ const ViewSupplierBill = () => {
     <div style="text-align:center; font-weight:bold;">
         <div style="font-size:24px;">${SHOP_NAME} (${SHOP_STALL_NO})</div>
         <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;">
-            <div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${bill.supplier_code}</span></div>
+            <div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 12px; font-size:32px;">${bill.supplier_code}</span></div>
         </div>
       <div style="font-size:16px; white-space: nowrap;">${SHOP_ADDRESS}</div>
     </div>
@@ -202,8 +203,13 @@ const ViewSupplierBill = () => {
         </tr>
         <tr>
             <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">${tr('Bag Cost', 'මලු වියදම')}:</td>
-            <td style="text-align:right;"><span style="font-size:${fontSizeTotal}; padding:5px 10px;">${totalCustomerPackCost.toFixed(2)}</span></td>
+            <td style="text-align:right;"><span style="font-size:${fontSizeTotal}; padding:5px 10px;">${totalKuliya(items).toFixed(2)}</span></td>
         </tr>
+        ${totalCustomerPackCost > 0 ? `
+        <tr>
+            <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">${tr('Bags', 'මලු')}:</td>
+            <td style="text-align:right;"><span style="font-size:${fontSizeTotal}; padding:5px 10px;">${totalCustomerPackCost.toFixed(2)}</span></td>
+        </tr>` : ''}
 
         <tr style="font-size:18px;">
             <td style="font-size:15px; padding-top:5px;">${tr('Advance', 'අත්තිකාරම්')}</td>

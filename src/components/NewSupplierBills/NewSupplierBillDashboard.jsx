@@ -5,6 +5,7 @@ import api from '../../api';
 import { tr } from '../../i18n/language';
 import { SHOP_NAME, SHOP_STALL_NO } from '../../config/shop';
 import { printHtml } from '../../utils/printHtml';
+import { billDate } from '../../utils/billDate';
 
 // New Supplier Bills dashboard.
 // Bills entered here are stored in the new tables new_supplier_bills /
@@ -567,9 +568,9 @@ export default function NewSupplierBillDashboard() {
                 <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
                 <div class="sub">${escapeHtml(tr('Pack details', 'මලු විස්තර'))}</div>
                 <div class="meta">
-                    <div><b>${escapeHtml(tr('Supplier', 'සැපයුම්කරු'))}:</b> ${escapeHtml(bill.supplier_code)} ${escapeHtml(bill.supplier_name || '')}</div>
+                    <div><b>${escapeHtml(tr('Supplier', 'සැපයුම්කරු'))}:</b> <span class="code">${escapeHtml(bill.supplier_code)}</span> ${escapeHtml(bill.supplier_name || '')}</div>
                     <div class="r"><b>${escapeHtml(tr('Bill No', 'බිල් අංකය'))}:</b> ${escapeHtml(bill.bill_no)}<br>
-                    <b>${escapeHtml(tr('Date', 'දිනය'))}:</b> ${escapeHtml(bill.bill_date)}</div>
+                    <b>${escapeHtml(tr('Date', 'දිනය'))}:</b> ${escapeHtml(billDate(bill.bill_date))}</div>
                 </div>
                 <table class="packtbl"><thead><tr>
                     <th>${escapeHtml(tr('Item', 'භාණ්ඩය'))}</th><th class="r">${escapeHtml(tr('Pack', 'මල්ල'))}</th>
@@ -587,6 +588,7 @@ export default function NewSupplierBillDashboard() {
                 th{background:#eee} .r{text-align:right} .tot td{border:none;padding:2px 6px}
                 .tot{width:auto;margin-left:auto;margin-top:10px} .b{font-weight:bold}
                 .page2{page-break-before:always;break-before:page}
+                .code{font-size:20px;font-weight:bold;border:2px solid #000;padding:0 6px}
                 @media screen{.page2{margin-top:30px;padding-top:20px;border-top:2px dashed #999}}
                 .packtbl{font-size:12px} .packtbl th,.packtbl td{padding:2px 6px}
                 .packtbl tr{page-break-inside:avoid;break-inside:avoid}
@@ -594,10 +596,10 @@ export default function NewSupplierBillDashboard() {
             <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
             <div class="sub">${escapeHtml(tr('Supplier Bill', 'සැපයුම්කරු බිල්පත'))}</div>
             <div class="meta">
-                <div><b>${escapeHtml(tr('Supplier', 'සැපයුම්කරු'))}:</b> ${escapeHtml(bill.supplier_code)} ${escapeHtml(bill.supplier_name || '')}
+                <div><b>${escapeHtml(tr('Supplier', 'සැපයුම්කරු'))}:</b> <span class="code">${escapeHtml(bill.supplier_code)}</span> ${escapeHtml(bill.supplier_name || '')}
                 ${bill.reference_no ? `<br><b>${escapeHtml(tr('Ref No', 'යොමු අංකය'))}:</b> ${escapeHtml(bill.reference_no)}` : ''}</div>
                 <div class="r"><b>${escapeHtml(tr('Bill No', 'බිල් අංකය'))}:</b> ${escapeHtml(bill.bill_no)}<br>
-                <b>${escapeHtml(tr('Date', 'දිනය'))}:</b> ${escapeHtml(bill.bill_date)}<br>
+                <b>${escapeHtml(tr('Date', 'දිනය'))}:</b> ${escapeHtml(billDate(bill.bill_date))}<br>
                 <span style="font-size:11px">${escapeHtml(paymentLabel(bill.payment_type))}</span></div>
             </div>
             <table><thead><tr>

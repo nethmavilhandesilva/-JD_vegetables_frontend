@@ -184,7 +184,7 @@ const ThermalBillHTML = ({ salesData, billNo, customerName, mobile, globalLoanAm
 
             <table class="total-table">
                 ${totalPackCost > 0 ? `<tr><td style="padding-top:5px;">${tr('Bags', 'මලු')}:</td><td style="text-align:right;">${formatNumber(totalPackCost.toFixed(2))}</td></tr>` : ''}
-                <tr><td style="padding-top:5px;">${tr('Kuliya', 'කුලිය')}:</td><td style="text-align:right;">${formatNumber(totalKuliyaSum.toFixed(2))}</td></tr>
+                <tr><td style="padding-top:5px;">${tr('Bag Cost', 'මලු වියදම')}:</td><td style="text-align:right;">${formatNumber(totalKuliyaSum.toFixed(2))}</td></tr>
                 <tr>
                     <td style="padding-top:10px;">${tr('Total', 'එකතුව')}:</td>
                     <td style="text-align:right; padding-top:10px;">

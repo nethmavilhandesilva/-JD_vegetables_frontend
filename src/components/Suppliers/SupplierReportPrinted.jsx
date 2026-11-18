@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { SHOP_PHONE, SHOP_TAGLINE } from '../../config/shop';
 import { STORAGE_URL } from '../../config/paths';
 import { tr } from '../../i18n/language';
+import { billDate, totalKuliya } from '../../utils/billDate';
 
 const SupplierReport = () => {
     const navigate = useNavigate();
@@ -522,7 +523,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
     }, [supplierDetails]);
 
     const getBillContent = useCallback((currentBillNo) => {
-        const date = new Date().toLocaleDateString('si-LK');
+        const date = billDate();
         const mobile = SHOP_PHONE;
         const is4Inch = billSize === '4inch';
         const receiptMaxWidth = is4Inch ? '4in' : '350px';
@@ -590,7 +591,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
         <div style="font-size:24px;">xxxx</div>
         <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;">
             <span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">xx</span>
-            <div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${selectedSupplier}</span></div>
+            <div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 12px; font-size:32px;">${selectedSupplier}</span></div>
         </div>
       <div style="font-size:14px;">${SHOP_TAGLINE}</div>
     </div>
@@ -626,7 +627,11 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
           <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">${tr('Total value of this bill', 'මෙම බිලට මුළු අගය')}:</td>
           <td style="text-align:right;"><span style="border-bottom:2px solid #000; font-size:${fontSizeTotal}; padding:5px 10px;">${(totalsupplierSales.toFixed(2))}</span></td>
         </tr>
-        
+        <tr>
+          <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">${tr('Bag Cost', 'මලු වියදම')}:</td>
+          <td style="text-align:right;"><span style="font-size:${fontSizeTotal}; padding:5px 10px;">${totalKuliya(supplierDetails).toFixed(2)}</span></td>
+        </tr>
+
         ${(parseFloat(paymentAmount) || 0) > 0 ? `
         <tr style="font-size:18px;">
             <td style="font-size:15px; padding-top:10px;">${tr('Paid Amount', 'ගෙවූ මුදල')} (${paymentType}):</td>

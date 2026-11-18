@@ -3,6 +3,7 @@ import Sidebar from '../Sidebar';
 import api from "../../api"; // ✅ axios wrapper
 import { SHOP_NAME, SHOP_PHONE, SHOP_TAGLINE, SHOP_ADDRESS } from '../../config/shop';
 import { tr } from '../../i18n/language';
+import { billDate, totalKuliya } from '../../utils/billDate';
 
 const SalesReport = () => {
     const [sales, setSales] = useState([]);
@@ -110,7 +111,7 @@ const SalesReport = () => {
 
     // --- 2. FARMER RECEIPT LOGIC ---
     const buildFarmerBillHTML = (supplierDetails, currentBillNo, selectedSupplier) => {
-        const date = new Date().toLocaleDateString('si-LK');
+        const date = billDate();
         const mobile = SHOP_PHONE;
         const receiptMaxWidth = '350px';
         const fontSizeBody = '25px';
@@ -156,13 +157,13 @@ const SalesReport = () => {
                  <div style="font-size:24px;">
                 <span style="font-size: 14px; margin-left: -160px; margin-right: 40px; color: #666;">${tr('Old Bill', 'පරණ බිල්')}</span>xxxx
                 </div>
-                <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;"><span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">xx</span><div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${selectedSupplier}</span></div></div>
+                <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;"><span style="border:2.5px solid #000; padding:5px 12px; font-size:22px;">xx</span><div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 12px; font-size:32px;">${selectedSupplier}</span></div></div>
                 <div style="font-size:14px;">${SHOP_TAGLINE}</div>
             </div>
             <div style="font-size:19px; margin-top:10px; padding:0 5px;"><div style="font-weight: bold; white-space: normal;">${tr('Tel', 'දුර')}: ${mobile}</div><div style="display:flex; justify-content:space-between; margin-top:3px;"><span>${tr('Bill No', 'බිල් අංකය')}:${currentBillNo}</span><span>${tr('Date', 'දිනය')}:${date}</span></div></div>
             <hr style="border:none; border-top:2.5px solid #000; margin:10px 0;">
             <table style="width:100%; border-collapse:collapse; font-size:${fontSizeBody}; table-layout: fixed;">${colGroups}<thead><tr style="border-bottom:2.5px solid #000; font-weight:bold;"><th style="text-align:left; padding-bottom:8px; font-size:${fontSizeHeader};">${tr('Type', 'වර්ගය')}<br>${tr('Bags', 'මලු')}</th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -50px; top: 24px;"> ${tr('Kg', 'කිලෝ')} </th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -45px; top: 24px;">${tr('Price', 'මිල')}</th><th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};"><br>${tr('Value', 'අගය')}</th></tr></thead><tbody>${detailedItemsHtml}</tbody><tfoot><tr style="border-top:2.5px solid #000; font-weight:bold;"><td style="padding-top:12px; font-size:${fontSizeTotal};">${formatNumber(totalPacksSum)}</td><td colspan="3" style="padding-top:12px; font-size:${fontSizeTotal}; text-align:right;">${totalsupplierSales.toFixed(2)}</td></tr></tfoot></table>
-            <table style="width:100%; margin-top:20px; font-weight:bold; font-size:22px;"><tr><td>${tr('Pay for this bill', 'මෙම බිලට ගෙවන්න')}:</td><td style="text-align:right;"><span style="border-bottom:5px double #000; border-top:2px solid #000; font-size:${fontSizeTotal}; padding:5px 10px;">${totalsupplierSales.toFixed(2)}</span></td></tr><tr style="font-weight:900;"><td>${tr('Remaining Balance', 'ඉතිරි ශේෂය')}:</td><td style="text-align:right;"><span style="font-size:${fontSizeTotal};">${netPayable.toFixed(2)}</span></td></tr></table>
+            <table style="width:100%; margin-top:20px; font-weight:bold; font-size:22px;"><tr><td>${tr('Pay for this bill', 'මෙම බිලට ගෙවන්න')}:</td><td style="text-align:right;"><span style="border-bottom:5px double #000; border-top:2px solid #000; font-size:${fontSizeTotal}; padding:5px 10px;">${totalsupplierSales.toFixed(2)}</span></td></tr><tr><td style="font-size:15px;">${tr('Bag Cost', 'මලු වියදම')}:</td><td style="text-align:right;"><span style="font-size:${fontSizeTotal}; padding:5px 10px;">${totalKuliya(supplierDetails).toFixed(2)}</span></td></tr><tr style="font-weight:900;"><td>${tr('Remaining Balance', 'ඉතිරි ශේෂය')}:</td><td style="text-align:right;"><span style="font-size:${fontSizeTotal};">${netPayable.toFixed(2)}</span></td></tr></table>
             <div style="text-align:center; margin-top:25px; font-size:13px; border-top:2.5px solid #000; padding-top:10px;"><p style="margin:4px 0; font-weight:bold;">${tr('Please check goods before taking them', 'භාණ්ඩ පරීක්ෂාකර බලා රැගෙන යන්න')}</p><p style="margin:4px 0;">${tr('Goods will not be taken back', 'නැවත භාර ගනු නොලැබේ')}</p></div>
         </div>`;
     };

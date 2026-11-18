@@ -6,6 +6,7 @@ import { STORAGE_URL } from '../../config/paths';
 import { printHtml } from '../../utils/printHtml';
 import PrintPreviewDialog from '../PrintPreviewDialog';
 import { tr } from '../../i18n/language';
+import { billDate, totalKuliya } from '../../utils/billDate';
 
 // Surfaces the real backend error (Laravel validation errors, custom error/message
 // fields, etc.) instead of a hardcoded generic string, so failures are diagnosable
@@ -1334,7 +1335,7 @@ const SupplierReport = () => {
 
     // 🚀 FIXED: Customizable width bill with center alignment and ultra-clear high-visibility styling
     const getA4Content = useCallback((currentBillNo, billWidth = "101mm", topMargin = "13mm") => {
-        const date = new Date().toLocaleDateString('si-LK');
+        const date = billDate();
         const time = new Date().toLocaleTimeString('si-LK', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
         const paidAmountValue = parseFloat(payingAmount) || 0;
         const netPayable = totalsupplierSales - advanceAmount - hireAmount - paidAmountValue + totalCustomerPackCost;
@@ -1434,6 +1435,7 @@ const SupplierReport = () => {
         const grandAdvanceAmount = advanceAmount;
         const grandPaidAmount = paidAmountValue;
         const grandNetPayable = netPayable;
+        const grandKuliya = totalKuliya(supplierDetails);
 
         // Generate HTML for each page
         const generatePage = (pageItems, pageNumber, isLastPage) => {
@@ -1456,7 +1458,7 @@ const SupplierReport = () => {
             </div>
             
             <div class="info-row" style="display: flex; flex-wrap: nowrap; gap: 3.3mm; white-space: nowrap;">
-                <div>${tr('Farmer', 'ගොවියා')}: ${(selectedSupplier || '').toUpperCase()}</div>
+                <div>${tr('Farmer', 'ගොවියා')}: <span style="font-size: ${styles.headerFontSize}; border: 0.4mm solid #000; padding: 0 1mm;">${(selectedSupplier || '').toUpperCase()}</span></div>
                 <div>${tr('No:', 'අං:')} ${currentBillNo || ''}</div>
                 <div>${tr('Date', 'දිනය')}: ${date}</div>
                 <div>${time}</div>
@@ -1475,12 +1477,11 @@ const SupplierReport = () => {
 
             <table>
                 <colgroup>
-                    <col style="width: 30%">
-                    <col style="width: 10%">
-                    <col style="width: 15%">
-                    <col style="width: 15%">
-                    <col style="width: 15%">
-                    <col style="width: 15%">
+                    <col style="width: 34%">
+                    <col style="width: 12%">
+                    <col style="width: 18%">
+                    <col style="width: 16%">
+                    <col style="width: 20%">
                 </colgroup>
                 <thead>
                     <tr>
@@ -1488,7 +1489,6 @@ const SupplierReport = () => {
                         <th style="font-size: ${styles.tableHeaderFontSize};">${tr('Bags', 'මලු')}</th>
                         <th style="text-align: right; font-size: ${styles.tableHeaderFontSize};">${tr('Weight', 'බර')}</th>
                         <th style="text-align: right; font-size: ${styles.tableHeaderFontSize};">${tr('Price', 'මිල')}</th>
-                        <th style="text-align: center; font-size: ${styles.tableHeaderFontSize};">${tr('Cust', 'ගනු')}</th>
                         <th style="text-align: right; font-size: ${styles.tableHeaderFontSize};">${tr('Total', 'එකතුව')}</th>
                     </tr>
                 </thead>
@@ -1499,17 +1499,16 @@ const SupplierReport = () => {
                             <td style="text-align: center; padding: ${styles.cellPadding}; font-size: ${styles.normalFontSize};">${record.packs || 0}</td>
                             <td class="text-right" style="padding: ${styles.cellPadding}; font-size: ${styles.normalFontSize};">${formatNumber(record.weight)}</td>
                             <td class="text-right" style="padding: ${styles.cellPadding}; font-size: ${styles.normalFontSize};">${formatNumber(record.SupplierPricePerKg)}</td>
-                            <td style="text-align: center; padding: ${styles.cellPadding}; font-size: ${styles.normalFontSize};">${(record.customer_code || '').toUpperCase()}</td>
                             <td class="text-right" style="padding: ${styles.cellPadding}; font-size: ${styles.normalFontSize};">${formatNumber(record.SupplierTotal)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
                 <tfoot>
                     <tr style="background: #f0f0f0;">
-                        <td colspan="2" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${tr('Page Total', 'මෙම පිටුවේ එකතුව')}</td>
-                        <td class="text-right" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">  </td>
-                        <td style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">  </td>
+                        <td style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${tr('Page Total', 'මෙම පිටුවේ එකතුව')}</td>
                         <td class="text-center" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${pageTotalPacks}</td>
+                        <td style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">  </td>
+                        <td style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">  </td>
                         <td class="text-right" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${formatNumber(pageTotalSales)}</td>
                     </tr>
                 </tfoot>
@@ -1518,7 +1517,8 @@ const SupplierReport = () => {
             ${isLastPage ? `
             <div class="totals-section">
                 <div class="total-row"><span>${tr('Grand Total', 'මුළු එකතුව')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalSales)}</span></div>
-                <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalPackCost)}</span></div>
+                ${grandTotalPackCost > 0 ? `<div class="total-row"><span>${tr('Bags', 'මලු')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalPackCost)}</span></div>` : ''}
+                <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandKuliya)}</span></div>
                 <div class="total-row"><span>${tr('Advance', 'අත්තිකාරම්')}:</span><span style="color: red !important;">${tr('Rs.', 'රු.')} -${formatNumber(grandAdvanceAmount)}</span></div>
                 ${hireAmount > 0 ? `<div class="total-row"><span>${tr('Hire', 'කුලී')}:</span><span style="color: red !important;">${tr('Rs.', 'රු.')} -${formatNumber(hireAmount)}</span></div>` : ''}
                 ${grandPaidAmount > 0 ? `<div class="total-row"><span>${tr('Paid Amount', 'ගෙවූ මුදල')}:</span><span>${tr('Rs.', 'රු.')} -${formatNumber(grandPaidAmount)}</span></div>` : ''}
@@ -1554,7 +1554,7 @@ const SupplierReport = () => {
             </div>
             
             <div class="info-row">
-                <div>${tr('Code', 'කේතය')}: ${(selectedSupplier || '').toUpperCase()}</div>
+                <div>${tr('Code', 'කේතය')}: <span style="font-size: ${styles.headerFontSize};">${(selectedSupplier || '').toUpperCase()}</span></div>
                 <div>${tr('No', 'අංකය')}: ${currentBillNo || ''}</div>
                 <div>${tr('Date', 'දිනය')}: ${date}</div>
                 <div>${tr('Time', 'වේලාව')}: ${time}</div>
@@ -1734,7 +1734,7 @@ const SupplierReport = () => {
     }, [selectedSupplier, supplierDetails, totalsupplierSales, advanceAmount, hireAmount, payingAmount, totalPacksSum, totalWeight, totalCustomerPackCost, farmerLoanTotal, isBulkPrintEnabled]);
 
     const getBillContent = useCallback((currentBillNo) => {
-        const date = new Date().toLocaleDateString('si-LK');
+        const date = billDate();
         const mobile = SHOP_PHONE;
         const is4Inch = billSize === '4inch';
         const receiptMaxWidth = is4Inch ? '4in' : '350px';
@@ -1829,7 +1829,7 @@ const SupplierReport = () => {
     <div style="text-align:center; font-weight:bold;">
         <div style="font-size:24px;">${SHOP_NAME} (${SHOP_STALL_NO})</div>
         <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin:12px 0;">
-            <div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 10px; font-size:22px;">${selectedSupplier}</span></div>
+            <div style="font-size:18px;">${tr('Farmer', 'ගොවියා')}: <span style="border:2.5px solid #000; padding:5px 12px; font-size:32px;">${selectedSupplier}</span></div>
         </div>
       <div style="font-size:16px; white-space: nowrap;">${SHOP_ADDRESS}</div>
     </div>
@@ -1867,8 +1867,13 @@ const SupplierReport = () => {
          </tr>
         <tr>
           <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">${tr('Bag Cost', 'මලු වියදම')}:</td>
-          <td style="text-align:right;"><span style="font-size:${fontSizeTotal}; padding:5px 10px;">${totalCustomerPackCost.toFixed(2)}</span></td>
+          <td style="text-align:right;"><span style="font-size:${fontSizeTotal}; padding:5px 10px;">${totalKuliya(supplierDetails).toFixed(2)}</span></td>
         </tr>
+        ${totalCustomerPackCost > 0 ? `
+        <tr>
+          <td style="font-size:15px; white-space:nowrap; position:relative; left:-15px;">${tr('Bags', 'මලු')}:</td>
+          <td style="text-align:right;"><span style="font-size:${fontSizeTotal}; padding:5px 10px;">${totalCustomerPackCost.toFixed(2)}</span></td>
+        </tr>` : ''}
         
         ${paidAmountValue > 0 ? `
         <tr style="font-size:18px;">
