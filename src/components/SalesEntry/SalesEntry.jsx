@@ -808,17 +808,13 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     const [printJob, setPrintJob] = useState(null);
     // Pack by pack: weight, price, Enter = one pack (Packs 1) saved; item + price stay for the
     // next pack. The bill (F1) then lists the weight of every pack under its item.
-    const [packMode, setPackMode] = useState(() => {
-        try { return localStorage.getItem('salesPackMode') === '1'; } catch { return false; }
-    });
+    // Always unticked when the page opens; ticking it only lasts until the page is opened again.
+    const [packMode, setPackMode] = useState(false);
     // Credit / Cash buttons: every new bill starts as Credit. Records are saved with the choice
     // and the whole bill gets it when printed (credit_transaction Y = credit, N = cash).
     const [billType, setBillType] = useState('credit');
     const creditFlag = billType === 'cash' ? 'N' : 'Y';
-    const togglePackMode = (on) => {
-        setPackMode(on);
-        try { localStorage.setItem('salesPackMode', on ? '1' : '0'); } catch { /* ignore */ }
-    };
+    const togglePackMode = (on) => setPackMode(on);
     const [lastPrintedBill, setLastPrintedBill] = useState(() => {
         try {
             const saved = localStorage.getItem('lastPrintedBill');
