@@ -17,25 +17,39 @@ const SupplierReport = () => {
     // Search Filter
     const [searchSupplierBillNo, setSearchSupplierBillNo] = useState('');
 
-    // Fetch Report
-    const fetchReport = async () => {
+    // Fetch Report. With a date range the records come from sales_histories only (not today's
+    // sales); with no dates they come from today's sales. One date alone = that single day.
+    const fetchReport = async (from = startDate, to = endDate) => {
         try {
             setLoading(true);
+            const start = from || to;
+            const end = to || from;
 
             const response = await api.get('/supplier-report', {
-                params: {
-                    start_date: startDate,
-                    end_date: endDate
-                }
+                params: start ? { start_date: start, end_date: end } : {}
             });
 
             setReportData(response.data);
-            setFilteredReportData(response.data);
+            setFilteredReportData(searchSupplierBillNo.trim() ? applyBillFilter(response.data, searchSupplierBillNo) : response.data);
         } catch (error) {
             console.error("Error fetching report:", error);
         } finally {
             setLoading(false);
         }
+    };
+
+    // Records of the report that match a supplier bill number
+    const applyBillFilter = (data, searchTerm) => {
+        const filterGroups = (groups = {}) => {
+            const filtered = {};
+            Object.keys(groups).forEach(key => {
+                const rows = groups[key].filter(sale =>
+                    sale.supplier_bill_no && String(sale.supplier_bill_no).toLowerCase().includes(searchTerm.toLowerCase()));
+                if (rows.length > 0) filtered[key] = rows;
+            });
+            return filtered;
+        };
+        return { ...data, billed: filterGroups(data.billed), nonBilled: filterGroups(data.nonBilled) };
     };
 
     // Filter by Supplier Bill Number
@@ -85,16 +99,21 @@ const SupplierReport = () => {
         setSearchSupplierBillNo('');
         setLoading(true);
 
-        const response = await api.get('/supplier-report');
-        setReportData(response.data);
-        setFilteredReportData(response.data);
-        setLoading(false);
+        try {
+            const response = await api.get('/supplier-report');
+            setReportData(response.data);
+            setFilteredReportData(response.data);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // Auto Load Default Report on Page Load
+    // Load on page open, and again whenever the date range changes (a range = sales history)
     useEffect(() => {
-        fetchReport();
-    }, []);
+        if ((startDate && !endDate) || (!startDate && endDate)) return; // wait for both dates
+        fetchReport(startDate, endDate);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [startDate, endDate]);
 
     // Calculate Grand Total
     const calculateGrandTotal = () => {
@@ -207,10 +226,25 @@ const SupplierReport = () => {
     const grandProfit = calculateGrandProfit();
 
     return (
-        <div style={{ display: 'flex' }}>
+        <div className="sfr-root" style={{ display: 'flex' }}>
+            {/* Full-screen report: these rules override the page's normal width / padding */}
+            <style>{`
+                .sfr-root { width: 100% !important; max-width: none !important; margin: -1.5rem -12px 0 -12px !important; min-height: 100vh; background: #f5f5f5 !important; }
+                .sfr-root .sfr-content { margin-left: 260px !important; width: auto !important; max-width: none !important; flex: 1 1 auto !important; min-width: 0 !important; padding: 16px 20px !important; background: #f5f5f5 !important; box-sizing: border-box; }
+                .sfr-root .card { width: 100% !important; max-width: none !important; }
+                .sfr-root .table-responsive { overflow-x: auto; }
+                .sfr-root table.table { width: 100% !important; font-size: 1rem; }
+                .sfr-root table.table th, .sfr-root table.table td { padding: 8px 12px !important; white-space: nowrap; }
+                @media (max-width: 991px) { .sfr-root .sfr-content { margin-left: 0 !important; } }
+                @media print {
+                    .sfr-root { margin: 0 !important; }
+                    .sfr-root .sfr-content { margin-left: 0 !important; padding: 0 !important; }
+                    .sfr-root > :not(.sfr-content) { display: none !important; }
+                }
+            `}</style>
             <Sidebar />
 
-            <div style={{
+            <div className="sfr-content" style={{
                 marginLeft: '260px',
                 padding: '30px',
                 width: '100%',
@@ -240,8 +274,8 @@ const SupplierReport = () => {
                         <div className="col-md-2">
                             <button
                                 className="btn btn-primary w-100"
-                                onClick={fetchReport}
-                                disabled={!startDate || !endDate || loading}
+                                onClick={() => fetchReport()}
+                                disabled={(!startDate && !endDate) || loading}
                             >
                                 {loading ? 'Loading...' : 'Search'}
                             </button>
@@ -255,11 +289,11 @@ const SupplierReport = () => {
                     </div>
 
                     {/* Date Summary */}
-                    {startDate && endDate && (
-                        <div className="mt-2 text-muted">
-                            Showing records from <b>{startDate}</b> to <b>{endDate}</b>
-                        </div>
-                    )}
+                    <div className="mt-2 text-muted">
+                        {startDate && endDate
+                            ? <>{tr('Sales history from', 'විකුණුම් ඉතිහාසය')} <b>{startDate}</b> {tr('to', 'සිට')} <b>{endDate}</b></>
+                            : tr("Today's sales (choose a date range to see sales history)", 'අද විකුණුම් (විකුණුම් ඉතිහාසය සඳහා දින පරාසයක් තෝරන්න)')}
+                    </div>
                 </div>
 
                 {/* SEARCH BAR - SUPPLIER BILL NUMBER FILTER */}
@@ -269,7 +303,15 @@ const SupplierReport = () => {
                             <label className="fw-bold">{tr('Search by Supplier Bill No', 'සැපයුම්කරු බිල් අංකය අනුව සොයන්න')}</label>
                             <div className="input-group">
                                 <input 
-                                    type="text" 
+                                    type="search" 
+                                    name="sfr-supplier-bill-search"
+                                    autoComplete="off"
+                                    data-lpignore="true"
+                                    data-1p-ignore="true"
+                                    data-bwignore="true"
+                                    data-form-type="other"
+                                    readOnly
+                                    onFocus={(e) => e.target.removeAttribute('readonly')}
                                     className="form-control"
                                     placeholder={tr('Enter supplier bill no...', 'සැපයුම්කරු බිල් අංකය ඇතුලත් කරන්න...')}
                                     value={searchSupplierBillNo}
