@@ -218,6 +218,13 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
 
                                 {user?.role !== 'Admin' && (
                                     <>
+                                        {/* Back to the main billing screen (Sales Entry) from any other page */}
+                                        {!isSalesEntryPage && (
+                                            <Link to="/sales" className="btn btn-warning btn-sm mx-1 d-inline-flex align-items-center" style={{ fontWeight: 'bold', color: '#000' }}>
+                                                <i className="material-icons me-1" style={{ fontSize: 18 }}>point_of_sale</i>
+                                                {tr('Billing', 'බිල්පත් කිරීම')}
+                                            </Link>
+                                        )}
                                         <Link to="/customers-loans" className="btn btn-outline-success btn-sm mx-1" style={{ fontWeight: 'bold', color: '#fff' }}>{tr('Give / Take Loans', 'ණය දීම/ගැනීම')}</Link>
                                         <Link to="/supplierreport" className="btn btn-outline-success btn-sm mx-1" style={{ fontWeight: 'bold', color: '#fff' }}>{tr('Supplier Bills', 'සැපයුම්කරු බිල්පත්')}</Link>
                                         <Link to="/new-supplier-bills" className="btn btn-outline-success btn-sm mx-1" style={{ fontWeight: 'bold', color: '#fff' }}>{tr('New Supplier Bills', 'නව සැපයුම්කරු බිල්පත්')}</Link>

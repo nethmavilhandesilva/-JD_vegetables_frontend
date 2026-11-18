@@ -37,7 +37,11 @@ const emptyForm = () => ({
     deduction_note: '',
     paid_amount: '',
     notes: '',
+    payment_type: 'credit', // Credit / Cash buttons: every new bill starts as Credit
 });
+
+const paymentLabel = (t) => (t === 'cash' ? tr('Cash', 'මුදල්') : tr('Credit', 'ණය'));
+const PAYMENT_BADGE = { credit: 'bg-info text-dark', cash: 'bg-success' };
 
 const STATUS_BADGE = { unpaid: 'bg-danger', partial: 'bg-warning text-dark', paid: 'bg-success' };
 const statusLabel = (s) => ({
@@ -74,7 +78,7 @@ export default function NewSupplierBillDashboard() {
     const [message, setMessage] = useState('');
 
     // ---------- list ----------
-    const [filters, setFilters] = useState({ start_date: today(), end_date: today(), supplier: null, status: '', print_status: '', search: '' });
+    const [filters, setFilters] = useState({ start_date: today(), end_date: today(), supplier: null, status: '', print_status: '', payment_type: '', search: '' });
     const [bills, setBills] = useState([]);
     const [summary, setSummary] = useState(null);
     const [truncated, setTruncated] = useState(false);
@@ -123,6 +127,7 @@ export default function NewSupplierBillDashboard() {
             if (f.supplier) params.supplier_code = f.supplier.value;
             if (f.status) params.status = f.status;
             if (f.print_status) params.print_status = f.print_status;
+            if (f.payment_type) params.payment_type = f.payment_type;
             if (f.search.trim()) params.search = f.search.trim();
             const res = await api.get('/new-supplier-bills', { params });
             setBills(res.data?.bills || []);
@@ -250,9 +255,10 @@ export default function NewSupplierBillDashboard() {
         setTimeout(() => weightRef.current?.focus(), 0);
     };
 
-    // Pack by pack: one line per item. Every Enter adds one pack (Packs 1, 2, 3 ...) to that line,
-    // even when the price is different; each pack keeps its own weight and price.
-    const sameLine = (l, item) => Array.isArray(l.pack_weights) && !!item && l.item?.value === item?.value;
+    // Pack by pack: one line per item AND price. Every Enter adds one pack (Packs 1, 2, 3 ...) to
+    // the line with the same item and price; a different price starts a new line (new record).
+    const sameLine = (l, item, price) => Array.isArray(l.pack_weights) && !!item && l.item?.value === item?.value
+        && num(l.price_per_kg) === num(price) && !mixedPrices(l);
 
     const withPacks = (l, weights, prices) => ({
         ...l,
@@ -266,7 +272,7 @@ export default function NewSupplierBillDashboard() {
     const linesWithPack = (current, item, price, weight) => {
         const w = Math.round(num(weight) * 1000) / 1000;
         const p = num(price);
-        const idx = current.findIndex((l) => sameLine(l, item));
+        const idx = current.findIndex((l) => sameLine(l, item, price));
         if (idx === -1) return [...current, withPacks({ item, price_per_kg: String(price) }, [w], [p])];
         return current.map((l, i) => (i === idx
             ? withPacks({ ...l, price_per_kg: String(price) }, [...l.pack_weights, w], [...pricesOf(l), p])
@@ -294,7 +300,7 @@ export default function NewSupplierBillDashboard() {
     };
 
     // Pack line of the item + price being entered (its pack weights are listed under the inputs)
-    const activePackIndex = packMode ? lines.findIndex((l) => sameLine(l, line.item)) : -1;
+    const activePackIndex = packMode ? lines.findIndex((l) => sameLine(l, line.item, line.price_per_kg)) : -1;
     const activePackLine = activePackIndex >= 0 ? lines[activePackIndex] : null;
 
     // Weight -> Enter -> price (in pack mode the last price stays filled and selected, so one
@@ -386,6 +392,7 @@ export default function NewSupplierBillDashboard() {
             supplier_code: form.supplier.value,
             supplier_name: form.supplier.name || null,
             reference_no: form.reference_no.trim() || null,
+            payment_type: form.payment_type === 'cash' ? 'cash' : 'credit',
             deductions: num(form.deductions),
             deduction_note: form.deduction_note.trim() || null,
             paid_amount: num(form.paid_amount),
@@ -461,6 +468,7 @@ export default function NewSupplierBillDashboard() {
                 bill_date: full.bill_date,
                 supplier,
                 reference_no: full.reference_no || '',
+                payment_type: full.payment_type === 'cash' ? 'cash' : 'credit',
                 deductions: num(full.deductions) ? String(full.deductions) : '',
                 deduction_note: full.deduction_note || '',
                 paid_amount: num(full.paid_amount) ? String(full.paid_amount) : '',
@@ -589,7 +597,8 @@ export default function NewSupplierBillDashboard() {
                 <div><b>${escapeHtml(tr('Supplier', 'සැපයුම්කරු'))}:</b> ${escapeHtml(bill.supplier_code)} ${escapeHtml(bill.supplier_name || '')}
                 ${bill.reference_no ? `<br><b>${escapeHtml(tr('Ref No', 'යොමු අංකය'))}:</b> ${escapeHtml(bill.reference_no)}` : ''}</div>
                 <div class="r"><b>${escapeHtml(tr('Bill No', 'බිල් අංකය'))}:</b> ${escapeHtml(bill.bill_no)}<br>
-                <b>${escapeHtml(tr('Date', 'දිනය'))}:</b> ${escapeHtml(bill.bill_date)}</div>
+                <b>${escapeHtml(tr('Date', 'දිනය'))}:</b> ${escapeHtml(bill.bill_date)}<br>
+                <span style="font-size:11px">${escapeHtml(paymentLabel(bill.payment_type))}</span></div>
             </div>
             <table><thead><tr>
                 <th>#</th><th>${escapeHtml(tr('Item', 'භාණ්ඩය'))}</th><th class="r">${escapeHtml(tr('Packs', 'මලු'))}</th>
@@ -631,6 +640,7 @@ export default function NewSupplierBillDashboard() {
             bill_date: form.bill_date,
             supplier_code: form.supplier?.value || '', supplier_name: form.supplier?.name || '',
             reference_no: form.reference_no, notes: form.notes, deduction_note: form.deduction_note,
+            payment_type: form.payment_type,
             items, total_weight: items.reduce((a, it) => a + it.weight, 0), gross_amount: gross, commission_amount: commission,
             deductions: num(form.deductions), net_amount: net, paid_amount: num(form.paid_amount), balance_amount: round2(net - num(form.paid_amount)),
         }));
@@ -642,7 +652,7 @@ export default function NewSupplierBillDashboard() {
 
     const applyFilters = (e) => { e?.preventDefault(); loadBills(filters); };
     const clearFilters = () => {
-        const f = { start_date: today(), end_date: today(), supplier: null, status: '', print_status: '', search: '' };
+        const f = { start_date: today(), end_date: today(), supplier: null, status: '', print_status: '', payment_type: '', search: '' };
         setFilters(f);
         loadBills(f);
     };
@@ -685,7 +695,20 @@ export default function NewSupplierBillDashboard() {
                         <span style={{ marginLeft: 6, background: '#000', borderRadius: 8, padding: '0 6px', fontSize: 11 }}>{list.length}</span>
                     </h2>
                     <input
-                        type="text"
+                        type="search"
+                        // Not a login field: stop the browser / password managers filling saved
+                        // usernames or passwords here (read-only until focused, when browsers autofill)
+                        name={`nsb-sidebar-search-${type}`}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-bwignore="true"
+                        data-form-type="other"
+                        readOnly
+                        onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
+                        onBlur={(e) => e.currentTarget.setAttribute('readonly', '')}
                         value={sideSearch[type]}
                         onChange={(e) => setSideSearch({ ...sideSearch, [type]: e.target.value.toUpperCase() })}
                         placeholder={isPrinted ? tr('Search bill no / code...', 'සෙවීම බිල්පත් අංකය/කේතය...') : tr('Search supplier code...', 'සැපයුම්කරු කේතය සොයන්න...')}
@@ -712,6 +735,9 @@ export default function NewSupplierBillDashboard() {
                                 }}
                             >
                                 {text}
+                                <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 'bold', color: b.payment_type === 'cash' ? '#15803d' : '#b45309' }}>
+                                    {b.payment_type === 'cash' ? tr('Cash', 'මුදල්') : tr('Credit', 'ණය')}
+                                </span>
                                 {!isPrinted && b.bill_date !== today() && <span style={{ display: 'block', fontSize: 10, color: '#b91c1c' }}>{b.bill_date}</span>}
                             </button>
                         );
@@ -752,6 +778,25 @@ export default function NewSupplierBillDashboard() {
                         </div>
                         <div style={{ color: 'red', fontWeight: 'bold', fontSize: '1.15rem', whiteSpace: 'nowrap' }}>
                             {tr("Today's Bills:", 'අද බිල්පත්:')} Rs. {money(todayTotal)}
+                        </div>
+                        {/* Credit / Cash: chosen for this bill (Credit by default) */}
+                        <div style={{ display: 'flex', gap: 6 }}>
+                            {[
+                                { key: 'credit', color: '#dc2626' },
+                                { key: 'cash', color: '#16a34a' },
+                            ].map(({ key, color }) => {
+                                const active = form.payment_type === key;
+                                return (
+                                    <button key={key} type="button" tabIndex={-1}
+                                        onClick={() => setForm((f) => ({ ...f, payment_type: key }))}
+                                        style={{
+                                            padding: '4px 14px', borderRadius: 6, fontWeight: 'bold', fontSize: '0.95rem', cursor: 'pointer',
+                                            border: `2px solid ${color}`, backgroundColor: active ? color : 'transparent', color: active ? 'white' : color,
+                                        }}>
+                                        {active ? '✓ ' : ''}{paymentLabel(key)}
+                                    </button>
+                                );
+                            })}
                         </div>
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                             <button type="button" className="btn btn-sm btn-outline-light fw-bold" onClick={openReport}>
@@ -1111,7 +1156,16 @@ export default function NewSupplierBillDashboard() {
                                             <option value="printed">{tr('Printed', 'මුද්‍රිත')}</option>
                                         </select>
                                     </div>
-                                    <div className="col-12 col-md-6">
+                                    <div className="col-6 col-md-2">
+                                        <label className="form-label small mb-1">{tr('Credit / Cash', 'ණය / මුදල්')}</label>
+                                        <select className="form-select form-select-sm" value={filters.payment_type}
+                                            onChange={(e) => setFilters({ ...filters, payment_type: e.target.value })}>
+                                            <option value="">{tr('All', 'සියල්ල')}</option>
+                                            <option value="credit">{paymentLabel('credit')}</option>
+                                            <option value="cash">{paymentLabel('cash')}</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-6 col-md-4">
                                         <label className="form-label small mb-1">{tr('Search', 'සොයන්න')}</label>
                                         <input type="text" className="form-control form-control-sm" value={filters.search}
                                             placeholder={tr('Bill no / ref', 'බිල් අංකය / යොමු')}
@@ -1137,6 +1191,22 @@ export default function NewSupplierBillDashboard() {
                                         <div className="col-6 col-md-3"><div className="stat"><div className="l">{tr('Total weight', 'මුළු බර')}</div><div className="v">{kg(summary.total_weight)} kg</div></div></div>
                                         <div className="col-6 col-md-3"><div className="stat"><div className="l">{tr('Net amount', 'ශුද්ධ මුදල')}</div><div className="v">{money(summary.net_amount)}</div></div></div>
                                         <div className="col-6 col-md-3"><div className="stat" style={{ borderLeftColor: '#c62828' }}><div className="l">{tr('Balance due', 'ගෙවිය යුතු ශේෂය')}</div><div className="v text-danger">{money(summary.balance_amount)}</div></div></div>
+                                        {/* Credit and cash bills shown separately (click to show only those) */}
+                                        {['credit', 'cash'].map((t) => {
+                                            const d = summary.by_payment?.[t] || { bill_count: 0, net_amount: 0, balance_amount: 0 };
+                                            const color = t === 'cash' ? '#15803d' : '#b45309';
+                                            return (
+                                                <div key={t} className="col-12 col-md-6">
+                                                    <div className="stat" role="button" style={{ borderLeftColor: color, outline: filters.payment_type === t ? `2px solid ${color}` : 'none' }}
+                                                        onClick={() => { const f = { ...filters, payment_type: filters.payment_type === t ? '' : t }; setFilters(f); loadBills(f); }}>
+                                                        <div className="l" style={{ color }}>{t === 'cash' ? tr('Cash bills', 'මුදල් බිල්පත්') : tr('Credit bills', 'ණය බිල්පත්')} · {d.bill_count}</div>
+                                                        <div className="v" style={{ color }}>{money(d.net_amount)}
+                                                            <span className="small text-muted ms-2" style={{ fontSize: 12 }}>{tr('Balance', 'ශේෂය')}: {money(d.balance_amount)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
 
@@ -1175,6 +1245,7 @@ export default function NewSupplierBillDashboard() {
                                                     <td className="text-end">{money(b.paid_amount)}</td>
                                                     <td className="text-end fw-semibold">{money(b.balance_amount)}</td>
                                                     <td className="text-nowrap">
+                                                        <span className={`badge ${PAYMENT_BADGE[b.payment_type] || PAYMENT_BADGE.credit}`}>{paymentLabel(b.payment_type)}</span>{' '}
                                                         <span className={`badge ${STATUS_BADGE[b.status] || 'bg-secondary'}`}>{statusLabel(b.status)}</span>{' '}
                                                         {b.is_printed
                                                             ? <span className="badge bg-secondary">{tr('Printed', 'මුද්‍රිත')}</span>
