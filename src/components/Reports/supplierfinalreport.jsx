@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../api';
 import Sidebar from '../Sidebar';
 import { tr } from '../../i18n/language';
+import { printHtml } from '../../utils/printHtml';
+import { buildSupplierA4Bill, buildSupplierThermalBill, joinSupplierBills } from '../../utils/supplierBillPrint';
 
 const SupplierReport = () => {
 
@@ -63,6 +65,46 @@ const SupplierReport = () => {
             Object.values(groups || {}).forEach(rows => rows.forEach(r => r.supplier_code && codes.add(String(r.supplier_code).toUpperCase()))));
         return [...codes].sort();
     }, [reportData]);
+
+    // Print: only the bills shown (after the Supplier Code / Bill No / date filters), each in
+    // the supplier bill format of the Supplier Bills page (A4 or thermal, as chosen there).
+    // Billed records print one bill per supplier bill number; unbilled records are only
+    // printed (one bill per supplier, without a number) when no billed records are shown.
+    const [printing, setPrinting] = useState(false);
+    const handlePrintBills = async () => {
+        let groups = Object.entries(filteredReportData.billed || {}).map(([key, rows]) => ({
+            code: rows[0]?.supplier_code || key.split(' - Bill: ')[0],
+            billNo: rows[0]?.supplier_bill_no || '',
+            rows,
+        }));
+        if (groups.length === 0) {
+            groups = Object.entries(filteredReportData.nonBilled || {}).map(([code, rows]) => ({ code, billNo: '', rows }));
+        }
+        if (groups.length === 0) {
+            alert(tr('No bills to print.', 'මුද්‍රණය කිරීමට බිල්පත් නැත.'));
+            return;
+        }
+        let format = 'a4', billSize = '3inch';
+        try {
+            format = localStorage.getItem('supplier_print_format_v2') || 'a4';
+            billSize = localStorage.getItem('supplier_bill_size') || '3inch';
+        } catch { /* storage blocked: defaults */ }
+
+        const docs = groups.map(({ code, billNo, rows }) => {
+            // Older data without `weight` falls back to the supplier weight
+            const records = rows.map(r => ({ ...r, weight: r.weight ?? r.SupplierWeight }));
+            const options = { selectedSupplier: code, currentBillNo: billNo, printDate: rows[0]?.Date || null };
+            return format === 'thermal'
+                ? buildSupplierThermalBill(records, { ...options, billSize })
+                : buildSupplierA4Bill(records, { ...options, billWidth: '98mm', topMargin: '20mm' });
+        });
+        setPrinting(true);
+        try {
+            await printHtml(joinSupplierBills(docs));
+        } finally {
+            setPrinting(false);
+        }
+    };
 
     const handleSearchChange = (e) => setSearchSupplierBillNo(e.target.value);
     const handleClearSearch = () => setSearchSupplierBillNo('');
@@ -348,8 +390,9 @@ const SupplierReport = () => {
                 {/* TITLE */}
                 <div className="d-flex justify-content-between align-items-center mb-4">
                     <h2 className="fw-bold">{tr('Report by Supplier', 'සැපයුම්කරු අනුව වාර්තාව')}</h2>
-                    <button className="btn btn-success" onClick={() => window.print()}>
-                        Print
+                    <button className="btn btn-success" onClick={handlePrintBills} disabled={printing || loading}
+                        title={tr('Print the bills shown, in supplier bill format', 'පෙන්වන බිල්පත් සැපයුම්කරු බිල් ආකෘතියෙන් මුද්‍රණය කරන්න')}>
+                        {printing ? tr('Printing...', 'මුද්‍රණය වෙමින්...') : `${tr('Print Bills', 'බිල්පත් මුද්‍රණය')} (${Object.keys(filteredReportData.billed || {}).length || Object.keys(filteredReportData.nonBilled || {}).length})`}
                     </button>
                 </div>
 
