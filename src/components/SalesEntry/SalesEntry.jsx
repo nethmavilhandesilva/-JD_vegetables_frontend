@@ -810,6 +810,9 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     // next pack. The bill (F1) then lists the weight of every pack under its item.
     // Always unticked when the page opens; ticking it only lasts until the page is opened again.
     const [packMode, setPackMode] = useState(false);
+    // Pack by pack: print the second paper (weight of every pack) with the bill only when ticked.
+    // Unticked every time the page opens.
+    const [printPackSheet, setPrintPackSheet] = useState(false);
     // Credit / Cash buttons: every new bill starts as Credit. Records are saved with the choice
     // and the whole bill gets it when printed (credit_transaction Y = credit, N = cash).
     const [billType, setBillType] = useState('credit');
@@ -2427,7 +2430,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         const onClose = () => updateState({ showBillPreview: false });
 
         const printData = state.isBulkPrintEnabled
-            ? combineSalesForPrinting(displayedSales, { packWeights: packMode })
+            ? combineSalesForPrinting(displayedSales, { packWeights: packMode && printPackSheet })
             : displayedSales.map(s => ({ ...s, original_ids: [s.id] }));
         const customerName = displayedSales[0]?.customer_code || "N/A";
         const mobile = formData.telephone_no || SHOP_PHONE;
@@ -2519,7 +2522,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         // Bulk Printing ticked: records with the same item and price are one line (any
         // supplier). Unticked: every record is its own line.
         const printData = state.isBulkPrintEnabled
-            ? combineSalesForPrinting(salesData, { packWeights: packMode })
+            ? combineSalesForPrinting(salesData, { packWeights: packMode && printPackSheet })
             : salesData.map(s => ({ ...s, original_ids: [s.id] }));
 
         // --- ZERO PRICE VALIDATION ---
@@ -2840,6 +2843,21 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                     <label htmlFor="packModeCheckbox" style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                                         {tr('Pack by pack', 'මල්ලෙන් මල්ල')}
                                                     </label>
+                                                    {/* Optional second paper with each pack's weight (only with Pack by pack) */}
+                                                    {packMode && (
+                                                        <>
+                                                            <input
+                                                                type="checkbox"
+                                                                id="packSheetCheckbox"
+                                                                checked={printPackSheet}
+                                                                onChange={(e) => setPrintPackSheet(e.target.checked)}
+                                                                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#38bdf8', marginLeft: '12px' }}
+                                                            />
+                                                            <label htmlFor="packSheetCheckbox" title={tr('Also print a second paper with the weight of each pack', 'එක් එක් මල්ලේ බර සහිත දෙවන පිටුවක්ද මුද්‍රණය කරන්න')} style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                                                {tr('Print pack sheet', 'මලු පත්‍රය මුද්‍රණය')}
+                                                            </label>
+                                                        </>
+                                                    )}
                                                     {lastPrintedBill && (
                                                         <div className="font-bold text-xl whitespace-nowrap" style={{ color: '#4ade80', fontSize: '1.15rem', marginLeft: '15px' }}>
                                                             {tr('Last Bill Total:', 'අවසන් බිල් එකතුව:')} Rs. {formatDecimal(lastPrintedBill.total)} (#{lastPrintedBill.billNo})
