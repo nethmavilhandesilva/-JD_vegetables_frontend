@@ -439,11 +439,10 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
         const pageItemsRows = pageItems.map((item) => {
             return `
             <tr style="page-break-inside: avoid;">
-                <td style="text-align: center; padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.id}</td>
+                <td class="text-center" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.packs}</td>
                 <td style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.name}</td>
                 <td class="text-right" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${formatNumber(item.weight)}</td>
                 <td class="text-right" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${formatNumber(item.price)}</td>
-                <td class="text-center" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${item.packs}</td>
                 <td class="text-right" style="padding: ${styles.cellPadding}; font-size: ${styles.tableDataFontSize};">${formatNumber(item.total)}</td>
             </tr>
         `;
@@ -488,20 +487,18 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
 
             <table>
                 <colgroup>
-                    <col style="width: 8%">
-                    <col style="width: 32%">
+                    <col style="width: 11%">
+                    <col style="width: 35%">
+                    <col style="width: 17%">
                     <col style="width: 15%">
-                    <col style="width: 15%">
-                    <col style="width: 10%">
-                    <col style="width: 20%">
+                    <col style="width: 22%">
                 </colgroup>
                 <thead>
                     <tr>
-                        <th style="font-size: ${styles.tableHeaderFontSize};">#</th>
+                        <th style="font-size: ${styles.tableHeaderFontSize};">${tr('Bags', 'මලු')}</th>
                         <th style="font-size: ${styles.tableHeaderFontSize};">${tr('Item', 'අයිතමය')}</th>
                         <th style="font-size: ${styles.tableHeaderFontSize};">${tr('Weight(kg)', 'බර(kg)')}</th>
                         <th style="font-size: ${styles.tableHeaderFontSize};">${tr('Price', 'මිල')}</th>
-                        <th style="font-size: ${styles.tableHeaderFontSize};">${tr('Bags', 'මලු')}</th>
                         <th style="font-size: ${styles.tableHeaderFontSize};">${tr('Total', 'එකතුව')}</th>
                     </tr>
                 </thead>
@@ -510,11 +507,11 @@ export const A4BillHTML = ({ salesData, billNo, customerName, mobile, globalLoan
                 </tbody>
                 <tfoot>
                     <tr style="background: #f0f0f0;">
-                        <td colspan="2" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${tr('Page Total', 'මෙම පිටුවේ එකතුව')}</td>
-                        <td class="text-right" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${formatNumber(pageTotalSales)}</td>
-                        <td style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};"></td>
                         <td class="text-center" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${pageTotalPacks}</td>
+                        <td style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${tr('Page Total', 'මෙම පිටුවේ එකතුව')}</td>
                         <td style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};"></td>
+                        <td style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};"></td>
+                        <td class="text-right" style="font-size: ${styles.smallFontSize}; font-weight: bold; padding: ${styles.cellPadding};">${formatNumber(pageTotalSales)}</td>
                     </tr>
                 </tfoot>
             </table>
