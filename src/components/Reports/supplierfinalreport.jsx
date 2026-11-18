@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../api';
 import Sidebar from '../Sidebar';
 import { tr } from '../../i18n/language';
@@ -7,7 +7,6 @@ const SupplierReport = () => {
 
     // Report Data
     const [reportData, setReportData] = useState({ billed: {}, nonBilled: {} });
-    const [filteredReportData, setFilteredReportData] = useState({ billed: {}, nonBilled: {} });
     const [loading, setLoading] = useState(false);
 
     // Date Filters
@@ -16,6 +15,7 @@ const SupplierReport = () => {
 
     // Search Filter
     const [searchSupplierBillNo, setSearchSupplierBillNo] = useState('');
+    const [searchSupplierCode, setSearchSupplierCode] = useState('');
 
     // Fetch Report. With a date range the records come from sales_histories only (not today's
     // sales); with no dates they come from today's sales. One date alone = that single day.
@@ -30,7 +30,6 @@ const SupplierReport = () => {
             });
 
             setReportData(response.data);
-            setFilteredReportData(searchSupplierBillNo.trim() ? applyBillFilter(response.data, searchSupplierBillNo) : response.data);
         } catch (error) {
             console.error("Error fetching report:", error);
         } finally {
@@ -38,71 +37,47 @@ const SupplierReport = () => {
         }
     };
 
-    // Records of the report that match a supplier bill number
-    const applyBillFilter = (data, searchTerm) => {
+    // Report rows that match the Supplier Code and Supplier Bill No boxes (both optional).
+    // Supplier code: rows whose supplier_code starts with what was typed (case ignored).
+    const filteredReportData = useMemo(() => {
+        const code = searchSupplierCode.trim().toLowerCase();
+        const billNo = searchSupplierBillNo.trim().toLowerCase();
+        if (!code && !billNo) return reportData;
         const filterGroups = (groups = {}) => {
             const filtered = {};
             Object.keys(groups).forEach(key => {
                 const rows = groups[key].filter(sale =>
-                    sale.supplier_bill_no && String(sale.supplier_bill_no).toLowerCase().includes(searchTerm.toLowerCase()));
+                    (!code || String(sale.supplier_code || '').toLowerCase().startsWith(code))
+                    && (!billNo || String(sale.supplier_bill_no || '').toLowerCase().includes(billNo)));
                 if (rows.length > 0) filtered[key] = rows;
             });
             return filtered;
         };
-        return { ...data, billed: filterGroups(data.billed), nonBilled: filterGroups(data.nonBilled) };
-    };
+        return { ...reportData, billed: filterGroups(reportData.billed), nonBilled: filterGroups(reportData.nonBilled) };
+    }, [reportData, searchSupplierCode, searchSupplierBillNo]);
 
-    // Filter by Supplier Bill Number
-    const filterBySupplierBillNo = (searchTerm) => {
-        if (!searchTerm.trim()) {
-            setFilteredReportData(reportData);
-            return;
-        }
+    // Supplier codes in the loaded report (suggestions for the Supplier Code box)
+    const supplierCodes = useMemo(() => {
+        const codes = new Set();
+        [reportData.billed, reportData.nonBilled].forEach(groups =>
+            Object.values(groups || {}).forEach(rows => rows.forEach(r => r.supplier_code && codes.add(String(r.supplier_code).toUpperCase()))));
+        return [...codes].sort();
+    }, [reportData]);
 
-        const filterGroups = (groups) => {
-            const filtered = {};
-            Object.keys(groups).forEach(supplierCode => {
-                const filteredSales = groups[supplierCode].filter(sale => 
-                    sale.supplier_bill_no && 
-                    sale.supplier_bill_no.toLowerCase().includes(searchTerm.toLowerCase())
-                );
-                if (filteredSales.length > 0) {
-                    filtered[supplierCode] = filteredSales;
-                }
-            });
-            return filtered;
-        };
-
-        setFilteredReportData({
-            billed: filterGroups(reportData.billed),
-            nonBilled: filterGroups(reportData.nonBilled)
-        });
-    };
-
-    // Handle search input change
-    const handleSearchChange = (e) => {
-        const value = e.target.value;
-        setSearchSupplierBillNo(value);
-        filterBySupplierBillNo(value);
-    };
-
-    // Clear search
-    const handleClearSearch = () => {
-        setSearchSupplierBillNo('');
-        setFilteredReportData(reportData);
-    };
+    const handleSearchChange = (e) => setSearchSupplierBillNo(e.target.value);
+    const handleClearSearch = () => setSearchSupplierBillNo('');
 
     // Reset Function
     const handleReset = async () => {
         setStartDate('');
         setEndDate('');
         setSearchSupplierBillNo('');
+        setSearchSupplierCode('');
         setLoading(true);
 
         try {
             const response = await api.get('/supplier-report');
             setReportData(response.data);
-            setFilteredReportData(response.data);
         } finally {
             setLoading(false);
         }
@@ -299,7 +274,36 @@ const SupplierReport = () => {
                 {/* SEARCH BAR - SUPPLIER BILL NUMBER FILTER */}
                 <div className="card shadow mb-4 p-3">
                     <div className="row g-3 align-items-center">
-                        <div className="col-md-8">
+                        <div className="col-md-4">
+                            <label className="fw-bold">{tr('Supplier Code', 'සැපයුම්කරු කේතය')}</label>
+                            <div className="input-group">
+                                <input
+                                    type="search"
+                                    name="sfr-supplier-code-search"
+                                    list="sfr-supplier-codes"
+                                    autoComplete="off"
+                                    data-lpignore="true"
+                                    data-1p-ignore="true"
+                                    data-bwignore="true"
+                                    data-form-type="other"
+                                    readOnly
+                                    onFocus={(e) => e.target.removeAttribute('readonly')}
+                                    className="form-control"
+                                    placeholder={tr('Enter supplier code...', 'සැපයුම්කරු කේතය ඇතුලත් කරන්න...')}
+                                    value={searchSupplierCode}
+                                    onChange={(e) => setSearchSupplierCode(e.target.value.toUpperCase())}
+                                />
+                                <datalist id="sfr-supplier-codes">
+                                    {supplierCodes.map(c => <option key={c} value={c} />)}
+                                </datalist>
+                                {searchSupplierCode && (
+                                    <button className="btn btn-outline-secondary" onClick={() => setSearchSupplierCode('')} type="button">
+                                        Clear
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        <div className="col-md-4">
                             <label className="fw-bold">{tr('Search by Supplier Bill No', 'සැපයුම්කරු බිල් අංකය අනුව සොයන්න')}</label>
                             <div className="input-group">
                                 <input 
@@ -329,9 +333,12 @@ const SupplierReport = () => {
                             </div>
                         </div>
                         <div className="col-md-4">
-                            {searchSupplierBillNo && (
+                            {(searchSupplierCode || searchSupplierBillNo) && (
                                 <div className="alert alert-info mb-0 py-2">
-                                    <i className="bi bi-search"></i> {tr('Filter:', 'පෙරහන:')} <strong>{searchSupplierBillNo}</strong>
+                                    <i className="bi bi-search"></i> {tr('Filter:', 'පෙරහන:')}{' '}
+                                    {searchSupplierCode && <strong>{tr('Supplier', 'සැපයුම්කරු')} {searchSupplierCode}</strong>}
+                                    {searchSupplierCode && searchSupplierBillNo && ' · '}
+                                    {searchSupplierBillNo && <strong>{tr('Bill', 'බිල')} {searchSupplierBillNo}</strong>}
                                 </div>
                             )}
                         </div>
@@ -375,7 +382,7 @@ const SupplierReport = () => {
                         {Object.keys(filteredReportData.billed).length === 0 &&
                          Object.keys(filteredReportData.nonBilled).length === 0 && (
                             <div className="alert alert-info">
-                                {searchSupplierBillNo ? tr(`No records found for "${searchSupplierBillNo}"`, `"${searchSupplierBillNo}" සඳහා වාර්තා හමු නොවිණි`) : tr('No records found', 'වාර්තා හමු නොවිණි')}
+                                {(searchSupplierCode || searchSupplierBillNo) ? tr(`No records found for "${[searchSupplierCode, searchSupplierBillNo].filter(Boolean).join(' / ')}"`, `"${[searchSupplierCode, searchSupplierBillNo].filter(Boolean).join(' / ')}" සඳහා වාර්තා හමු නොවිණි`) : tr('No records found', 'වාර්තා හමු නොවිණි')}
                             </div>
                         )}
 
@@ -400,7 +407,7 @@ const SupplierReport = () => {
                                                             {grandProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </td>
                                                     </tr>
-                                                    {(searchSupplierBillNo || startDate || endDate) && (
+                                                    {(searchSupplierCode || searchSupplierBillNo || startDate || endDate) && (
                                                         <tr style={{ backgroundColor: '#fff3cd' }}>
                                                             <td colSpan="2" className="text-muted small">
                                                                 <i className="bi bi-info-circle"></i> 
