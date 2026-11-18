@@ -23,15 +23,17 @@ const packDetailsPage = (salesData, billNo, customerName, width) => {
     if (lines.length === 0) return '';
     const fmt = (w) => (parseFloat(w) || 0).toFixed(2);
     const money = (v) => (parseFloat(v) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const cell = 'border:1px solid #000; padding:3px 4px;';
+    const cell = 'border:1px solid #000; padding:3px 3px;';
     const rows = lines.map(s => {
-        const price = parseFloat(s.price_per_kg) || 0;
-        const amounts = Array.isArray(s.pack_amounts) ? s.pack_amounts : s.pack_weights.map(w => (parseFloat(w) || 0) * price);
+        const linePrice = parseFloat(s.price_per_kg) || 0;
+        const prices = Array.isArray(s.pack_prices) ? s.pack_prices : s.pack_weights.map(() => linePrice);
+        const amounts = Array.isArray(s.pack_amounts) ? s.pack_amounts : s.pack_weights.map((w, j) => (parseFloat(w) || 0) * prices[j]);
         const packRows = s.pack_weights.map((w, j) => `
             <tr>
-                <td style="${cell}">${j === 0 ? `${s.item_name || s.item_code || ''}<div style="font-size:11px;">@ ${money(price)}</div>` : ''}</td>
+                <td style="${cell}">${j === 0 ? (s.item_name || s.item_code || '') : ''}</td>
                 <td style="${cell} text-align:center;">${j + 1}</td>
                 <td style="${cell} text-align:right;">${fmt(w)}</td>
+                <td style="${cell} text-align:right;">${money(prices[j])}</td>
                 <td style="${cell} text-align:right;">${money(amounts[j])}</td>
             </tr>`).join('');
         const totalWeight = s.pack_weights.reduce((a, w) => a + (parseFloat(w) || 0), 0);
@@ -41,6 +43,7 @@ const packDetailsPage = (salesData, billNo, customerName, width) => {
                 <td style="${cell}">${tr('Total', 'එකතුව')}</td>
                 <td style="${cell} text-align:center;">${s.pack_weights.length}</td>
                 <td style="${cell} text-align:right;">${fmt(totalWeight)}</td>
+                <td style="${cell}"></td>
                 <td style="${cell} text-align:right;">${money(totalAmount)}</td>
             </tr>`;
     }).join('');
@@ -52,11 +55,12 @@ const packDetailsPage = (salesData, billNo, customerName, width) => {
             <span>${tr('Bill No', 'බිල් අංකය')}: ${billNo}</span>
             <span>${(customerName || '').toUpperCase()}</span>
         </div>
-        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <table style="width:100%; border-collapse:collapse; font-size:12px;">
             <thead><tr style="font-weight:bold;">
                 <th style="${cell} text-align:left;">${tr('Item', 'භාණ්ඩය')}</th>
                 <th style="${cell} text-align:center;">${tr('Pack', 'මල්ල')}</th>
-                <th style="${cell} text-align:right;">${tr('Weight (kg)', 'බර (kg)')}</th>
+                <th style="${cell} text-align:right;">${tr('Kg', 'කිලෝ')}</th>
+                <th style="${cell} text-align:right;">${tr('Price', 'මිල')}</th>
                 <th style="${cell} text-align:right;">${tr('Amount', 'මුදල')}</th>
             </tr></thead>
             <tbody>${rows}</tbody>

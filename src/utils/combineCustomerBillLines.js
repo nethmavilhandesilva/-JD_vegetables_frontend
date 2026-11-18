@@ -24,25 +24,40 @@ export const combineCustomerBillLines = (sales = [], options = {}) => {
     sales.forEach((sale) => {
         const price = parseFloat(sale.price_per_kg) || 0;
         const packCost = parseFloat(sale.CustomerPackCost) || 0;
-        const key = `${String(sale.item_code || sale.item_name || '').toUpperCase()}|${price}|${packCost}`;
+        // Pack by pack: packs of one item are one line even at different prices
+        const priceKey = options.packWeights ? '*' : price;
+        const key = `${String(sale.item_code || sale.item_name || '').toUpperCase()}|${priceKey}|${packCost}`;
         const line = lines.get(key);
         if (!line) {
             lines.set(key, {
                 ...sale,
                 original_ids: [sale.id],
-                ...(options.packWeights && { pack_weights: [enteredWeight(sale)], pack_amounts: [recordAmount(sale)] }),
+                _value: recordAmount(sale),
+                ...(options.packWeights && {
+                    pack_weights: [enteredWeight(sale)],
+                    pack_amounts: [recordAmount(sale)],
+                    pack_prices: [price],
+                }),
             });
             return;
         }
         line.weight = (parseFloat(line.weight) || 0) + (parseFloat(sale.weight) || 0);
         line.packs = (parseInt(line.packs) || 0) + (parseInt(sale.packs) || 0);
         line.Kuliya = (parseFloat(line.Kuliya) || 0) + (parseFloat(sale.Kuliya) || 0);
-        line.total = line.weight * price;
+        line._value += recordAmount(sale);
+        line.total = line._value;
         line.original_ids.push(sale.id);
         if (options.packWeights) {
             line.pack_weights.push(enteredWeight(sale));
             line.pack_amounts.push(recordAmount(sale));
+            line.pack_prices.push(price);
         }
     });
-    return Array.from(lines.values());
+    // A line whose packs have different prices shows the average price, so weight x price
+    // on the bill still equals the sum of the packs' amounts
+    return Array.from(lines.values()).map(({ _value, ...line }) => {
+        const weight = parseFloat(line.weight) || 0;
+        const mixed = Array.isArray(line.pack_prices) && new Set(line.pack_prices).size > 1;
+        return mixed && weight > 0 ? { ...line, price_per_kg: _value / weight, mixed_price: true } : line;
+    });
 };

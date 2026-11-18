@@ -112,12 +112,14 @@ const entryTime = (sale) => {
     const d = new Date(sale.created_at || sale.timestamp || '');
     return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 };
-const groupSalesForTable = (sales) => {
+// ignorePrice (Pack by pack): packs of the same item stay one row even at different prices;
+// the row then shows the average price and is marked mixed_price.
+const groupSalesForTable = (sales, ignorePrice = false) => {
     const groups = new Map();
     sales.forEach((s) => {
         const key = [
             (s.customer_code || '').toUpperCase(), s.item_code || '', (s.supplier_code || '').toUpperCase(),
-            parseFloat(s.price_per_kg) || 0, s.bill_printed || 'N', s.bill_no || '',
+            ignorePrice ? '*' : (parseFloat(s.price_per_kg) || 0), s.bill_printed || 'N', s.bill_no || '',
         ].join('|');
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key).push(s);
@@ -131,9 +133,13 @@ const groupSalesForTable = (sales) => {
             const h = parseHistory(m);
             return h.length > 0 ? h : [{ time: entryTime(m), weight: parseFloat(m.weight) || 0, packs: parseInt(m.packs) || 0 }];
         });
+        const mixedPrice = new Set(ordered.map((m) => parseFloat(m.price_per_kg) || 0)).size > 1;
+        const value = ordered.reduce((t, m) => t + (parseFloat(m.weight) || 0) * (parseFloat(m.price_per_kg) || 0), 0);
+        const weight = add('weight');
         return {
             ...ordered[0],
-            weight: add('weight'),
+            ...(mixedPrice && { price_per_kg: weight ? Math.round((value / weight) * 100) / 100 : 0, mixed_price: true }),
+            weight,
             packs: add('packs'),
             Kuliya: add('Kuliya'),
             total: add('total'),
@@ -256,7 +262,23 @@ const CustomerList = React.memo(({ customers, type, searchQuery, onSearchChange,
                 </div>
 
                 <input
-                    type="text"
+                    type="search"
+                    // Not a login field: stop the browser / password managers filling saved
+                    // usernames or passwords in here. It stays read-only until it is focused,
+                    // which is when browsers decide whether to autofill.
+                    name={`sidebar-search-${type}`}
+                    id={`sidebar-search-${type}`}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-bwignore="true"
+                    data-form-type="other"
+                    readOnly
+                    onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
+                    onBlur={(e) => e.currentTarget.setAttribute('readonly', '')}
                     placeholder={type === "printed" ? tr('Search bill no / code...', 'සෙවීම බිල්පත් අංකය/කේතය...') : tr('Search customer code...', 'සෙවීම ගනුදෙනු කේතය...')}
                     value={searchQuery}
                     onChange={(e) => onSearchChange(e.target.value.toUpperCase())}
@@ -1188,7 +1210,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         return sales.slice().reverse();
     }, [newSales, unprintedSales, printedSales, selectedUnprintedCustomer, selectedPrintedCustomer]);
 
-    const tableRows = useMemo(() => groupSalesForTable(displayedSales), [displayedSales]);
+    const tableRows = useMemo(() => groupSalesForTable(displayedSales, packMode), [displayedSales, packMode]);
 
     const allDisplayedSelected = displayedSales.length > 0 && displayedSales.every(s => state.selectedSalesIds.includes(s.id));
     // Customers/items across every ticked record, for the bulk-update modal's "Current Selection" card
@@ -1827,6 +1849,13 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 refs.supplier_code?.current?.select();
             }, 0);
 
+            return;
+        }
+
+        // A Pack by pack row with packs at different prices cannot be edited as one row
+        // (one price would overwrite them all): untick Pack by pack to edit each pack.
+        if (sale.mixed_price) {
+            updateState({ errors: { form: tr('This row has packs at different prices. Untick "Pack by pack" to edit each pack separately.', 'මෙම පේළියේ විවිධ මිල ඇති මලු ඇත. එක් එක් මල්ල වෙනම සංස්කරණය කිරීමට "මල්ලෙන් මල්ල" ඉවත් කරන්න.') } });
             return;
         }
 
@@ -2756,7 +2785,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                     ) : (
                         <div className="pos-sales-view flex flex-col h-full">
                             <div className="flex-shrink-0">
-                                <form onSubmit={handleSubmit} className="space-y-4">
+                                <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
                                     <div className="w-full flex justify-between items-center">
                                         <div style={{ position: 'relative', top: '-20px', display: 'flex', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0, zIndex: 20 }}>
                                             <div className="font-bold text-lg whitespace-nowrap" style={{ color: 'red', fontSize: '1.35rem' }}>
@@ -3185,10 +3214,9 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
                                             {/* Pack by pack: packs entered so far for this item + price on the open bill */}
                                             {packMode && formData.item_code && (() => {
-                                                const price = parseFloat(formData.price_per_kg) || 0;
+                                                // Every pack of this item on the open bill, whatever its price
                                                 const packs = displayedSales.filter(s =>
-                                                    String(s.item_code).toUpperCase() === String(formData.item_code).toUpperCase()
-                                                    && (parseFloat(s.price_per_kg) || 0) === price);
+                                                    String(s.item_code).toUpperCase() === String(formData.item_code).toUpperCase());
                                                 if (packs.length === 0) return null;
                                                 const weights = [...packs]
                                                     .sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
