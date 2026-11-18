@@ -1210,7 +1210,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         return sales.slice().reverse();
     }, [newSales, unprintedSales, printedSales, selectedUnprintedCustomer, selectedPrintedCustomer]);
 
-    const tableRows = useMemo(() => groupSalesForTable(displayedSales, packMode), [displayedSales, packMode]);
+    // Same item at a different price is its own row (also with Pack by pack)
+    const tableRows = useMemo(() => groupSalesForTable(displayedSales), [displayedSales]);
 
     const allDisplayedSelected = displayedSales.length > 0 && displayedSales.every(s => state.selectedSalesIds.includes(s.id));
     // Customers/items across every ticked record, for the bulk-update modal's "Current Selection" card
@@ -3166,6 +3167,48 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                             </tbody>
                                         </table>
 
+                                        {/* Pack by pack: weight of every pack, one small table per row of the main table */}
+                                        {packMode && (() => {
+                                            const lines = tableRows
+                                                .map(row => ({ row, packs: (row.group_members || [row]).slice().sort((a, b) => (a.id || 0) - (b.id || 0)) }));
+                                            if (!lines.some(l => l.packs.length > 0)) return null;
+                                            const cell = { border: '1px solid #444', padding: '2px 8px' };
+                                            return (
+                                                <div style={{ marginTop: '10px', backgroundColor: '#000', color: 'white', borderRadius: '6px', padding: '6px 8px', fontSize: '12px' }}>
+                                                    <div style={{ fontWeight: 'bold', color: '#facc15', marginBottom: '4px' }}>{tr('Pack weights', 'මලු බර')}</div>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                                        {lines.map(({ row, packs }, i) => (
+                                                            <table key={i} style={{ borderCollapse: 'collapse', minWidth: '220px' }}>
+                                                                <thead>
+                                                                    <tr><th colSpan={4} style={{ ...cell, textAlign: 'left', color: '#facc15' }}>{row.item_name} @ {formatDecimal(packs[0]?.price_per_kg)}</th></tr>
+                                                                    <tr style={{ color: '#9ca3af' }}>
+                                                                        <th style={cell}>{tr('Pack', 'මල්ල')}</th><th style={cell}>{tr('Kg', 'කිලෝ')}</th>
+                                                                        <th style={cell}>{tr('Price', 'මිල')}</th><th style={cell}>{tr('Amount', 'මුදල')}</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {packs.map((p, n) => (
+                                                                        <tr key={p.id ?? n}>
+                                                                            <td style={{ ...cell, textAlign: 'center' }}>{n + 1}</td>
+                                                                            <td style={{ ...cell, textAlign: 'right' }}>{formatDecimal(enteredWeight(p))}</td>
+                                                                            <td style={{ ...cell, textAlign: 'right' }}>{formatDecimal(p.price_per_kg)}</td>
+                                                                            <td style={{ ...cell, textAlign: 'right' }}>{formatDecimal((parseFloat(p.weight) || 0) * (parseFloat(p.price_per_kg) || 0))}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                    <tr style={{ fontWeight: 'bold' }}>
+                                                                        <td style={cell}>{packs.length}</td>
+                                                                        <td style={{ ...cell, textAlign: 'right' }}>{formatDecimal(packs.reduce((t, p) => t + enteredWeight(p), 0))}</td>
+                                                                        <td style={cell}></td>
+                                                                        <td style={{ ...cell, textAlign: 'right' }}>{formatDecimal(packs.reduce((t, p) => t + (parseFloat(p.weight) || 0) * (parseFloat(p.price_per_kg) || 0), 0))}</td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+
                                         <ContextMenu show={state.bulkUpdateContextMenu.show} onClose={closeContextMenu} onUpdate={handleBulkUpdateCustomer} selectionCriteria={selectedSalesSummary} selectedCount={state.selectedSalesIds.length} />
 
                                         {displayedSales.length > 0 && (<SalesSummaryFooter sales={displayedSales} formatDecimal={formatDecimal} />)}
@@ -3217,9 +3260,11 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
                                             {/* Pack by pack: packs entered so far for this item + price on the open bill */}
                                             {packMode && formData.item_code && (() => {
-                                                // Every pack of this item on the open bill, whatever its price
+                                                // Packs of this item at this price (a different price is a new record)
+                                                const price = parseFloat(formData.price_per_kg) || 0;
                                                 const packs = displayedSales.filter(s =>
-                                                    String(s.item_code).toUpperCase() === String(formData.item_code).toUpperCase());
+                                                    String(s.item_code).toUpperCase() === String(formData.item_code).toUpperCase()
+                                                    && (parseFloat(s.price_per_kg) || 0) === price);
                                                 if (packs.length === 0) return null;
                                                 const weights = [...packs]
                                                     .sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))

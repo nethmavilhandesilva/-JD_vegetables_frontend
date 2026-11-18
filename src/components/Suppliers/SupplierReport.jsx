@@ -21,29 +21,82 @@ const extractApiErrorMessage = (error, fallback) => {
 };
 
 // Bulk Printing (same idea as the sales entry page): on the printed supplier bill, lines
-// for the same customer, item, price and pack cost are merged into one line with their
-// weight, packs and amount added up. Only the printout changes, not the saved records.
+// for the same item, price and pack cost are merged into one line (whatever the customer)
+// with their weight, packs and amount added up. Only the printout changes, not the saved
+// records. Each line keeps `packs_list` (every record's weight, bags, price and amount)
+// for the pack details page.
+const packOf = (record) => ({
+    weight: parseFloat(record.weight) || 0,
+    packs: parseInt(record.packs) || 0,
+    price: parseFloat(record.SupplierPricePerKg) || 0,
+    total: parseFloat(record.SupplierTotal) || 0,
+});
 const combineSupplierBillLines = (records) => {
     const combined = new Map();
-    records.forEach(record => {
+    records.slice().sort((a, b) => (a.id || 0) - (b.id || 0)).forEach(record => {
         const key = [
-            (record.customer_code || '').toUpperCase(),
-            record.item_code || record.item_name || '',
+            String(record.item_code || record.item_name || '').toUpperCase(),
             parseFloat(record.SupplierPricePerKg) || 0,
             parseFloat(record.CustomerPackCost) || 0,
         ].join('|');
 
         const existing = combined.get(key);
         if (!existing) {
-            combined.set(key, { ...record, original_ids: [record.id] });
+            combined.set(key, { ...record, original_ids: [record.id], packs_list: [packOf(record)] });
             return;
         }
+        existing.packs_list.push(packOf(record));
         existing.weight = (parseFloat(existing.weight) || 0) + (parseFloat(record.weight) || 0);
         existing.packs = (parseInt(existing.packs) || 0) + (parseInt(record.packs) || 0);
         existing.SupplierTotal = (parseFloat(existing.SupplierTotal) || 0) + (parseFloat(record.SupplierTotal) || 0);
         existing.original_ids.push(record.id);
     });
     return Array.from(combined.values());
+};
+
+// Second paper of the supplier bill: the weight of every pack for each merged line
+const supplierPackDetailsPage = (billLines, { supplier, billNo, date, width, fontSize }) => {
+    const lines = billLines.filter(l => Array.isArray(l.packs_list) && l.packs_list.length > 1);
+    if (lines.length === 0) return '';
+    const n = (v) => {
+        const x = parseFloat(v) || 0;
+        return Number.isInteger(x) ? x.toLocaleString('en-US') : x.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    };
+    const td = 'border:1px solid #000;padding:3px 5px;';
+    const rows = lines.map(l => `
+        <tr><td colspan="5" style="${td}background:#eee;font-weight:bold;">${l.item_name || ''}</td></tr>
+        ${l.packs_list.map((p, i) => `
+        <tr>
+            <td style="${td}text-align:center;">${i + 1}</td>
+            <td style="${td}text-align:center;">${p.packs}</td>
+            <td style="${td}text-align:right;">${n(p.weight)}</td>
+            <td style="${td}text-align:right;">${n(p.price)}</td>
+            <td style="${td}text-align:right;">${n(p.total)}</td>
+        </tr>`).join('')}
+        <tr style="font-weight:bold;">
+            <td style="${td}">${tr('Total', 'එකතුව')}</td>
+            <td style="${td}text-align:center;">${l.packs_list.reduce((t, p) => t + p.packs, 0)}</td>
+            <td style="${td}text-align:right;">${n(l.packs_list.reduce((t, p) => t + p.weight, 0))}</td>
+            <td style="${td}"></td>
+            <td style="${td}text-align:right;">${n(l.packs_list.reduce((t, p) => t + p.total, 0))}</td>
+        </tr>`).join('');
+    return `
+    <div class="supplier-pack-page" style="width:${width}; margin:0 auto; padding:8px; background:#fff; color:#000; font-family:Arial, sans-serif; font-weight:bold; font-size:${fontSize};">
+        <div style="text-align:center; font-size:1.3em;">${SHOP_NAME} (${SHOP_STALL_NO})</div>
+        <div style="text-align:center; margin:2px 0 6px;">${tr('Pack details', 'මලු විස්තර')}</div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span>${tr('Farmer', 'ගොවියා')}: <span style="font-size:1.5em; border:2px solid #000; padding:0 6px;">${(supplier || '').toUpperCase()}</span></span>
+            <span>${tr('No:', 'අං:')} ${billNo || ''}<br>${tr('Date', 'දිනය')}: ${date}</span>
+        </div>
+        <table style="width:100%; border-collapse:collapse;">
+            <thead><tr>
+                <th style="${td}">${tr('Pack', 'මල්ල')}</th><th style="${td}">${tr('Bags', 'මලු')}</th>
+                <th style="${td}text-align:right;">${tr('Weight', 'බර')}</th><th style="${td}text-align:right;">${tr('Price', 'මිල')}</th>
+                <th style="${td}text-align:right;">${tr('Total', 'එකතුව')}</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>`;
 };
 
 // Hoisted to module scope (and memoized) so it keeps a stable identity across
@@ -1574,6 +1627,9 @@ const SupplierReport = () => {
             itemPages.forEach((page, idx) => {
                 allPagesHTML += generatePage(page, idx + 1, idx === itemPages.length - 1);
             });
+            allPagesHTML += supplierPackDetailsPage(billLines, {
+                supplier: selectedSupplier, billNo: currentBillNo, date, width: styles.containerWidth, fontSize: styles.normalFontSize,
+            });
         }
 
         return `
@@ -1717,6 +1773,9 @@ const SupplierReport = () => {
             font-weight: bold;
         }
 
+        .supplier-pack-page { page-break-before: always !important; break-before: page !important; }
+        @media screen { .supplier-pack-page { margin-top: 8mm !important; border-top: 2px dashed #999; } }
+
         .footer { 
             margin-top: 2.6mm; 
             text-align: center; 
@@ -1821,7 +1880,9 @@ const SupplierReport = () => {
             page-break-after: avoid;
             page-break-before: avoid;
         }
+        div.supplier-pack-page { page-break-before: always !important; break-before: page !important; page-break-inside: auto; }
     }
+    @media screen { .supplier-pack-page { margin-top: 20px !important; border-top: 2px dashed #999; } }
 </style>
 </head>
 <body>
@@ -1924,6 +1985,7 @@ const SupplierReport = () => {
 
     <div style="margin-top:25px; border-top:1px dashed #000; padding-top:10px;"><table style="width:100%; border-collapse:collapse; font-size:14px; text-align:center;">${itemSummaryHtml}</table></div>
 </div>
+${supplierPackDetailsPage(billLines, { supplier: selectedSupplier, billNo: currentBillNo, date, width: receiptMaxWidth, fontSize: '15px' })}
 </body>
 </html>`;
     }, [selectedSupplier, supplierDetails, totalPacksSum, totalsupplierSales, itemSummaryData, billSize, advanceAmount, hireAmount, payingAmount, totalCustomerPackCost, farmerLoanTotal, isBulkPrintEnabled]);
