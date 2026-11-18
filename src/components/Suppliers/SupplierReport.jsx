@@ -524,22 +524,9 @@ const SupplierReport = () => {
         return saved || 'a4';
     });
 
-    // Bulk Printing: merge matching bill lines on the printout - PERSISTED, on by default like sales entry
-    const [isBulkPrintEnabled, setIsBulkPrintEnabled] = useState(() => {
-        try {
-            return localStorage.getItem('supplier_bulk_print') !== 'false';
-        } catch {
-            return true;
-        }
-    });
-
-    useEffect(() => {
-        try {
-            localStorage.setItem('supplier_bulk_print', String(isBulkPrintEnabled));
-        } catch {
-            // ignore storage errors (private mode etc.)
-        }
-    }, [isBulkPrintEnabled]);
+    // Bulk Printing: merge matching bill lines on the printout. Always ticked when this screen
+    // opens; unticking it only lasts until the screen is opened again.
+    const [isBulkPrintEnabled, setIsBulkPrintEnabled] = useState(true);
 
     // Save billSize to localStorage whenever it changes
     useEffect(() => {
