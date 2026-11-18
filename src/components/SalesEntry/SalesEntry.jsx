@@ -3185,8 +3185,11 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                     </>
                                 ) : (
                                     <div
+                                        className="all-sales-compact"
                                         style={{
-                                            height: "650px", // Fixed full section height
+                                            // Smaller section, a little lower; the table scrolls inside it
+                                            height: "380px",
+                                            marginTop: "24px",
                                             display: "flex",
                                             flexDirection: "column"
                                         }}
@@ -3242,9 +3245,10 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
                                         {/* Scrollable Table Container */}
                                         <div
+                                            className="all-sales-scroll"
                                             style={{
                                                 flex: 1,
-                                                overflowY: "auto",
+                                                overflowY: "scroll", // vertical scroll bar always shown
                                                 overflowX: "auto",
                                                 border: "1px solid #4a5568",
                                                 borderRadius: "0.5rem",
@@ -3257,8 +3261,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                     width: "100%",
                                                     borderCollapse: "collapse",
                                                     color: "white",
-                                                    fontSize: "13px",
-                                                    marginTop: "-6px"
+                                                    fontSize: "12px"
                                                 }}
                                             >
                                                 {/* Transparent Sticky Header */}

@@ -254,3 +254,35 @@ html, body {
     height: 32px;
     padding: 0 8px;
 }
+/* ==================================== */
+/* Sales Entry: "All Sales Records" table - compact, scrolls inside its box */
+/* (overrides the general .center-form table styles above) */
+/* ==================================== */
+.center-form .all-sales-compact table {
+    margin: 0 !important;
+    font-size: 12px !important;
+}
+.center-form .all-sales-compact table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 4px 6px !important;
+    font-size: 12px !important;
+    margin-top: 0 !important;
+}
+.center-form .all-sales-compact table td {
+    padding: 3px 6px !important;
+    font-size: 12px !important;
+    margin-top: 0 !important;
+    line-height: 1.3;
+}
+.center-form .all-sales-scroll::-webkit-scrollbar {
+    width: 10px;
+}
+.center-form .all-sales-scroll::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 5px;
+}
+.center-form .all-sales-scroll::-webkit-scrollbar-track {
+    background: #1f2937;
+}

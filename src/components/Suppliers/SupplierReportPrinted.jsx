@@ -558,7 +558,6 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
             const price = parseFloat(record.SupplierPricePerKg) || 0;
             const total = parseFloat(record.SupplierTotal) || 0;
             const itemName = record.item_name || '';
-            const customerCode = record.customer_code?.toUpperCase() || '';
 
             return `
         <tr style="font-size:${fontSizeBody}; font-weight:bold; vertical-align: bottom;">
@@ -566,7 +565,6 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
             <td style="text-align:right; padding:10px 2px; position: relative; left: -70px;">${formatNumber(weight.toFixed(2))}</td>
             <td style="text-align:right; padding:10px 2px; position: relative; left: -65px;">${formatNumber(price.toFixed(2))}</td>
             <td style="padding:10px 0; display:flex; flex-direction:column; align-items:flex-end;">
-                <div style="font-size:25px; white-space:nowrap;">${customerCode}</div>
                 <div style="font-weight:900; white-space:nowrap;">${formatNumber(total.toFixed(2))}</div>
             </td>
         </tr>`;
@@ -611,7 +609,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
                 <th style="text-align:left; padding-bottom:8px; font-size:${fontSizeHeader};">${tr('Type', 'වර්ගය')}<br>${tr('Bags', 'මලු')}</th>
                 <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -50px; top: 24px;"> ${tr('Kg', 'කිලෝ')} </th>
                  <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader}; position: relative; left: -45px; top: 24px;">${tr('Price', 'මිල')}</th>
-                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};">${tr('Code', 'කේතය')}<br>${tr('Value', 'අගය')}</th>
+                <th style="text-align:right; padding-bottom:8px; font-size:${fontSizeHeader};"><br>${tr('Value', 'අගය')}</th>
             </tr>
         </thead>
         <tbody>${detailedItemsHtml}</tbody>

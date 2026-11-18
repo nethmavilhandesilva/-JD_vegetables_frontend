@@ -76,7 +76,7 @@ const SupplierDetailsPanel = ({
                     <td style="text-align:center;padding:3px;border-bottom:1px solid #eee;"><br>${weight.toFixed(3)}</td>
                     <td style="text-align:center;padding:3px;border-bottom:1px solid #eee;"><br>${SupplierPricePerKg.toFixed(2)}</td>
                     <td style="text-align:right;padding:3px;border-bottom:1px solid #eee;">
-                        <span style="font-weight: bold; font-size: 0.9em;">${record.customer_code.toUpperCase()}</span><br>${SupplierTotal.toFixed(2)}
+                        <br>${SupplierTotal.toFixed(2)}
                     </td>
                 </tr>
             `);
