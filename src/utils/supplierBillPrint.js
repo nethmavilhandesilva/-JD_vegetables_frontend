@@ -107,7 +107,7 @@ export const supplierPackSheet = (records = [], { supplier, billNo, date, width 
     });
     const td = 'border:1px solid #000;padding:0 3px;height:4.2mm;line-height:4.2mm;text-align:right;';
     const cols = chunks.map((ch) => `
-        <table style="border-collapse:collapse;min-width:14mm;font-size:10px;">
+        <table class="pack-col" style="border-collapse:collapse;min-width:14mm;font-size:10px;">
             <thead><tr><th style="border:1px solid #000;background:#eee;font-size:9px;padding:1px 3px;max-width:22mm;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${ch.name}${ch.cont ? ' ›' : ''}</th></tr></thead>
             <tbody>${ch.weights.map((w) => `<tr><td style="${td}">${n(w)}</td></tr>`).join('')}
             ${ch.total != null ? `<tr><td style="border:1px solid #000;padding:1px 3px;text-align:right;font-weight:bold;">${n(ch.total)}<br><span style="font-weight:normal">${ch.count} ${tr('packs', 'මලු')}</span></td></tr>` : ''}</tbody>
@@ -122,6 +122,12 @@ export const supplierPackSheet = (records = [], { supplier, billNo, date, width 
             <span style="text-align:right;">${tr('Bill No', 'බිල් අංකය')}: <b>${billNo || ''}</b><br>${date || ''}</span>
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:1.5mm; align-items:flex-start;">${cols}</div>
+        <style>
+            /* Narrow columns (like the New Supplier Bills pack sheet): the bill's own
+               "table { width: 100% }" rule must not stretch them across the page */
+            .supplier-pack-page table.pack-col { width: auto !important; min-width: 14mm; max-width: 24mm; table-layout: auto !important; margin: 0 !important; flex: 0 0 auto; }
+            .supplier-pack-page table.pack-col td, .supplier-pack-page table.pack-col th { width: auto !important; white-space: nowrap; }
+        </style>
     </div>`;
 };
 
