@@ -963,7 +963,7 @@ export default function NewSupplierBillDashboard() {
                             <table style={{ width: '100%', backgroundColor: '#000', color: 'white', borderCollapse: 'collapse', fontSize: 14, textAlign: 'center' }}>
                                 <thead>
                                     <tr>
-                                        {['#', tr('Code', 'කේතය'), tr('Item', 'අයිතමය'), tr('Bags', 'මලු'), tr('Weight(kg)', 'බර(kg)'), tr('Price', 'මිල'), tr('Value', 'අගය'), tr('Comm.', 'කොමිස්'), tr('Actions', 'Actions')].map((h) => (
+                                        {['#', tr('Code', 'කේතය'), tr('Item', 'අයිතමය'), tr('Bags', 'මලු'), tr('Weight(kg)', 'බර(kg)'), tr('Price', 'මිල'), tr('Value', 'අගය'), tr('Actions', 'Actions')].map((h) => (
                                             <th key={h} style={headCell}>{h}</th>
                                         ))}
                                     </tr>
@@ -981,9 +981,11 @@ export default function NewSupplierBillDashboard() {
                                             </td>
                                             <td style={cell}>{num(l.packs) ? kg(l.packs) : ''}</td>
                                             <td style={cell}>{kg(l.weight)}</td>
-                                            <td style={cell} title={mixedPrices(l) ? tr('Average price per kg', 'කිලෝවක සාමාන්‍ය මිල') : undefined}>{money(linePrice(l))}{mixedPrices(l) ? '*' : ''}</td>
-                                            <td style={cell}>{money(lineValue(l))}</td>
-                                            <td style={{ ...cell, color: '#f87171' }} title={`${money(commissionPerKg(l))} / kg`}>{lineCommission(l) ? `-${money(lineCommission(l))}` : '0.00'}</td>
+                                            {/* Price and value after the commission is taken off (no separate commission column) */}
+                                            <td style={cell} title={`${mixedPrices(l) ? tr('Average price per kg', 'කිලෝවක සාමාන්‍ය මිල') + ' · ' : ''}${money(linePrice(l))} - ${money(commissionPerKg(l))} ${tr('commission', 'කොමිස්')}`}>
+                                                {money(linePrice(l) - commissionPerKg(l))}{mixedPrices(l) ? '*' : ''}
+                                            </td>
+                                            <td style={cell} title={`${money(lineValue(l))} - ${money(lineCommission(l))} ${tr('commission', 'කොමිස්')}`}>{money(lineValue(l) - lineCommission(l))}</td>
                                             <td style={cell}>
                                                 <button type="button" onClick={(e) => { e.stopPropagation(); removeLine(i); }}
                                                     style={{ background: 'white', border: 'none', borderRadius: '50%', padding: '2px 6px', fontWeight: 'bold' }}>🗑️</button>
