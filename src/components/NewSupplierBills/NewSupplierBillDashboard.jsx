@@ -548,43 +548,32 @@ export default function NewSupplierBillDashboard() {
                 <td class="r">${money(it.amount)}</td>
             </tr>`).join('');
 
-        // Second paper (printed after the bill): every pack of each item with the weight typed
-        // for it, its price and value. Only items entered as more than one pack; the bill
-        // itself shows one line per item.
-        const packItems = (bill.items || []).filter((it) => Array.isArray(it.pack_weights) && it.pack_weights.length > 1)
-            .map((it) => ({ ...it, pack_weights: it.pack_weights.map(Number) }));
-        const packRows = packItems.map((it) => {
-            const prices = pricesOf(it);
-            const rowsHtml = it.pack_weights.map((w, j) => `
-                <tr>
-                    <td>${j === 0 ? `${escapeHtml(it.item_code)} ${escapeHtml(it.item_name || '')}` : ''}</td>
-                    <td class="r">${j + 1}</td>
-                    <td class="r">${kg(w)}</td>
-                    <td class="r">${money(prices[j])}</td>
-                    <td class="r">${money(w * prices[j])}</td>
-                </tr>`).join('');
-            return `${rowsHtml}
-                <tr class="b">
-                    <td>${escapeHtml(tr('Total', 'එකතුව'))}</td>
-                    <td class="r">${it.pack_weights.length}</td>
-                    <td class="r">${kg(it.pack_weights.reduce((a, b) => a + b, 0))}</td>
-                    <td></td>
-                    <td class="r">${money(lineValue(it))}</td>
-                </tr>`;
-        }).join('');
+        // Second paper (pack sheet, printed after the bill): only the weights typed for the packs,
+        // one column per item name; the same item at another price stays in the same column.
+        const packItems = (bill.items || []).filter((it) => Array.isArray(it.pack_weights) && it.pack_weights.length > 0);
+        const packColumns = [];
+        packItems.forEach((it) => {
+            const name = String(it.item_name || it.item_code || '').trim();
+            let col = packColumns.find((c) => c.name.toUpperCase() === name.toUpperCase());
+            if (!col) { col = { name, weights: [] }; packColumns.push(col); }
+            col.weights.push(...it.pack_weights.map(Number));
+        });
+        const packRowCount = Math.max(0, ...packColumns.map((c) => c.weights.length));
+        const packRows = Array.from({ length: packRowCount }, (_, r) => `
+                <tr>${packColumns.map((c) => `<td class="r">${r < c.weights.length ? kg(c.weights[r]) : ''}</td>`).join('')}</tr>`).join('')
+            + `
+                <tr class="b">${packColumns.map((c) => `<td class="r">${kg(c.weights.reduce((x, w) => x + w, 0))}<br><span style="font-weight:normal">${c.weights.length} ${escapeHtml(tr('packs', 'මලු'))}</span></td>`).join('')}</tr>`;
         const packsPage = packItems.length ? `
             <div class="page2">
                 <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
-                <div class="sub">${escapeHtml(tr('Pack details', 'මලු විස්තර'))}</div>
+                <div class="sub">${escapeHtml(tr('Pack sheet', 'මලු පත්‍රය'))}</div>
                 <div class="meta">
                     <div><b>${escapeHtml(tr('Supplier', 'සැපයුම්කරු'))}:</b> <span class="code">${escapeHtml(bill.supplier_code)}</span> ${escapeHtml(bill.supplier_name || '')}</div>
                     <div class="r"><b>${escapeHtml(tr('Bill No', 'බිල් අංකය'))}:</b> ${escapeHtml(bill.bill_no)}<br>
                     <b>${escapeHtml(tr('Date', 'දිනය'))}:</b> ${escapeHtml(billDate(bill.bill_date))}</div>
                 </div>
-                <table class="packtbl"><thead><tr>
-                    <th>${escapeHtml(tr('Item', 'භාණ්ඩය'))}</th><th class="r">${escapeHtml(tr('Pack', 'මල්ල'))}</th>
-                    <th class="r">${escapeHtml(tr('Weight (kg)', 'බර (kg)'))}</th><th class="r">${escapeHtml(tr('Price/kg', 'මිල/kg'))}</th>
-                    <th class="r">${escapeHtml(tr('Value', 'අගය'))}</th>
+                <table class="packtbl" style="width:auto;min-width:40%"><thead><tr>
+                    ${packColumns.map((c) => `<th>${escapeHtml(c.name)}</th>`).join('')}
                 </tr></thead><tbody>${packRows}</tbody></table>
             </div>` : '';
 
