@@ -545,7 +545,11 @@ export default function NewSupplierBillDashboard() {
         const rows = (bill.items || []).map((it, i) => {
             const commission = num(it.commission_amount);
             const netAmount = num(it.amount) - commission;
-            const netPrice = num(it.price_per_kg) - (num(it.weight) > 0 ? commission / num(it.weight) : 0);
+            // Price column = price per kg minus the commission per kg (saved with each line)
+            const commissionPerKg = it.commission_per_kg != null && it.commission_per_kg !== ''
+                ? num(it.commission_per_kg)
+                : (num(it.weight) > 0 ? commission / num(it.weight) : 0);
+            const netPrice = num(it.price_per_kg) - commissionPerKg;
             return `
             <tr>
                 <td>${i + 1}</td>
