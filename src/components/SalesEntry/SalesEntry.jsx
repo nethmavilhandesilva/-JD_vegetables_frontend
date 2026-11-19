@@ -1946,7 +1946,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         const ids = groupIds && groupIds.length > 0 ? groupIds : [saleId];
         if (ids.some(isTempId)) return; // still saving
         const question = ids.length > 1
-            ? tr(`Delete all ${ids.length} entries in this row?`, `මෙම පේළියේ ඇතුළත් කිරීම් ${ids.length} ම මකන්නද?`)
+            ? tr(`Delete all ${ids.length} entries in this row?\n\nTo delete only one entry, press Cancel and use the 🗑 next to it in the "Pack weights" table below.`,
+                `මෙම පේළියේ ඇතුළත් කිරීම් ${ids.length} ම මකන්නද?\n\nඑක් ඇතුළත් කිරීමක් පමණක් මැකීමට, Cancel ඔබා පහත "මලු බර" වගුවේ එය අසල ඇති 🗑 භාවිතා කරන්න.`)
             : "Are you sure you want to delete this sales record?";
         if (!saleId || !window.confirm(question)) return;
         try {
@@ -2431,7 +2432,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         const onClose = () => updateState({ showBillPreview: false });
 
         const printData = state.isBulkPrintEnabled
-            ? combineSalesForPrinting(displayedSales, { packWeights: packMode && printPackSheet })
+            ? combineSalesForPrinting(displayedSales, { packWeights: printPackSheet })
             : displayedSales.map(s => ({ ...s, original_ids: [s.id] }));
         const customerName = displayedSales[0]?.customer_code || "N/A";
         const mobile = formData.telephone_no || SHOP_PHONE;
@@ -2523,7 +2524,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         // Bulk Printing ticked: records with the same item and price are one line (any
         // supplier). Unticked: every record is its own line.
         const printData = state.isBulkPrintEnabled
-            ? combineSalesForPrinting(salesData, { packWeights: packMode && printPackSheet })
+            ? combineSalesForPrinting(salesData, { packWeights: printPackSheet })
             : salesData.map(s => ({ ...s, original_ids: [s.id] }));
 
         // --- ZERO PRICE VALIDATION ---
@@ -2850,8 +2851,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                     <label htmlFor="packModeCheckbox" style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                                         {tr('Pack by pack', 'මල්ලෙන් මල්ල')} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>(F9)</span>
                                                     </label>
-                                                    {/* Optional second paper with each pack's weight (only with Pack by pack) */}
-                                                    {packMode && (
+                                                    {/* Optional second paper with each pack's weight (any bill that has packs) */}
+                                                    {(
                                                         <>
                                                             <input
                                                                 type="checkbox"
@@ -3189,22 +3190,26 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                         </table>
 
                                         {/* Pack by pack: weight of every pack, one small table per row of the main table */}
-                                        {packMode && (() => {
+                                        {(() => {
+                                            // Shown with Pack by pack, and whenever a row of the table is made of
+                                            // several entries, so each entry can be seen and deleted on its own
                                             const lines = tableRows
-                                                .map(row => ({ row, packs: (row.group_members || [row]).slice().sort((a, b) => (a.id || 0) - (b.id || 0)) }));
-                                            if (!lines.some(l => l.packs.length > 0)) return null;
+                                                .map(row => ({ row, packs: (row.group_members || [row]).slice().sort((a, b) => (a.id || 0) - (b.id || 0)) }))
+                                                .filter(l => packMode || l.packs.length > 1);
+                                            if (lines.length === 0) return null;
                                             const cell = { border: '1px solid #444', padding: '2px 8px' };
                                             return (
                                                 <div style={{ marginTop: '10px', backgroundColor: '#000', color: 'white', borderRadius: '6px', padding: '6px 8px', fontSize: '12px' }}>
-                                                    <div style={{ fontWeight: 'bold', color: '#facc15', marginBottom: '4px' }}>{tr('Pack weights', 'මලු බර')}</div>
+                                                    <div style={{ fontWeight: 'bold', color: '#facc15', marginBottom: '4px' }}>{tr('Pack weights', 'මලු බර')} <span style={{ color: '#9ca3af', fontWeight: 'normal' }}>— {tr('🗑 deletes one entry', '🗑 එක් ඇතුළත් කිරීමක් මකයි')}</span></div>
                                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                                                         {lines.map(({ row, packs }, i) => (
                                                             <table key={i} style={{ borderCollapse: 'collapse', minWidth: '220px' }}>
                                                                 <thead>
-                                                                    <tr><th colSpan={4} style={{ ...cell, textAlign: 'left', color: '#facc15' }}>{row.item_name} @ {formatDecimal(packs[0]?.price_per_kg)}</th></tr>
+                                                                    <tr><th colSpan={5} style={{ ...cell, textAlign: 'left', color: '#facc15' }}>{row.item_name} @ {formatDecimal(packs[0]?.price_per_kg)}</th></tr>
                                                                     <tr style={{ color: '#9ca3af' }}>
                                                                         <th style={cell}>{tr('Pack', 'මල්ල')}</th><th style={cell}>{tr('Kg', 'කිලෝ')}</th>
                                                                         <th style={cell}>{tr('Price', 'මිල')}</th><th style={cell}>{tr('Amount', 'මුදල')}</th>
+                                                                        <th style={cell}></th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
@@ -3214,6 +3219,11 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                                             <td style={{ ...cell, textAlign: 'right' }}>{formatDecimal(enteredWeight(p))}</td>
                                                                             <td style={{ ...cell, textAlign: 'right' }}>{formatDecimal(p.price_per_kg)}</td>
                                                                             <td style={{ ...cell, textAlign: 'right' }}>{formatDecimal((parseFloat(p.weight) || 0) * (parseFloat(p.price_per_kg) || 0))}</td>
+                                                                            <td style={{ ...cell, textAlign: 'center' }}>
+                                                                                <button type="button" title={tr('Delete this entry only', 'මෙම ඇතුළත් කිරීම පමණක් මකන්න')} disabled={isTempId(p.id)}
+                                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteRecord(p.id); }}
+                                                                                    style={{ background: 'white', border: 'none', borderRadius: '4px', padding: '0 4px', cursor: 'pointer', fontSize: '12px', lineHeight: '18px' }}>🗑️</button>
+                                                                            </td>
                                                                         </tr>
                                                                     ))}
                                                                     <tr style={{ fontWeight: 'bold' }}>
@@ -3221,6 +3231,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                                         <td style={{ ...cell, textAlign: 'right' }}>{formatDecimal(packs.reduce((t, p) => t + enteredWeight(p), 0))}</td>
                                                                         <td style={cell}></td>
                                                                         <td style={{ ...cell, textAlign: 'right' }}>{formatDecimal(packs.reduce((t, p) => t + (parseFloat(p.weight) || 0) * (parseFloat(p.price_per_kg) || 0), 0))}</td>
+                                                                        <td style={cell}></td>
                                                                     </tr>
                                                                 </tbody>
                                                             </table>
