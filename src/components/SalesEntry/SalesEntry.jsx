@@ -2687,6 +2687,12 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 // This reloads the entire page from the server
                 window.location.reload();
             }
+            // F9: tick / untick "Pack by pack"
+            if (e.key === "F9") {
+                e.preventDefault();
+                setPackMode(on => !on);
+                return;
+            }
             if (selectedPrintedCustomer && e.key === "F5") {
                 e.preventDefault();
                 return;
@@ -2842,7 +2848,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                         style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#facc15', marginLeft: '12px' }}
                                                     />
                                                     <label htmlFor="packModeCheckbox" style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                                        {tr('Pack by pack', 'මල්ලෙන් මල්ල')}
+                                                        {tr('Pack by pack', 'මල්ලෙන් මල්ල')} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>(F9)</span>
                                                     </label>
                                                     {/* Optional second paper with each pack's weight (only with Pack by pack) */}
                                                     {packMode && (

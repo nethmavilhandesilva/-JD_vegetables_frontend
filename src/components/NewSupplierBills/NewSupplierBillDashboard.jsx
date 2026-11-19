@@ -256,6 +256,9 @@ export default function NewSupplierBillDashboard() {
         setTimeout(() => weightRef.current?.focus(), 0);
     };
 
+    const togglePackRef = useRef(null);
+    togglePackRef.current = togglePackMode;
+
     // Pack by pack: one line per item AND price. Every Enter adds one pack (Packs 1, 2, 3 ...) to
     // the line with the same item and price; a different price starts a new line (new record).
     const sameLine = (l, item, price) => Array.isArray(l.pack_weights) && !!item && l.item?.value === item?.value
@@ -441,6 +444,12 @@ export default function NewSupplierBillDashboard() {
     // F5 = hold, F4 = print (also stops F5 from reloading the page and losing the bill)
     useEffect(() => {
         const onKey = (e) => {
+            // F9: Pack by pack on / off
+            if (e.key === 'F9' && !reportOpenRef.current) {
+                e.preventDefault();
+                togglePackRef.current?.();
+                return;
+            }
             if (e.key === 'F2' && !reportOpenRef.current) {
                 e.preventDefault();
                 previewRef.current?.();
@@ -932,7 +941,7 @@ export default function NewSupplierBillDashboard() {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 0' }}>
                         <small style={{ color: '#94a3b8' }}>
-                            {tr('Enter = next / add · F2 = preview · F5 = hold · F4 = print', 'Enter = ඊළඟ / එක් කරන්න · F2 = පෙරදසුන · F5 = රඳවන්න · F4 = මුද්‍රණය')}
+                            {tr('Enter = next / add · F2 = preview · F5 = hold · F4 = print · F9 = pack by pack', 'Enter = ඊළඟ / එක් කරන්න · F2 = පෙරදසුන · F5 = රඳවන්න · F4 = මුද්‍රණය · F9 = මල්ලෙන් මල්ල')}
                         </small>
                         <div style={{ display: 'flex', gap: 6 }}>
                             <button type="button" className={`btn btn-sm fw-bold ${packMode ? 'btn-warning' : 'btn-outline-warning'}`} onClick={togglePackMode}
