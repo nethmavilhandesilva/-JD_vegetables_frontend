@@ -565,6 +565,9 @@ export default function NewSupplierBillDashboard() {
         // one column per item name; the same item at another price stays in the same column.
         // Bag cost on the bill: bags x Rs. 40 (same rule as Kuliya on the billing screen)
         const billPacks = (bill.items || []).reduce((a, it) => a + num(it.packs), 0);
+        // Printed balance: net amount + bag cost - paid (the bag cost is added to what the supplier gets)
+        const bagCost = round2(billPacks * BAG_COST_PER_PACK);
+        const printBalance = round2(num(bill.net_amount) + bagCost - num(bill.paid_amount));
         const packItems = (bill.items || []).filter((it) => Array.isArray(it.pack_weights) && it.pack_weights.length > 0);
         const packColumns = [];
         packItems.forEach((it) => {
@@ -649,11 +652,11 @@ export default function NewSupplierBillDashboard() {
             <table class="tot">
                 <tr><td>${escapeHtml(tr('Total weight', 'මුළු බර'))}</td><td class="r">${kg(bill.total_weight)} kg</td></tr>
                 <tr><td>${escapeHtml(tr('Gross amount', 'දළ මුදල'))}</td><td class="r">${money(num(bill.gross_amount) - num(bill.commission_amount))}</td></tr>
-                <tr><td>${escapeHtml(tr('Bag Cost', 'මලු වියදම'))} (${kg(billPacks)} × ${BAG_COST_PER_PACK})</td><td class="r">${money(billPacks * BAG_COST_PER_PACK)}</td></tr>
                 ${num(bill.deductions) ? `<tr><td>${escapeHtml(tr('Deductions', 'අඩු කිරීම්'))}${bill.deduction_note ? ` (${escapeHtml(bill.deduction_note)})` : ''}</td><td class="r">-${money(bill.deductions)}</td></tr>` : ''}
                 <tr class="b"><td>${escapeHtml(tr('Net amount', 'ශුද්ධ මුදල'))}</td><td class="r">${money(bill.net_amount)}</td></tr>
-                <tr><td>${escapeHtml(tr('Paid', 'ගෙවූ'))}</td><td class="r">${money(bill.paid_amount)}</td></tr>
-                <tr class="b"><td>${escapeHtml(tr('Balance', 'ශේෂය'))}</td><td class="r">${money(bill.balance_amount)}</td></tr>
+                <tr><td>${escapeHtml(tr('Bag Cost', 'මලු වියදම'))} (${kg(billPacks)} × ${BAG_COST_PER_PACK})</td><td class="r">+${money(bagCost)}</td></tr>
+                ${num(bill.paid_amount) ? `<tr><td>${escapeHtml(tr('Paid', 'ගෙවූ'))}</td><td class="r">-${money(bill.paid_amount)}</td></tr>` : ''}
+                <tr class="b"><td>${escapeHtml(tr('Balance', 'ශේෂය'))}</td><td class="r">${money(printBalance)}</td></tr>
             </table>
             ${bill.notes ? `<p><b>${escapeHtml(tr('Notes', 'සටහන්'))}:</b> ${escapeHtml(bill.notes)}</p>` : ''}
             </div>
