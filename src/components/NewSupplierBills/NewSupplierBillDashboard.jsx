@@ -613,19 +613,21 @@ export default function NewSupplierBillDashboard() {
 
         const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(bill.bill_no)}</title>
             <style>
-                /* One quarter of an A4 sheet (105mm x 148mm), at the top-left corner of the paper */
-                @page{size:A4;margin:0}
+                /* Printed on quarter-A4 paper (105mm x 148mm): the page itself is that size, so the
+                   printer does not crop an A4 page down to the small sheet */
+                @page{size:105mm 148mm;margin:0}
+                html,body{width:105mm}
                 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
                 body{font-family:Arial,sans-serif;font-size:11px;margin:0;color:#000}
-                .sheet{width:105mm;min-height:148mm;padding:5mm;overflow:hidden}
+                .sheet{width:105mm;padding:5mm 5mm 4mm 5mm}
                 h2{margin:0;text-align:center;font-size:15px} .sub{text-align:center;margin-bottom:6px;font-size:11px}
                 .meta{display:flex;justify-content:space-between;gap:4mm;margin-bottom:6px;line-height:1.5}
-                table{width:100%;border-collapse:collapse;table-layout:fixed} th,td{border:1px solid #444;padding:2px 4px;word-wrap:break-word}
+                table{width:100%;border-collapse:collapse;table-layout:fixed} th,td{border:1px solid #444;padding:2px 3px;word-wrap:break-word} td.r{white-space:nowrap}
                 th{background:#eee;font-size:10px} .r{text-align:right} .tot td{border:none;padding:1px 4px}
                 .tot{width:65%;margin-left:auto;margin-top:6px;table-layout:auto} .b{font-weight:bold}
                 .page2{page-break-before:always;break-before:page}
                 .code{font-size:16px;font-weight:bold;border:2px solid #000;padding:0 5px}
-                @media screen{body{background:#f3f4f6}.sheet{background:#fff;margin:10px;box-shadow:0 0 6px rgba(0,0,0,.25)}.page2{margin-top:20px}}
+                @media screen{html,body{width:auto}body{background:#f3f4f6}.sheet{background:#fff;margin:10px;min-height:148mm;box-shadow:0 0 6px rgba(0,0,0,.25)}.page2{margin-top:20px}}
                 .packcols{display:flex;flex-wrap:wrap;gap:1.5mm;align-items:flex-start}
                 .packcol{width:auto;min-width:14mm;table-layout:auto;font-size:10px}
                 .packcol th{font-size:9px;padding:1px 3px;max-width:22mm;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
@@ -644,7 +646,7 @@ export default function NewSupplierBillDashboard() {
                 <b>${escapeHtml(tr('Date', 'දිනය'))}:</b> ${escapeHtml(billDate(bill.bill_date))}<br>
                 <span style="font-size:11px">${escapeHtml(paymentLabel(bill.payment_type))}</span></div>
             </div>
-            <table><colgroup><col style="width:7%"><col style="width:31%"><col style="width:12%"><col style="width:16%"><col style="width:15%"><col style="width:19%"></colgroup><thead><tr>
+            <table><colgroup><col style="width:6%"><col style="width:26%"><col style="width:10%"><col style="width:16%"><col style="width:16%"><col style="width:26%"></colgroup><thead><tr>
                 <th>#</th><th>${escapeHtml(tr('Item', 'භාණ්ඩය'))}</th><th class="r">${escapeHtml(tr('Packs', 'මලු'))}</th>
                 <th class="r">${escapeHtml(tr('Weight (kg)', 'බර (kg)'))}</th><th class="r">${escapeHtml(tr('Price/kg', 'මිල/kg'))}</th>
                 <th class="r">${escapeHtml(tr('Amount', 'මුදල'))}</th>
