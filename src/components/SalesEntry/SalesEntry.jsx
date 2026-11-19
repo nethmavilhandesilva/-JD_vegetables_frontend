@@ -794,8 +794,8 @@ const hasPending = (row) => !!row && (row._pending || (row.group_members || []).
 const DECIMAL_FORMAT = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatDecimalShared = (value) => DECIMAL_FORMAT.format(Number(value || 0));
 const initialFormData = { customer_code: "", customer_name: "", supplier_code: "", code: "", item_code: "", item_name: "", weight: "", price_per_kg: "", pack_due: "", total: "", packs: "", given_amount: "", pack_cost: "", telephone_no: "", kuliya: "", };
-const fieldOrder = ["telephone_no", "customer_code_input", "customer_code_select", "supplier_code", "item_code_select", "weight", "price_per_kg_grid_item", "packs", "kuliya"];
-const skipMap = { telephone_no: "customer_code_input", customer_code_input: "supplier_code", customer_code_select: "supplier_code", given_amount: "supplier_code", supplier_code: "item_code_select", item_code_select: "weight", price_per_kg: "packs", price_per_kg_grid_item: "packs", packs: "kuliya", kuliya: null };
+const fieldOrder = ["telephone_no", "supplier_code", "customer_code_input", "customer_code_select", "item_code_select", "weight", "price_per_kg_grid_item", "packs", "kuliya"];
+const skipMap = { telephone_no: "supplier_code", supplier_code: "customer_code_input", customer_code_input: "item_code_select", customer_code_select: "item_code_select", given_amount: "customer_code_input", item_code_select: "weight", price_per_kg: "packs", price_per_kg_grid_item: "packs", packs: "kuliya", kuliya: null };
 
 export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMode: propSetPrintMode }) {
     const [localPrintMode, setLocalPrintMode] = useState(propPrintMode || 'a4');
@@ -1428,7 +1428,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         return () => window.removeEventListener('focus', handleWindowFocus);
     }, []);
 
-    useEffect(() => { fetchInitialData(); refs.customer_code_input.current?.focus(); }, []);
+    // New bill: the supplier code is entered first
+    useEffect(() => { fetchInitialData(); refs.supplier_code.current?.focus(); }, []);
 
     const handleKeyDown = async (e, currentFieldName) => {
         if (e.key === "Enter") {
@@ -1452,7 +1453,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             // 3. Logic for TELEPHONE input
             if (currentFieldName === "telephone_no") {
                 updateState({ showSavePhoneButton: false });
-                refs.customer_code_input.current?.focus();
+                refs.supplier_code.current?.focus();
                 return;
             }
 
@@ -1460,9 +1461,9 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             if (currentFieldName === "customer_code_input") {
                 const code = (formData.customer_code || autoCustomerCode).trim().toUpperCase();
 
-                // IF EMPTY: Smoothly pass the cursor forward to supplier_code anyway
+                // IF EMPTY: pass the cursor forward to the item anyway
                 if (!code) {
-                    refs.supplier_code.current?.focus();
+                    refs.item_code_select.current?.focus();
                     return;
                 }
 
@@ -1473,16 +1474,15 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                     fetchLoanAmount(code);
                 }
 
-                refs.supplier_code.current?.focus();
+                refs.item_code_select.current?.focus();
                 return;
             }
 
             // 5. Logic for SUPPLIER CODE input
             if (currentFieldName === "supplier_code") {
-                // IF EMPTY or filled: Pass focus seamlessly to item selection container
-                if (refs.item_code_select.current) {
-                    refs.item_code_select.current.focus();
-                }
+                // Supplier first, then the customer code
+                refs.customer_code_input.current?.focus();
+                refs.customer_code_input.current?.select();
                 return;
             }
 
@@ -2066,8 +2066,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
         setFormData({ ...initialFormData, customer_code: customerCode, customer_name: formData.customer_name, telephone_no: formData.telephone_no, supplier_code: formData.supplier_code });
         updateState({ errors: {}, editingSaleId: null, editingGroup: null, isManualClear: false, priceManuallyChanged: false, gridPricePerKg: "", selectedSaleForBreakdown: null, isKuliyaManuallyChanged: false });
-        refs.supplier_code.current?.focus();
-        refs.supplier_code.current?.select();
+        refs.customer_code_input.current?.focus();
+        refs.customer_code_input.current?.select();
 
         const tracked = Promise.allSettled(requests);
         pendingSaveRequestsRef.current.push(tracked);
@@ -2198,9 +2198,10 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         } else {
             setFormData({ ...initialFormData, customer_code: customerCode, customer_name: currentCustomerName, telephone_no: currentTelephone, supplier_code: currentSupplierCode });
             updateState({ errors: {}, editingSaleId: null, isManualClear: false, priceManuallyChanged: false, gridPricePerKg: "" });
-            if (refs.supplier_code.current) {
-                refs.supplier_code.current.focus();
-                refs.supplier_code.current.select();
+            // Next record of the same bill: cursor in the customer code field
+            if (refs.customer_code_input.current) {
+                refs.customer_code_input.current.focus();
+                refs.customer_code_input.current.select();
             }
         }
 
@@ -2343,7 +2344,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 });
 
                 fetchLoanAmount(customerCode);
-                refs.supplier_code.current?.focus();
+                refs.customer_code_input.current?.focus();
 
             } catch (error) {
                 setFormData({
@@ -2380,7 +2381,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             handleClearForm();
             setBillType('credit'); // next bill starts as Credit
             updateState({ selectedUnprintedCustomer: null, selectedPrintedCustomer: null });
-            refs.customer_code_input.current?.focus();
+            refs.supplier_code.current?.focus(); // next bill starts with the supplier code
 
             try {
                 const response = await api.post(routes.markAllProcessed, { sales_ids: [...ids] });
@@ -2659,8 +2660,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             speakSinhalaBillTotal(billFinalTotal);
             await printHtml(job.buildReceipt(billNo));
 
-            // Keep the cursor in the customer code field
-            refs.customer_code_input.current?.focus();
+            // Next bill starts with the supplier code
+            refs.supplier_code.current?.focus();
 
             // Sync with the server in the background so the sidebars reflect the DB
             fetchSalesOnly({ force: true });
@@ -2900,7 +2901,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                 </div>
                                             </div>
                                             <div className="flex-1 min-w-0" style={{ marginTop: '-40px' }}>
-                                                <input id="supplier_code" ref={refs.supplier_code} name="supplier_code" value={formData.supplier_code} onChange={(e) => handleInputChange("supplier_code", e.target.value.toUpperCase())} onKeyDown={(e) => handleKeyDown(e, "supplier_code")} type="text" title={tr("Supplier code", "සැපයුම්කරු කේතය")} placeholder={tr('Supplier', 'සැපයුම්කරු')} className="px-2 py-1 uppercase font-bold text-sm w-full border rounded bg-white text-black placeholder-gray-500" style={{ backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: '36px', fontSize: '1rem', padding: '0 0.75rem', borderRadius: '0.5rem', boxSizing: 'border-box' }} />
+                                                <input id="supplier_code" ref={refs.supplier_code} name="supplier_code" value={formData.supplier_code} onChange={(e) => handleInputChange("supplier_code", e.target.value.toUpperCase())} onKeyDown={(e) => handleKeyDown(e, "supplier_code")} type="text" title={tr("Supplier code", "සැපයුම්කරු කේතය")} placeholder={tr('Supplier', 'සැපයුම්කරු')} className="px-2 py-1 uppercase font-bold text-sm border rounded bg-white text-black placeholder-gray-500" style={{ width: 'calc(100% - 108px)', backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: '36px', fontSize: '1rem', padding: '0 0.75rem', borderRadius: '0.5rem', boxSizing: 'border-box' }} />
                                             </div>
                                         </div>
                                         <div style={{ flex: '0 0 150px', minWidth: '120px', marginLeft: '-100px' }}>
