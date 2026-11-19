@@ -611,15 +611,16 @@ export default function NewSupplierBillDashboard() {
                 <div class="packcols">${packColsHtml}</div>
             </div>` : '';
 
-        const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(bill.bill_no)}</title>
+        const html = `<!doctype html><html><head><meta charset="utf-8"><title>&nbsp;</title>
             <style>
-                /* Printed on quarter-A4 paper (105mm x 148mm): the page itself is that size, so the
-                   printer does not crop an A4 page down to the small sheet */
-                @page{size:105mm 148mm;margin:0}
-                html,body{width:105mm}
+                /* The shop prints on quarter-A4 paper (105mm x 148mm) fed through the MIDDLE of an A4
+                   printer. So the page is A4 and each bill is a 105mm-wide block in the horizontal
+                   centre, starting at the top: exactly the part of the A4 page that lands on the paper.
+                   margin:0 also stops the browser printing its own header (page title) on the bill. */
+                @page{size:A4;margin:0}
                 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
                 body{font-family:Arial,sans-serif;font-size:11px;margin:0;color:#000}
-                .sheet{width:105mm;padding:5mm 5mm 4mm 5mm}
+                .sheet{width:105mm;max-height:148mm;margin:0 auto;padding:5mm 5mm 4mm 5mm;overflow:hidden}
                 h2{margin:0;text-align:center;font-size:15px} .sub{text-align:center;margin-bottom:6px;font-size:11px}
                 .meta{display:flex;justify-content:space-between;gap:4mm;margin-bottom:6px;line-height:1.5}
                 table{width:100%;border-collapse:collapse;table-layout:fixed} th,td{border:1px solid #444;padding:2px 3px;word-wrap:break-word} td.r{white-space:nowrap}
@@ -627,7 +628,7 @@ export default function NewSupplierBillDashboard() {
                 .tot{width:65%;margin-left:auto;margin-top:6px;table-layout:auto} .b{font-weight:bold}
                 .page2{page-break-before:always;break-before:page}
                 .code{font-size:16px;font-weight:bold;border:2px solid #000;padding:0 5px}
-                @media screen{html,body{width:auto}body{background:#f3f4f6}.sheet{background:#fff;margin:10px;min-height:148mm;box-shadow:0 0 6px rgba(0,0,0,.25)}.page2{margin-top:20px}}
+                @media screen{body{background:#f3f4f6}.sheet{background:#fff;margin:10px auto;min-height:148mm;box-shadow:0 0 6px rgba(0,0,0,.25)}.page2{margin-top:20px}}
                 .packcols{display:flex;flex-wrap:wrap;gap:1.5mm;align-items:flex-start}
                 .packcol{width:auto;min-width:14mm;table-layout:auto;font-size:10px}
                 .packcol th{font-size:9px;padding:1px 3px;max-width:22mm;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
