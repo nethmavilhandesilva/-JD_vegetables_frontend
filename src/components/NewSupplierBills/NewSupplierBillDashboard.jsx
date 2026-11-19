@@ -540,15 +540,22 @@ export default function NewSupplierBillDashboard() {
 
     // Bill HTML (used for printing and for the on-screen preview)
     function buildBillHtml(bill) {
-        const rows = (bill.items || []).map((it, i) => `
+        // The commission is not shown on the bill: each line's price and amount are printed
+        // after the commission is taken off, so the totals still add up to the net amount.
+        const rows = (bill.items || []).map((it, i) => {
+            const commission = num(it.commission_amount);
+            const netAmount = num(it.amount) - commission;
+            const netPrice = num(it.price_per_kg) - (num(it.weight) > 0 ? commission / num(it.weight) : 0);
+            return `
             <tr>
                 <td>${i + 1}</td>
                 <td>${escapeHtml(it.item_code)} ${escapeHtml(it.item_name || '')}</td>
                 <td class="r">${num(it.packs) ? kg(it.packs) : ''}</td>
                 <td class="r">${kg(it.weight)}</td>
-                <td class="r">${money(it.price_per_kg)}</td>
-                <td class="r">${money(it.amount)}</td>
-            </tr>`).join('');
+                <td class="r">${money(netPrice)}</td>
+                <td class="r">${money(netAmount)}</td>
+            </tr>`;
+        }).join('');
 
         // Second paper (pack sheet, printed after the bill): only the weights typed for the packs,
         // one column per item name; the same item at another price stays in the same column.
@@ -568,7 +575,8 @@ export default function NewSupplierBillDashboard() {
             + `
                 <tr class="b">${packColumns.map((c) => `<td class="r">${kg(c.weights.reduce((x, w) => x + w, 0))}<br><span style="font-weight:normal">${c.weights.length} ${escapeHtml(tr('packs', 'මලු'))}</span></td>`).join('')}</tr>`;
         const packsPage = packItems.length ? `
-            <div class="page2 sheet">
+            <div class="page2 sheet" id="packsheet">
+                <div class="pack-head">
                 <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
                 <div class="sub">${escapeHtml(tr('Pack sheet', 'මලු පත්‍රය'))}</div>
                 <div class="meta">
@@ -576,10 +584,26 @@ export default function NewSupplierBillDashboard() {
                     <div class="r"><b>${escapeHtml(tr('Bill No', 'බිල් අංකය'))}:</b> ${escapeHtml(bill.bill_no)}<br>
                     <b>${escapeHtml(tr('Date', 'දිනය'))}:</b> ${escapeHtml(billDate(bill.bill_date))}</div>
                 </div>
+                </div>
+                <div class="pack-body">
+                <div class="pack-title">${escapeHtml(tr('Pack weights (kg)', 'මලු බර (kg)'))}</div>
                 <table class="packtbl" style="width:auto;min-width:40%"><thead><tr>
                     ${packColumns.map((c) => `<th>${escapeHtml(c.name)}</th>`).join('')}
                 </tr></thead><tbody>${packRows}</tbody></table>
+                </div>
             </div>` : '';
+        // If the weights fit in the space left on the bill's quarter page they are printed there;
+        // otherwise they stay on their own page (page 2)
+        const fitScript = packItems.length ? `<script>(function () {
+            var bill = document.getElementById('billsheet'), page = document.getElementById('packsheet');
+            if (!bill || !page) return;
+            var body = page.querySelector('.pack-body');
+            var limit = 148 * 96 / 25.4; // quarter A4 height in px
+            bill.style.minHeight = '0';
+            var needed = bill.offsetHeight + body.offsetHeight + 6;
+            if (needed <= limit) { bill.appendChild(body); page.parentNode.removeChild(page); }
+            bill.style.minHeight = '';
+        })();</script>` : '';
 
         const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(bill.bill_no)}</title>
             <style>
@@ -596,10 +620,11 @@ export default function NewSupplierBillDashboard() {
                 .page2{page-break-before:always;break-before:page}
                 .code{font-size:16px;font-weight:bold;border:2px solid #000;padding:0 5px}
                 @media screen{body{background:#f3f4f6}.sheet{background:#fff;margin:10px;box-shadow:0 0 6px rgba(0,0,0,.25)}.page2{margin-top:20px}}
+                .pack-title{font-weight:bold;margin:6px 0 2px} #billsheet .pack-body{border-top:1px dashed #000;margin-top:6px}
                 .packtbl{font-size:11px;table-layout:auto} .packtbl th,.packtbl td{padding:2px 5px}
                 .packtbl tr{page-break-inside:avoid;break-inside:avoid}
             </style></head><body>
-            <div class="sheet">
+            <div class="sheet" id="billsheet">
             <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
             <div class="sub">${escapeHtml(tr('Supplier Bill', 'සැපයුම්කරු බිල්පත'))}</div>
             <div class="meta">
@@ -616,9 +641,8 @@ export default function NewSupplierBillDashboard() {
             </tr></thead><tbody>${rows}</tbody></table>
             <table class="tot">
                 <tr><td>${escapeHtml(tr('Total weight', 'මුළු බර'))}</td><td class="r">${kg(bill.total_weight)} kg</td></tr>
-                <tr><td>${escapeHtml(tr('Gross amount', 'දළ මුදල'))}</td><td class="r">${money(bill.gross_amount)}</td></tr>
+                <tr><td>${escapeHtml(tr('Gross amount', 'දළ මුදල'))}</td><td class="r">${money(num(bill.gross_amount) - num(bill.commission_amount))}</td></tr>
                 <tr><td>${escapeHtml(tr('Bag Cost', 'මලු වියදම'))} (${kg(billPacks)} × ${BAG_COST_PER_PACK})</td><td class="r">${money(billPacks * BAG_COST_PER_PACK)}</td></tr>
-                ${num(bill.commission_amount) ? `<tr><td>${escapeHtml(tr('Commission', 'කොමිස්'))}</td><td class="r">-${money(bill.commission_amount)}</td></tr>` : ''}
                 ${num(bill.deductions) ? `<tr><td>${escapeHtml(tr('Deductions', 'අඩු කිරීම්'))}${bill.deduction_note ? ` (${escapeHtml(bill.deduction_note)})` : ''}</td><td class="r">-${money(bill.deductions)}</td></tr>` : ''}
                 <tr class="b"><td>${escapeHtml(tr('Net amount', 'ශුද්ධ මුදල'))}</td><td class="r">${money(bill.net_amount)}</td></tr>
                 <tr><td>${escapeHtml(tr('Paid', 'ගෙවූ'))}</td><td class="r">${money(bill.paid_amount)}</td></tr>
@@ -627,6 +651,7 @@ export default function NewSupplierBillDashboard() {
             ${bill.notes ? `<p><b>${escapeHtml(tr('Notes', 'සටහන්'))}:</b> ${escapeHtml(bill.notes)}</p>` : ''}
             </div>
             ${packsPage}
+            ${fitScript}
             </body></html>`;
         return html;
     }
