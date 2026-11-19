@@ -26,6 +26,8 @@ const num = (v) => {
 };
 const money = (v) => num(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const kg = (v) => num(v).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+// Bag cost printed on the supplier bill: Rs. 40 per bag (same as Kuliya on the billing screen)
+const BAG_COST_PER_PACK = 40;
 const round2 = (v) => Math.round(num(v) * 100) / 100;
 
 const emptyLine = { item: null, packs: '', weight: '', price_per_kg: '' };
@@ -550,6 +552,8 @@ export default function NewSupplierBillDashboard() {
 
         // Second paper (pack sheet, printed after the bill): only the weights typed for the packs,
         // one column per item name; the same item at another price stays in the same column.
+        // Bag cost on the bill: bags x Rs. 40 (same rule as Kuliya on the billing screen)
+        const billPacks = (bill.items || []).reduce((a, it) => a + num(it.packs), 0);
         const packItems = (bill.items || []).filter((it) => Array.isArray(it.pack_weights) && it.pack_weights.length > 0);
         const packColumns = [];
         packItems.forEach((it) => {
@@ -564,7 +568,7 @@ export default function NewSupplierBillDashboard() {
             + `
                 <tr class="b">${packColumns.map((c) => `<td class="r">${kg(c.weights.reduce((x, w) => x + w, 0))}<br><span style="font-weight:normal">${c.weights.length} ${escapeHtml(tr('packs', 'මලු'))}</span></td>`).join('')}</tr>`;
         const packsPage = packItems.length ? `
-            <div class="page2">
+            <div class="page2 sheet">
                 <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
                 <div class="sub">${escapeHtml(tr('Pack sheet', 'මලු පත්‍රය'))}</div>
                 <div class="meta">
@@ -579,18 +583,23 @@ export default function NewSupplierBillDashboard() {
 
         const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(bill.bill_no)}</title>
             <style>
-                body{font-family:Arial,sans-serif;font-size:13px;margin:20px;color:#000}
-                h2{margin:0;text-align:center} .sub{text-align:center;margin-bottom:12px}
-                .meta{display:flex;justify-content:space-between;margin-bottom:10px}
-                table{width:100%;border-collapse:collapse} th,td{border:1px solid #444;padding:4px 6px}
-                th{background:#eee} .r{text-align:right} .tot td{border:none;padding:2px 6px}
-                .tot{width:auto;margin-left:auto;margin-top:10px} .b{font-weight:bold}
+                /* One quarter of an A4 sheet (105mm x 148mm), at the top-left corner of the paper */
+                @page{size:A4;margin:0}
+                *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+                body{font-family:Arial,sans-serif;font-size:11px;margin:0;color:#000}
+                .sheet{width:105mm;min-height:148mm;padding:5mm;overflow:hidden}
+                h2{margin:0;text-align:center;font-size:15px} .sub{text-align:center;margin-bottom:6px;font-size:11px}
+                .meta{display:flex;justify-content:space-between;gap:4mm;margin-bottom:6px;line-height:1.5}
+                table{width:100%;border-collapse:collapse;table-layout:fixed} th,td{border:1px solid #444;padding:2px 4px;word-wrap:break-word}
+                th{background:#eee;font-size:10px} .r{text-align:right} .tot td{border:none;padding:1px 4px}
+                .tot{width:65%;margin-left:auto;margin-top:6px;table-layout:auto} .b{font-weight:bold}
                 .page2{page-break-before:always;break-before:page}
-                .code{font-size:20px;font-weight:bold;border:2px solid #000;padding:0 6px}
-                @media screen{.page2{margin-top:30px;padding-top:20px;border-top:2px dashed #999}}
-                .packtbl{font-size:12px} .packtbl th,.packtbl td{padding:2px 6px}
+                .code{font-size:16px;font-weight:bold;border:2px solid #000;padding:0 5px}
+                @media screen{body{background:#f3f4f6}.sheet{background:#fff;margin:10px;box-shadow:0 0 6px rgba(0,0,0,.25)}.page2{margin-top:20px}}
+                .packtbl{font-size:11px;table-layout:auto} .packtbl th,.packtbl td{padding:2px 5px}
                 .packtbl tr{page-break-inside:avoid;break-inside:avoid}
             </style></head><body>
+            <div class="sheet">
             <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
             <div class="sub">${escapeHtml(tr('Supplier Bill', 'සැපයුම්කරු බිල්පත'))}</div>
             <div class="meta">
@@ -600,7 +609,7 @@ export default function NewSupplierBillDashboard() {
                 <b>${escapeHtml(tr('Date', 'දිනය'))}:</b> ${escapeHtml(billDate(bill.bill_date))}<br>
                 <span style="font-size:11px">${escapeHtml(paymentLabel(bill.payment_type))}</span></div>
             </div>
-            <table><thead><tr>
+            <table><colgroup><col style="width:7%"><col style="width:31%"><col style="width:12%"><col style="width:16%"><col style="width:15%"><col style="width:19%"></colgroup><thead><tr>
                 <th>#</th><th>${escapeHtml(tr('Item', 'භාණ්ඩය'))}</th><th class="r">${escapeHtml(tr('Packs', 'මලු'))}</th>
                 <th class="r">${escapeHtml(tr('Weight (kg)', 'බර (kg)'))}</th><th class="r">${escapeHtml(tr('Price/kg', 'මිල/kg'))}</th>
                 <th class="r">${escapeHtml(tr('Amount', 'මුදල'))}</th>
@@ -608,6 +617,7 @@ export default function NewSupplierBillDashboard() {
             <table class="tot">
                 <tr><td>${escapeHtml(tr('Total weight', 'මුළු බර'))}</td><td class="r">${kg(bill.total_weight)} kg</td></tr>
                 <tr><td>${escapeHtml(tr('Gross amount', 'දළ මුදල'))}</td><td class="r">${money(bill.gross_amount)}</td></tr>
+                <tr><td>${escapeHtml(tr('Bag Cost', 'මලු වියදම'))} (${kg(billPacks)} × ${BAG_COST_PER_PACK})</td><td class="r">${money(billPacks * BAG_COST_PER_PACK)}</td></tr>
                 ${num(bill.commission_amount) ? `<tr><td>${escapeHtml(tr('Commission', 'කොමිස්'))}</td><td class="r">-${money(bill.commission_amount)}</td></tr>` : ''}
                 ${num(bill.deductions) ? `<tr><td>${escapeHtml(tr('Deductions', 'අඩු කිරීම්'))}${bill.deduction_note ? ` (${escapeHtml(bill.deduction_note)})` : ''}</td><td class="r">-${money(bill.deductions)}</td></tr>` : ''}
                 <tr class="b"><td>${escapeHtml(tr('Net amount', 'ශුද්ධ මුදල'))}</td><td class="r">${money(bill.net_amount)}</td></tr>
@@ -615,6 +625,7 @@ export default function NewSupplierBillDashboard() {
                 <tr class="b"><td>${escapeHtml(tr('Balance', 'ශේෂය'))}</td><td class="r">${money(bill.balance_amount)}</td></tr>
             </table>
             ${bill.notes ? `<p><b>${escapeHtml(tr('Notes', 'සටහන්'))}:</b> ${escapeHtml(bill.notes)}</p>` : ''}
+            </div>
             ${packsPage}
             </body></html>`;
         return html;
