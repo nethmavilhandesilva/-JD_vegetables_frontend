@@ -85,6 +85,46 @@ export const supplierPackDetailsPage = (billLines, { supplier, billNo, date, wid
 };
 
 
+// Page 2 of the supplier bill (pack sheet): only the weights of the records, one column per
+// item name; an item with more weights than fit down the page carries on in the next column on
+// the same page. Printed when an item has more than one record. Page 1 stays the bill alone.
+export const supplierPackSheet = (records = [], { supplier, billNo, date, width = '105mm', rowsPerColumn = 22 } = {}) => {
+    const columns = [];
+    records.slice().sort((a, b) => (a.id || 0) - (b.id || 0)).forEach((r) => {
+        const name = String(r.item_name || r.item_code || '').trim();
+        let col = columns.find((c) => c.name.toUpperCase() === name.toUpperCase());
+        if (!col) { col = { name, weights: [] }; columns.push(col); }
+        col.weights.push(parseFloat(r.weight) || 0);
+    });
+    if (!columns.some((c) => c.weights.length > 1)) return '';
+    const n = (v) => (Number.isInteger(v) ? v.toLocaleString('en-US') : v.toLocaleString('en-US', { maximumFractionDigits: 2 }));
+    const chunks = [];
+    columns.forEach((c) => {
+        for (let i = 0; i < c.weights.length; i += rowsPerColumn) {
+            const last = i + rowsPerColumn >= c.weights.length;
+            chunks.push({ name: c.name, cont: i > 0, weights: c.weights.slice(i, i + rowsPerColumn), total: last ? c.weights.reduce((x, w) => x + w, 0) : null, count: c.weights.length });
+        }
+    });
+    const td = 'border:1px solid #000;padding:0 3px;height:4.2mm;line-height:4.2mm;text-align:right;';
+    const cols = chunks.map((ch) => `
+        <table style="border-collapse:collapse;min-width:14mm;font-size:10px;">
+            <thead><tr><th style="border:1px solid #000;background:#eee;font-size:9px;padding:1px 3px;max-width:22mm;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${ch.name}${ch.cont ? ' ›' : ''}</th></tr></thead>
+            <tbody>${ch.weights.map((w) => `<tr><td style="${td}">${n(w)}</td></tr>`).join('')}
+            ${ch.total != null ? `<tr><td style="border:1px solid #000;padding:1px 3px;text-align:right;font-weight:bold;">${n(ch.total)}<br><span style="font-weight:normal">${ch.count} ${tr('packs', 'මලු')}</span></td></tr>` : ''}</tbody>
+        </table>`).join('');
+    return `
+    <div class="supplier-pack-page" style="width:${width}; margin:0 auto; padding:5mm; background:#fff; color:#000; font-family:Arial, sans-serif; font-size:11px; box-sizing:border-box;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:3mm;">
+            <b style="font-size:12px;">${SHOP_NAME}</b><span>${tr('Pack sheet', 'මලු පත්‍රය')}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin:3px 0 4px;">
+            <span style="font-size:16px; font-weight:bold; border:2px solid #000; padding:0 5px;">${(supplier || '').toUpperCase()}</span>
+            <span style="text-align:right;">${tr('Bill No', 'බිල් අංකය')}: <b>${billNo || ''}</b><br>${date || ''}</span>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:1.5mm; align-items:flex-start;">${cols}</div>
+    </div>`;
+};
+
 // Totals of a supplier bill's records (same sums the Supplier Bills page shows)
 export const supplierBillTotals = (supplierDetails = []) => {
     let totalsupplierSales = 0, totalPacksSum = 0, totalCustomerPackCost = 0;
@@ -209,8 +249,9 @@ export const buildSupplierA4Bill = (supplierDetails = [], {
         const grandTotalPackCost = totalCustomerPackCost;
         const grandAdvanceAmount = advanceAmount;
         const grandPaidAmount = paidAmountValue;
-        const grandNetPayable = netPayable;
         const grandKuliya = totalKuliya(supplierDetails);
+        // Bag cost (Kuliya) is added to what the supplier is paid
+        const grandNetPayable = netPayable + grandKuliya;
 
         // Generate HTML for each page
         const generatePage = (pageItems, pageNumber, isLastPage) => {
@@ -293,7 +334,7 @@ export const buildSupplierA4Bill = (supplierDetails = [], {
             <div class="totals-section">
                 <div class="total-row"><span>${tr('Grand Total', 'මුළු එකතුව')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalSales)}</span></div>
                 ${grandTotalPackCost > 0 ? `<div class="total-row"><span>${tr('Bags', 'මලු')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalPackCost)}</span></div>` : ''}
-                <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandKuliya)}</span></div>
+                <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} +${formatNumber(grandKuliya)}</span></div>
                 <div class="total-row"><span>${tr('Advance', 'අත්තිකාරම්')}:</span><span style="color: red !important;">${tr('Rs.', 'රු.')} -${formatNumber(grandAdvanceAmount)}</span></div>
                 ${hireAmount > 0 ? `<div class="total-row"><span>${tr('Hire', 'කුලී')}:</span><span style="color: red !important;">${tr('Rs.', 'රු.')} -${formatNumber(hireAmount)}</span></div>` : ''}
                 ${grandPaidAmount > 0 ? `<div class="total-row"><span>${tr('Paid Amount', 'ගෙවූ මුදල')}:</span><span>${tr('Rs.', 'රු.')} -${formatNumber(grandPaidAmount)}</span></div>` : ''}
@@ -349,8 +390,8 @@ export const buildSupplierA4Bill = (supplierDetails = [], {
             itemPages.forEach((page, idx) => {
                 allPagesHTML += generatePage(page, idx + 1, idx === itemPages.length - 1);
             });
-            allPagesHTML += supplierPackDetailsPage(billLines, {
-                supplier: selectedSupplier, billNo: currentBillNo, date, width: styles.containerWidth, fontSize: styles.normalFontSize,
+            allPagesHTML += supplierPackSheet(supplierDetails, {
+                supplier: selectedSupplier, billNo: currentBillNo, date, width: styles.containerWidth,
             });
         }
 
@@ -393,8 +434,10 @@ export const buildSupplierA4Bill = (supplierDetails = [], {
                 page-break-after: always;
                 page-break-inside: avoid;
             }
+            /* Quarter-A4 paper fed through the middle of an A4 printer: A4 page, the bill is a
+               block in the horizontal centre starting at the top; margin 0 = no browser header */
             @page { 
-                size: ${styles.containerWidth} auto;
+                size: A4;
                 margin: 0mm;
             }
         }
@@ -582,7 +625,8 @@ export const buildSupplierThermalBill = (supplierDetails = [], {
 
         // 🚀 CALCULATION FOR FINAL NET AMOUNT
         // We subtract both Advance and any current payment made
-        const netPayable = totalsupplierSales - advanceAmount - hireAmount - paidAmountValue + totalCustomerPackCost;
+        // Bag cost (Kuliya) is added to what the supplier is paid
+        const netPayable = totalsupplierSales - advanceAmount - hireAmount - paidAmountValue + totalCustomerPackCost + totalKuliya(supplierDetails);
 
         return `
 <!DOCTYPE html>
@@ -713,7 +757,7 @@ export const buildSupplierThermalBill = (supplierDetails = [], {
 
     <div style="margin-top:25px; border-top:1px dashed #000; padding-top:10px;"><table style="width:100%; border-collapse:collapse; font-size:14px; text-align:center;">${itemSummaryHtml}</table></div>
 </div>
-${supplierPackDetailsPage(billLines, { supplier: selectedSupplier, billNo: currentBillNo, date, width: receiptMaxWidth, fontSize: '15px' })}
+${supplierPackSheet(supplierDetails, { supplier: selectedSupplier, billNo: currentBillNo, date, width: receiptMaxWidth })}
 </body>
 </html>`;
 };

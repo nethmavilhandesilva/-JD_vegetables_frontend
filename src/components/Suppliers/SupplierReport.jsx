@@ -1314,16 +1314,18 @@ const SupplierReport = () => {
 
         // 🎯 ONLY apply top margin for A4 format
         const isA4 = printFormat === 'a4';
-        const topMargin = "20mm"; // Only used for A4
+        // A4 format = quarter-A4 bill (105mm) at the top centre of the page (paper is fed through the
+        // middle of the printer), so no top margin
+        const topMargin = "0mm";
 
         // Full print document for a bill number (the number of a new bill is only known after Print)
         const buildDocument = (billNo) => {
-            const content = isA4 ? getA4Content(billNo, "98mm", topMargin) : getBillContent(billNo);
+            const content = isA4 ? getA4Content(billNo, "105mm", topMargin) : getBillContent(billNo);
             return `
         <!DOCTYPE html>
         <html>
             <head>
-                <title>Print Bill</title>
+                <title>&nbsp;</title>
                 <style>
                     /* CRITICAL FIX: Force margins in print */
                     * {
@@ -1467,7 +1469,7 @@ const SupplierReport = () => {
 
         const onClose = () => setShowBillPreview(false);
         const isA4 = printFormat === 'a4';
-        const previewHtml = isA4 ? getA4Content(selectedBillNo, "98mm", "20mm") : getBillContent(selectedBillNo);
+        const previewHtml = isA4 ? getA4Content(selectedBillNo, "105mm", "0mm") : getBillContent(selectedBillNo);
 
         return (
             <div

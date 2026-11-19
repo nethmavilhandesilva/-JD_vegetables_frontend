@@ -96,7 +96,7 @@ const SupplierReport = () => {
             const options = { selectedSupplier: code, currentBillNo: billNo, printDate: rows[0]?.Date || null };
             return format === 'thermal'
                 ? buildSupplierThermalBill(records, { ...options, billSize })
-                : buildSupplierA4Bill(records, { ...options, billWidth: '98mm', topMargin: '20mm' });
+                : buildSupplierA4Bill(records, { ...options, billWidth: '105mm', topMargin: '0mm' });
         });
         setPrinting(true);
         try {
