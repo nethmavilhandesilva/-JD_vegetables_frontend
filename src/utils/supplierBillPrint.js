@@ -88,7 +88,7 @@ export const supplierPackDetailsPage = (billLines, { supplier, billNo, date, wid
 // Page 2 of the supplier bill (pack sheet): only the weights of the records, one column per
 // item name; an item with more weights than fit down the page carries on in the next column on
 // the same page. Printed when an item has more than one record. Page 1 stays the bill alone.
-export const supplierPackSheet = (records = [], { supplier, billNo, date, width = '105mm', rowsPerColumn = 22 } = {}) => {
+export const supplierPackSheet = (records = [], { supplier, billNo, date, width = '105mm', rowsPerColumn = 20 } = {}) => {
     const columns = [];
     records.slice().sort((a, b) => (a.id || 0) - (b.id || 0)).forEach((r) => {
         const name = String(r.item_name || r.item_code || '').trim();
@@ -113,7 +113,7 @@ export const supplierPackSheet = (records = [], { supplier, billNo, date, width 
             ${ch.total != null ? `<tr><td style="border:1px solid #000;padding:1px 3px;text-align:right;font-weight:bold;">${n(ch.total)}<br><span style="font-weight:normal">${ch.count} ${tr('packs', 'මලු')}</span></td></tr>` : ''}</tbody>
         </table>`).join('');
     return `
-    <div class="supplier-pack-page" style="width:${width}; margin:0 auto; padding:5mm; background:#fff; color:#000; font-family:Arial, sans-serif; font-size:11px; box-sizing:border-box;">
+    <div class="supplier-pack-page" style="width:${width}; margin:0 auto; padding:12mm 5mm 5mm 5mm; background:#fff; color:#000; font-family:Arial, sans-serif; font-size:11px; box-sizing:border-box;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:3mm;">
             <b style="font-size:12px;">${SHOP_NAME}</b><span>${tr('Pack sheet', 'මලු පත්‍රය')}</span>
         </div>
@@ -148,6 +148,7 @@ export const buildSupplierA4Bill = (supplierDetails = [], {
     selectedSupplier = '', currentBillNo = '', billWidth = '101mm', topMargin = '13mm',
     advanceAmount = 0, hireAmount = 0, payingAmount = 0, farmerLoanTotal = 0, isBulkPrintEnabled = true,
     printDate = null, // date printed on the bill (default today), e.g. the sale date of an old bill
+    printPackSheet = false, // page 2 (pack weights in columns) only when asked for
 } = {}) => {
     const { totalsupplierSales, totalCustomerPackCost } = supplierBillTotals(supplierDetails);
         const date = billDate(printDate || undefined);
@@ -390,7 +391,7 @@ export const buildSupplierA4Bill = (supplierDetails = [], {
             itemPages.forEach((page, idx) => {
                 allPagesHTML += generatePage(page, idx + 1, idx === itemPages.length - 1);
             });
-            allPagesHTML += supplierPackSheet(supplierDetails, {
+            if (printPackSheet) allPagesHTML += supplierPackSheet(supplierDetails, {
                 supplier: selectedSupplier, billNo: currentBillNo, date, width: styles.containerWidth,
             });
         }
@@ -431,6 +432,8 @@ export const buildSupplierA4Bill = (supplierDetails = [], {
             .bill-border { 
                 box-shadow: none; 
                 margin: 0 auto !important;
+                /* the printer cannot print the first few mm of the paper: start the bill below it */
+                padding-top: calc(${styles.padding} + 7mm) !important;
                 page-break-after: always;
                 page-break-inside: avoid;
             }
@@ -562,6 +565,7 @@ export const buildSupplierThermalBill = (supplierDetails = [], {
     selectedSupplier = '', currentBillNo = '', billSize = '3inch',
     advanceAmount = 0, hireAmount = 0, payingAmount = 0, farmerLoanTotal = 0, isBulkPrintEnabled = true,
     printDate = null, // date printed on the bill (default today), e.g. the sale date of an old bill
+    printPackSheet = false, // page 2 (pack weights in columns) only when asked for
 } = {}) => {
     const { totalsupplierSales, totalPacksSum, totalCustomerPackCost, itemSummaryData } = supplierBillTotals(supplierDetails);
         const date = billDate(printDate || undefined);
@@ -757,7 +761,7 @@ export const buildSupplierThermalBill = (supplierDetails = [], {
 
     <div style="margin-top:25px; border-top:1px dashed #000; padding-top:10px;"><table style="width:100%; border-collapse:collapse; font-size:14px; text-align:center;">${itemSummaryHtml}</table></div>
 </div>
-${supplierPackSheet(supplierDetails, { supplier: selectedSupplier, billNo: currentBillNo, date, width: receiptMaxWidth })}
+${printPackSheet ? supplierPackSheet(supplierDetails, { supplier: selectedSupplier, billNo: currentBillNo, date, width: receiptMaxWidth }) : ''}
 </body>
 </html>`;
 };

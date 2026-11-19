@@ -448,6 +448,8 @@ const SupplierReport = () => {
     // Bulk Printing: merge matching bill lines on the printout. Always ticked when this screen
     // opens; unticking it only lasts until the screen is opened again.
     const [isBulkPrintEnabled, setIsBulkPrintEnabled] = useState(true);
+    // Print pack sheet: page 2 with the weight of every record in columns (unticked each time)
+    const [printPackSheet, setPrintPackSheet] = useState(false);
 
     // Save billSize to localStorage whenever it changes
     useEffect(() => {
@@ -1297,13 +1299,13 @@ const SupplierReport = () => {
     // 🚀 FIXED: Customizable width bill with center alignment and ultra-clear high-visibility styling
     // Supplier bill (A4 format): built in utils/supplierBillPrint.js, shared with the supplier report page
     const getA4Content = useCallback((currentBillNo, billWidth = "101mm", topMargin = "13mm") => buildSupplierA4Bill(supplierDetails, {
-        selectedSupplier, currentBillNo, billWidth, topMargin, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled,
-    }), [selectedSupplier, supplierDetails, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled]);
+        selectedSupplier, currentBillNo, billWidth, topMargin, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled, printPackSheet,
+    }), [selectedSupplier, supplierDetails, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled, printPackSheet]);
 
     // Supplier bill (thermal format): built in utils/supplierBillPrint.js
     const getBillContent = useCallback((currentBillNo) => buildSupplierThermalBill(supplierDetails, {
-        selectedSupplier, currentBillNo, billSize, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled,
-    }), [selectedSupplier, supplierDetails, billSize, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled]);
+        selectedSupplier, currentBillNo, billSize, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled, printPackSheet,
+    }), [selectedSupplier, supplierDetails, billSize, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled, printPackSheet]);
 
     // F4: open the app's own print window. Nothing is marked printed until Print is pressed.
     const handlePrint = useCallback(() => {
@@ -2068,6 +2070,20 @@ const SupplierReport = () => {
                         />
                         <label htmlFor="bulkPrintCheckbox" style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                             Bulk Printing
+                        </label>
+                    </div>
+
+                    {/* Print pack sheet: also print page 2 with each record's weight in columns */}
+                    <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#495057', padding: '5px 10px', borderRadius: '5px', gap: '8px' }}>
+                        <input
+                            type="checkbox"
+                            id="supplierPackSheetCheckbox"
+                            checked={printPackSheet}
+                            onChange={(e) => setPrintPackSheet(e.target.checked)}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#38bdf8' }}
+                        />
+                        <label htmlFor="supplierPackSheetCheckbox" title={tr('Also print a second page with the weight of each pack', 'එක් එක් මල්ලේ බර සහිත දෙවන පිටුවක්ද මුද්‍රණය කරන්න')} style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            {tr('Print pack sheet', 'මලු පත්‍රය මුද්‍රණය')}
                         </label>
                     </div>
 
