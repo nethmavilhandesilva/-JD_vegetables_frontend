@@ -2795,12 +2795,12 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                             <div className="flex-shrink-0">
                                 <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
                                     <div className="w-full flex justify-between items-center">
-                                        <div style={{ position: 'relative', top: '-20px', display: 'flex', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0, zIndex: 20 }}>
-                                            <div className="font-bold text-lg whitespace-nowrap" style={{ color: 'red', fontSize: '1.35rem' }}>
+                                        <div className="se-header" style={{ position: 'relative', top: '-20px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: '6px', columnGap: '16px', flex: '1 1 auto', minWidth: 0, maxWidth: '100%', zIndex: 20 }}>
+                                            <div className="font-bold text-lg whitespace-nowrap" style={{ color: 'red', fontSize: '1.35rem', whiteSpace: 'nowrap' }}>
                                                 {tr('Bill No:', 'බිල් අං:')} {currentBillNo}
                                             </div>
                                             {/* Credit / Cash: chosen before entering the bill (Credit by default) */}
-                                            <div style={{ display: 'flex', gap: '6px', marginLeft: '16px' }}>
+                                            <div style={{ display: 'flex', gap: '6px' }}>
                                                 {[
                                                     { key: 'credit', label: tr('Credit', 'ණය'), color: '#dc2626' },
                                                     { key: 'cash', label: tr('Cash', 'මුදල්'), color: '#16a34a' },
@@ -2824,11 +2824,11 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                     );
                                                 })}
                                             </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginLeft: '100px' }}>
-                                                <div className="font-bold text-xl whitespace-nowrap" style={{ color: 'red', fontSize: '1.15rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: '6px', columnGap: '16px', minWidth: 0 }}>
+                                                <div className="font-bold text-xl whitespace-nowrap" style={{ color: 'red', fontSize: '1.15rem', whiteSpace: 'nowrap' }}>
                                                     {tr('Total Sales:', 'මුළු විකුණුම්:')} Rs. {formatDecimal(totalSalesValue)}
                                                 </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                                                     {/* Bulk Printing ticked: the same item at the same price is one line on the
                                                         customer bill (any supplier). Unticked: every record on its own line. */}
                                                     <input
@@ -2867,7 +2867,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                         </>
                                                     )}
                                                     {lastPrintedBill && (
-                                                        <div className="font-bold text-xl whitespace-nowrap" style={{ color: '#4ade80', fontSize: '1.15rem', marginLeft: '15px' }}>
+                                                        <div className="font-bold text-xl whitespace-nowrap" style={{ color: '#4ade80', fontSize: '1.05rem', marginLeft: '8px', whiteSpace: 'nowrap' }}>
                                                             {tr('Last Bill Total:', 'අවසන් බිල් එකතුව:')} Rs. {formatDecimal(lastPrintedBill.total)} (#{lastPrintedBill.billNo})
                                                         </div>
                                                     )}
@@ -2908,7 +2908,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                 </div>
                                             </div>
                                             <div className="flex-1 min-w-0" style={{ marginTop: '-40px' }}>
-                                                <input id="supplier_code" ref={refs.supplier_code} name="supplier_code" value={formData.supplier_code} onChange={(e) => handleInputChange("supplier_code", e.target.value.toUpperCase())} onKeyDown={(e) => handleKeyDown(e, "supplier_code")} type="text" title={tr("Supplier code", "සැපයුම්කරු කේතය")} placeholder={tr('Supplier', 'සැපයුම්කරු')} className="px-2 py-1 uppercase font-bold text-sm border rounded bg-white text-black placeholder-gray-500" style={{ width: 'calc(100% - 108px)', backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: '36px', fontSize: '1rem', padding: '0 0.75rem', borderRadius: '0.5rem', boxSizing: 'border-box' }} />
+                                                <input id="supplier_code" ref={refs.supplier_code} name="supplier_code" value={formData.supplier_code} onChange={(e) => handleInputChange("supplier_code", e.target.value.toUpperCase())} onKeyDown={(e) => handleKeyDown(e, "supplier_code")} type="text" title={tr("Supplier code", "සැපයුම්කරු කේතය")} placeholder={tr('Supplier', 'සැපයුම්කරු')} className="px-2 py-1 uppercase font-bold text-sm border rounded bg-white text-black placeholder-gray-500" style={{ width: 'min(200px, calc(100% - 108px))', backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: '36px', fontSize: '1rem', padding: '0 0.75rem', borderRadius: '0.5rem', boxSizing: 'border-box' }} />
                                             </div>
                                         </div>
                                         <div style={{ flex: '0 0 150px', minWidth: '120px', marginLeft: '-100px' }}>
@@ -2927,7 +2927,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
                                     <div className="w-full" style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", columnGap: "8px", alignItems: "end", marginTop: "8px" }}>
                                         <div style={{ gridColumnStart: 1, gridColumnEnd: 3 }}>
-                                            <input id="customer_code_input" ref={refs.customer_code_input} name="customer_code" value={formData.customer_code || autoCustomerCode} onChange={(e) => handleInputChange("customer_code", e.target.value.toUpperCase())} onKeyDown={(e) => handleKeyDown(e, "customer_code_input")} type="text" placeholder={tr('Customer code', 'පාරිභෝගික කේතය')} className="px-2 py-1 uppercase font-bold text-xs border rounded bg-white text-black placeholder-gray-500 w-full" style={{ width: "150px", backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: '44px', fontSize: '1.25rem', padding: '0 1rem', borderRadius: '0.5rem', boxSizing: 'border-box' }} />
+                                            <input id="customer_code_input" ref={refs.customer_code_input} name="customer_code" value={formData.customer_code || autoCustomerCode} onChange={(e) => handleInputChange("customer_code", e.target.value.toUpperCase())} onKeyDown={(e) => handleKeyDown(e, "customer_code_input")} type="text" placeholder={tr('Customer code', 'පාරිභෝගික කේතය')} className="px-2 py-1 uppercase font-bold text-xs border rounded bg-white text-black placeholder-gray-500" style={{ width: "200px", maxWidth: "100%", backgroundColor: '#0d0d4d', border: '1px solid #4a5568', color: 'white', height: '44px', fontSize: '1.25rem', padding: '0 1rem', borderRadius: '0.5rem', boxSizing: 'border-box' }} />
                                         </div>
                                         <div style={{ gridColumnStart: 5, gridColumnEnd: 7, marginLeft: "-120px", marginRight: "-2px", position: "relative", zIndex: 30 /* above the page's own fields (max 20), below report modals/popups (Bootstrap ~1055) */ }}>
                                             {(() => {
