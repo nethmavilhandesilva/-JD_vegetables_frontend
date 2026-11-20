@@ -18,6 +18,7 @@ const SupplierReport = () => {
 
     // Record being edited (supplier weight / price)
     const [editingRecord, setEditingRecord] = useState(null);
+    const [editingSiblings, setEditingSiblings] = useState([]);
 
     // Search Filter
     const [searchSupplierBillNo, setSearchSupplierBillNo] = useState('');
@@ -225,7 +226,13 @@ const SupplierReport = () => {
                                         <td className="text-end text-success fw-bold">{sale.profit}</td>
                                         <td className="text-center">
                                             <button type="button" className="btn btn-sm btn-outline-primary" title={tr('Edit supplier weight / price', 'සැපයුම්කරු බර / මිල සංස්කරණය')}
-                                                onClick={() => setEditingRecord({ ...sale, source: reportData.source_table === 'sales_history' ? 'history' : 'today' })}>✏️</button>
+                                                onClick={() => {
+                                                    const source = reportData.source_table === 'sales_history' ? 'history' : 'today';
+                                                    const sameItem = (r) => String(r.supplier_code || '').toUpperCase() === String(sale.supplier_code || '').toUpperCase()
+                                                        && String(r.item_code || r.item_name || '').toUpperCase() === String(sale.item_code || sale.item_name || '').toUpperCase();
+                                                    setEditingSiblings(groups[key].filter(sameItem).map((r) => ({ ...r, source })));
+                                                    setEditingRecord({ ...sale, source });
+                                                }}>✏️</button>
                                         </td>
                                     </tr>
                                 ))}
@@ -254,7 +261,7 @@ const SupplierReport = () => {
 
     return (
         <div className="sfr-root" style={{ display: 'flex' }}>
-            <SupplierLineEditModal record={editingRecord} onClose={() => setEditingRecord(null)} onSaved={() => fetchReport()} />
+            <SupplierLineEditModal record={editingRecord} sameItemRecords={editingSiblings} onClose={() => setEditingRecord(null)} onSaved={() => fetchReport()} />
             {/* Full-screen report: these rules override the page's normal width / padding */}
             <style>{`
                 .sfr-root { width: 100% !important; max-width: none !important; margin: -1.5rem -12px 0 -12px !important; min-height: 100vh; background: #f5f5f5 !important; }

@@ -53,6 +53,7 @@ export default function AccountsModal({ isOpen, onClose }) {
     const [supplierDetail, setSupplierDetail] = useState(null);
     const [openBills, setOpenBills] = useState({});
     const [editingLine, setEditingLine] = useState(null); // supplier bill record being edited
+    const [editingSiblings, setEditingSiblings] = useState([]); // same item records of that bill
 
     const [workers, setWorkers] = useState([]);
     const [workerForm, setWorkerForm] = useState(emptyWorker);
@@ -206,7 +207,7 @@ export default function AccountsModal({ isOpen, onClose }) {
     return (
         <div className="modal show d-block accounts-modal" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1055 }} role="dialog" aria-modal="true">
             <style>{styles}</style>
-            <SupplierLineEditModal record={editingLine} onClose={() => setEditingLine(null)}
+            <SupplierLineEditModal record={editingLine} sameItemRecords={editingSiblings} onClose={() => setEditingLine(null)}
                 onSaved={() => load(async () => setSupplierDetail((await api.get(`/accounts/suppliers/${encodeURIComponent(selectedCode)}`)).data))} />
             <div className="modal-dialog modal-xl modal-dialog-scrollable">
                 <div className="modal-content" style={{ background: '#f4f6f9' }}>
@@ -412,7 +413,12 @@ export default function AccountsModal({ isOpen, onClose }) {
                                                                                 <td className="text-end fw-semibold">{money(l.SupplierTotal)}</td>
                                                                                 <td className="text-end" style={{ width: 50 }}>
                                                                                     <button type="button" className="btn btn-sm btn-outline-primary py-0" title={tr('Edit supplier weight / price', 'සැපයුම්කරු බර / මිල සංස්කරණය')}
-                                                                                        onClick={(e) => { e.stopPropagation(); setEditingLine(l); }}>✏️</button>
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            const itemKey = (r) => String(r.item_code || r.item_name || '').toUpperCase();
+                                                                                            setEditingSiblings(b.lines.filter((r) => itemKey(r) === itemKey(l)));
+                                                                                            setEditingLine(l);
+                                                                                        }}>✏️</button>
                                                                                 </td>
                                                                             </tr>
                                                                         ))}

@@ -13,9 +13,12 @@ const money = (v) => num(v).toLocaleString('en-US', { minimumFractionDigits: 2, 
  * Works for today's sales (source "today"/"sales") and sales history (source "history").
  * The server recalculates SupplierTotal, profit and commission.
  */
-export default function SupplierLineEditModal({ record, onClose, onSaved }) {
+// sameItemRecords: the other records of the same supplier + item shown with this one; with
+// "apply to all" ticked the price is saved to all of them at once (weight stays per record).
+export default function SupplierLineEditModal({ record, sameItemRecords = [], onClose, onSaved }) {
     const [weight, setWeight] = useState('');
     const [price, setPrice] = useState('');
+    const [applyAll, setApplyAll] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const weightRef = useRef(null);
@@ -25,8 +28,9 @@ export default function SupplierLineEditModal({ record, onClose, onSaved }) {
         setWeight(String(record.SupplierWeight ?? record.weight ?? ''));
         setPrice(String(record.SupplierPricePerKg ?? ''));
         setError('');
+        setApplyAll(sameItemRecords.length > 1);
         setTimeout(() => { weightRef.current?.focus(); weightRef.current?.select(); }, 0);
-    }, [record]);
+    }, [record]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (!record) return undefined;
@@ -47,8 +51,13 @@ export default function SupplierLineEditModal({ record, onClose, onSaved }) {
         setSaving(true);
         setError('');
         try {
+            const source = record.source || 'today';
+            const others = applyAll ? sameItemRecords.filter((r) => r.id !== record.id) : [];
             await api.put('/accounts/supplier-lines', {
-                updates: [{ id: record.id, source: record.source || 'today', SupplierWeight: w, SupplierPricePerKg: p }],
+                updates: [
+                    { id: record.id, source, SupplierWeight: w, SupplierPricePerKg: p },
+                    ...others.map((r) => ({ id: r.id, source: r.source || source, SupplierPricePerKg: p })),
+                ],
             });
             onSaved?.();
             onClose();
@@ -75,6 +84,16 @@ export default function SupplierLineEditModal({ record, onClose, onSaved }) {
                 <label className="form-label fw-bold mb-1">{tr('Supplier price per kg', 'සැපයුම්කරු කිලෝ මිල')}</label>
                 <input type="number" step="any" min="0" className="form-control mb-2" value={price} onChange={(e) => setPrice(e.target.value)} />
                 <div className="mb-3">{tr('New total', 'නව එකතුව')}: <b>Rs. {money(num(weight) * num(price))}</b></div>
+                {sameItemRecords.length > 1 && (
+                    <label className="d-flex align-items-start gap-2 mb-3 p-2 rounded" style={{ background: '#e8f5e9', cursor: 'pointer' }}>
+                        <input type="checkbox" className="form-check-input mt-1" checked={applyAll} onChange={(e) => setApplyAll(e.target.checked)} />
+                        <span>
+                            <b>{tr(`Apply this price to all ${sameItemRecords.length} "${record.item_name || record.item_code}" records of ${record.supplier_code || 'this supplier'}`,
+                                `මෙම මිල ${record.supplier_code || ''} හි "${record.item_name || record.item_code}" වාර්තා ${sameItemRecords.length} ටම යොදන්න`)}</b>
+                            <div className="small text-muted">{tr('Each record keeps its own weight; the weight above changes only this record.', 'සෑම වාර්තාවකම බර එලෙසම පවතී; ඉහත බර මෙම වාර්තාවට පමණි.')}</div>
+                        </span>
+                    </label>
+                )}
                 {error && <div className="alert alert-danger py-2">{error}</div>}
                 <div className="d-flex gap-2">
                     <button type="button" className="btn btn-secondary flex-fill" onClick={onClose} disabled={saving}>{tr('Cancel', 'අවලංගු')}</button>
