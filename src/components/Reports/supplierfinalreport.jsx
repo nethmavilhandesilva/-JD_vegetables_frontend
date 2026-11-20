@@ -3,6 +3,7 @@ import api from '../../api';
 import Sidebar from '../Sidebar';
 import { tr } from '../../i18n/language';
 import { printHtml } from '../../utils/printHtml';
+import SupplierLineEditModal from '../Suppliers/SupplierLineEditModal';
 import { buildSupplierA4Bill, buildSupplierThermalBill, joinSupplierBills } from '../../utils/supplierBillPrint';
 
 const SupplierReport = () => {
@@ -14,6 +15,9 @@ const SupplierReport = () => {
     // Date Filters
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+
+    // Record being edited (supplier weight / price)
+    const [editingRecord, setEditingRecord] = useState(null);
 
     // Search Filter
     const [searchSupplierBillNo, setSearchSupplierBillNo] = useState('');
@@ -203,6 +207,7 @@ const SupplierReport = () => {
                                     <th className="text-end">{tr('Price', 'මිල')}</th>
                                     <th className="text-end">{tr('Total', 'එකතුව')}</th>
                                     <th className="text-end">{tr('Profit', 'ලාභය')}</th>
+                                    <th className="text-center">{tr('Edit', 'සංස්කරණය')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -218,6 +223,10 @@ const SupplierReport = () => {
                                             {parseFloat(sale.SupplierTotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                         </td>
                                         <td className="text-end text-success fw-bold">{sale.profit}</td>
+                                        <td className="text-center">
+                                            <button type="button" className="btn btn-sm btn-outline-primary" title={tr('Edit supplier weight / price', 'සැපයුම්කරු බර / මිල සංස්කරණය')}
+                                                onClick={() => setEditingRecord({ ...sale, source: reportData.source_table === 'sales_history' ? 'history' : 'today' })}>✏️</button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -230,6 +239,7 @@ const SupplierReport = () => {
                                     <td className="text-end fw-bold text-success">
                                         {groups[key].reduce((sum, item) => sum + parseFloat(item.profit || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </td>
+                                    <td></td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -244,6 +254,7 @@ const SupplierReport = () => {
 
     return (
         <div className="sfr-root" style={{ display: 'flex' }}>
+            <SupplierLineEditModal record={editingRecord} onClose={() => setEditingRecord(null)} onSaved={() => fetchReport()} />
             {/* Full-screen report: these rules override the page's normal width / padding */}
             <style>{`
                 .sfr-root { width: 100% !important; max-width: none !important; margin: -1.5rem -12px 0 -12px !important; min-height: 100vh; background: #f5f5f5 !important; }

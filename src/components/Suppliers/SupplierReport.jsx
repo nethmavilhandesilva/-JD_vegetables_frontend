@@ -1296,16 +1296,24 @@ const SupplierReport = () => {
         };
     }, [supplierDetails]);
 
+    // Date printed on the bill: the Date of the bill's sales records (sales.Date), not today
+    const billSaleDate = useMemo(() => {
+        const dates = supplierDetails.map(r => String(r?.Date || '').slice(0, 10)).filter(Boolean).sort();
+        return dates.length ? dates[dates.length - 1] : null;
+    }, [supplierDetails]);
+
     // 🚀 FIXED: Customizable width bill with center alignment and ultra-clear high-visibility styling
     // Supplier bill (A4 format): built in utils/supplierBillPrint.js, shared with the supplier report page
     const getA4Content = useCallback((currentBillNo, billWidth = "101mm", topMargin = "13mm") => buildSupplierA4Bill(supplierDetails, {
         selectedSupplier, currentBillNo, billWidth, topMargin, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled, printPackSheet,
-    }), [selectedSupplier, supplierDetails, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled, printPackSheet]);
+        printDate: billSaleDate,
+    }), [selectedSupplier, supplierDetails, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled, printPackSheet, billSaleDate]);
 
     // Supplier bill (thermal format): built in utils/supplierBillPrint.js
     const getBillContent = useCallback((currentBillNo) => buildSupplierThermalBill(supplierDetails, {
         selectedSupplier, currentBillNo, billSize, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled, printPackSheet,
-    }), [selectedSupplier, supplierDetails, billSize, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled, printPackSheet]);
+        printDate: billSaleDate,
+    }), [selectedSupplier, supplierDetails, billSize, advanceAmount, hireAmount, payingAmount, farmerLoanTotal, isBulkPrintEnabled, printPackSheet, billSaleDate]);
 
     // F4: open the app's own print window. Nothing is marked printed until Print is pressed.
     const handlePrint = useCallback(() => {

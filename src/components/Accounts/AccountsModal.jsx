@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../../api';
 import { tr } from '../../i18n/language';
+import SupplierLineEditModal from '../Suppliers/SupplierLineEditModal';
 
 // Accounts (bottom navigation bar)
 //  - Customers: customer codes + full names from the sales table -> full bill details
@@ -51,6 +52,7 @@ export default function AccountsModal({ isOpen, onClose }) {
     const [suppliers, setSuppliers] = useState([]);
     const [supplierDetail, setSupplierDetail] = useState(null);
     const [openBills, setOpenBills] = useState({});
+    const [editingLine, setEditingLine] = useState(null); // supplier bill record being edited
 
     const [workers, setWorkers] = useState([]);
     const [workerForm, setWorkerForm] = useState(emptyWorker);
@@ -204,6 +206,8 @@ export default function AccountsModal({ isOpen, onClose }) {
     return (
         <div className="modal show d-block accounts-modal" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1055 }} role="dialog" aria-modal="true">
             <style>{styles}</style>
+            <SupplierLineEditModal record={editingLine} onClose={() => setEditingLine(null)}
+                onSaved={() => load(async () => setSupplierDetail((await api.get(`/accounts/suppliers/${encodeURIComponent(selectedCode)}`)).data))} />
             <div className="modal-dialog modal-xl modal-dialog-scrollable">
                 <div className="modal-content" style={{ background: '#f4f6f9' }}>
                     <div className="modal-header" style={{ background: '#1b5e20', color: '#fff' }}>
@@ -406,6 +410,10 @@ export default function AccountsModal({ isOpen, onClose }) {
                                                                                 <td className="text-end">× {money(l.SupplierPricePerKg)}</td>
                                                                                 <td className="text-end">{num(l.packs)} {tr('bags', 'මලු')}</td>
                                                                                 <td className="text-end fw-semibold">{money(l.SupplierTotal)}</td>
+                                                                                <td className="text-end" style={{ width: 50 }}>
+                                                                                    <button type="button" className="btn btn-sm btn-outline-primary py-0" title={tr('Edit supplier weight / price', 'සැපයුම්කරු බර / මිල සංස්කරණය')}
+                                                                                        onClick={(e) => { e.stopPropagation(); setEditingLine(l); }}>✏️</button>
+                                                                                </td>
                                                                             </tr>
                                                                         ))}
                                                                     </tbody>
