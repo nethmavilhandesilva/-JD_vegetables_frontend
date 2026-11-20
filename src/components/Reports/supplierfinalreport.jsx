@@ -76,6 +76,30 @@ const SupplierReport = () => {
     // Billed records print one bill per supplier bill number; unbilled records are only
     // printed (one bill per supplier, without a number) when no billed records are shown.
     const [printing, setPrinting] = useState(false);
+    // Second page with the weight of each pack (same as "Print pack sheet" on the Supplier Bills page)
+    const [printPackSheet, setPrintPackSheet] = useState(() => {
+        try { return localStorage.getItem('sfr_print_pack_sheet') === '1'; } catch { return false; }
+    });
+    const togglePackSheet = (checked) => {
+        setPrintPackSheet(checked);
+        try { localStorage.setItem('sfr_print_pack_sheet', checked ? '1' : '0'); } catch { /* ignore */ }
+    };
+
+    // Advance / hire of a bill: printed bills use the amounts saved with that bill number;
+    // unbilled records use the supplier's current advance / hire.
+    const fetchCharges = async (code, billNo) => {
+        try {
+            if (billNo) {
+                const res = await api.get(`/suppliers/bill/${encodeURIComponent(billNo)}/charges`);
+                return { advanceAmount: parseFloat(res.data?.advance_amount) || 0, hireAmount: parseFloat(res.data?.hire_amount) || 0 };
+            }
+            const res = await api.get(`/suppliers/search-by-code/${encodeURIComponent(code)}`);
+            return { advanceAmount: parseFloat(res.data?.advance_amount) || 0, hireAmount: parseFloat(res.data?.hire_amount) || 0 };
+        } catch {
+            return { advanceAmount: 0, hireAmount: 0 };
+        }
+    };
+
     const handlePrintBills = async () => {
         let groups = Object.entries(filteredReportData.billed || {}).map(([key, rows]) => ({
             code: rows[0]?.supplier_code || key.split(' - Bill: ')[0],
@@ -95,16 +119,20 @@ const SupplierReport = () => {
             billSize = localStorage.getItem('supplier_bill_size') || '3inch';
         } catch { /* storage blocked: defaults */ }
 
-        const docs = groups.map(({ code, billNo, rows }) => {
-            // Older data without `weight` falls back to the supplier weight
-            const records = rows.map(r => ({ ...r, weight: r.weight ?? r.SupplierWeight }));
-            const options = { selectedSupplier: code, currentBillNo: billNo, printDate: rows[0]?.Date || null };
-            return format === 'thermal'
-                ? buildSupplierThermalBill(records, { ...options, billSize })
-                : buildSupplierA4Bill(records, { ...options, billWidth: '105mm', topMargin: '0mm' });
-        });
         setPrinting(true);
         try {
+            const charges = await Promise.all(groups.map(({ code, billNo }) => fetchCharges(code, billNo)));
+            const docs = groups.map(({ code, billNo, rows }, i) => {
+                // Older data without `weight` falls back to the supplier weight
+                const records = rows.map(r => ({ ...r, weight: r.weight ?? r.SupplierWeight }));
+                const options = {
+                    selectedSupplier: code, currentBillNo: billNo, printDate: rows[0]?.Date || null,
+                    advanceAmount: charges[i].advanceAmount, hireAmount: charges[i].hireAmount, printPackSheet,
+                };
+                return format === 'thermal'
+                    ? buildSupplierThermalBill(records, { ...options, billSize })
+                    : buildSupplierA4Bill(records, { ...options, billWidth: '105mm', topMargin: '0mm' });
+            });
             await printHtml(joinSupplierBills(docs));
         } finally {
             setPrinting(false);
@@ -264,6 +292,8 @@ const SupplierReport = () => {
             <SupplierLineEditModal record={editingRecord} sameItemRecords={editingSiblings} onClose={() => setEditingRecord(null)} onSaved={() => fetchReport()} />
             {/* Full-screen report: these rules override the page's normal width / padding */}
             <style>{`
+                body:has(.sfr-root) { display: block !important; }
+                body:has(.sfr-root) #root, body:has(.sfr-root) .layout-main { width: 100% !important; max-width: none !important; }
                 .sfr-root { width: 100% !important; max-width: none !important; margin: -1.5rem -12px 0 -12px !important; min-height: 100vh; background: #f5f5f5 !important; }
                 .sfr-root .sfr-content { margin-left: 260px !important; width: auto !important; max-width: none !important; flex: 1 1 auto !important; min-width: 0 !important; padding: 16px 20px !important; background: #f5f5f5 !important; box-sizing: border-box; }
                 .sfr-root .card { width: 100% !important; max-width: none !important; }
@@ -408,10 +438,17 @@ const SupplierReport = () => {
                 {/* TITLE */}
                 <div className="d-flex justify-content-between align-items-center mb-4">
                     <h2 className="fw-bold">{tr('Report by Supplier', 'සැපයුම්කරු අනුව වාර්තාව')}</h2>
+                    <div className="d-flex align-items-center gap-3">
+                    <label className="d-flex align-items-center gap-2 fw-bold mb-0" style={{ cursor: 'pointer' }}
+                        title={tr('Also print a second page with the weight of each pack', 'එක් එක් මල්ලේ බර සහිත දෙවන පිටුවක්ද මුද්‍රණය කරන්න')}>
+                        <input type="checkbox" className="form-check-input m-0" checked={printPackSheet} onChange={(e) => togglePackSheet(e.target.checked)} />
+                        {tr('Print pack sheet', 'මලු පත්‍රය මුද්‍රණය')}
+                    </label>
                     <button className="btn btn-success" onClick={handlePrintBills} disabled={printing || loading}
                         title={tr('Print the bills shown, in supplier bill format', 'පෙන්වන බිල්පත් සැපයුම්කරු බිල් ආකෘතියෙන් මුද්‍රණය කරන්න')}>
                         {printing ? tr('Printing...', 'මුද්‍රණය වෙමින්...') : `${tr('Print Bills', 'බිල්පත් මුද්‍රණය')} (${Object.keys(filteredReportData.billed || {}).length || Object.keys(filteredReportData.nonBilled || {}).length})`}
                     </button>
+                    </div>
                 </div>
 
                 {/* LOADING */}
