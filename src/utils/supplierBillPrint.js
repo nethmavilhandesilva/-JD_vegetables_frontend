@@ -105,29 +105,28 @@ export const supplierPackSheet = (records = [], { supplier, billNo, date, width 
             chunks.push({ name: c.name, cont: i > 0, weights: c.weights.slice(i, i + rowsPerColumn), total: last ? c.weights.reduce((x, w) => x + w, 0) : null, count: c.weights.length });
         }
     });
-    const td = 'border:1px solid #000;padding:0 3px;height:4.2mm;line-height:4.2mm;text-align:right;';
+    // Every rule is inline with !important: the A4 bill's own styles ("table { width: 100% }",
+    // everything bold) must not change this sheet. Same look as the New Supplier Bills pack sheet.
+    const I = (css) => css.split(';').filter(Boolean).map((r) => `${r} !important`).join(';');
+    const td = I('border:1px solid #444;padding:0 5px;height:4.2mm;line-height:4.2mm;text-align:right;font-weight:normal;width:auto;white-space:nowrap;font-size:11px');
+    const th = I('border:1px solid #444;background:#eee;font-size:10px;font-weight:bold;padding:2px 5px;width:auto;white-space:nowrap;max-width:24mm;overflow:hidden;text-overflow:ellipsis;text-align:center');
+    const tot = I('border:1px solid #444;padding:1px 5px;text-align:right;font-weight:bold;width:auto;white-space:nowrap;font-size:11px;line-height:1.2');
     const cols = chunks.map((ch) => `
-        <table class="pack-col" style="border-collapse:collapse;min-width:14mm;font-size:10px;">
-            <thead><tr><th style="border:1px solid #000;background:#eee;font-size:9px;padding:1px 3px;max-width:22mm;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${ch.name}${ch.cont ? ' ›' : ''}</th></tr></thead>
+        <table style="${I('border-collapse:collapse;width:auto;min-width:14mm;table-layout:auto;margin:0;flex:0 0 auto')}">
+            <thead><tr><th style="${th}">${ch.name}${ch.cont ? ' ›' : ''}</th></tr></thead>
             <tbody>${ch.weights.map((w) => `<tr><td style="${td}">${n(w)}</td></tr>`).join('')}
-            ${ch.total != null ? `<tr><td style="border:1px solid #000;padding:1px 3px;text-align:right;font-weight:bold;">${n(ch.total)}<br><span style="font-weight:normal">${ch.count} ${tr('packs', 'මලු')}</span></td></tr>` : ''}</tbody>
+            ${ch.total != null ? `<tr><td style="${tot}">${n(ch.total)}<br><span style="${I('font-weight:normal')}">${ch.count} ${tr('packs', 'මලු')}</span></td></tr>` : ''}</tbody>
         </table>`).join('');
     return `
-    <div class="supplier-pack-page" style="width:${width}; margin:0 auto; padding:12mm 5mm 5mm 5mm; background:#fff; color:#000; font-family:Arial, sans-serif; font-size:11px; box-sizing:border-box;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:3mm;">
-            <b style="font-size:12px;">${SHOP_NAME}</b><span>${tr('Pack sheet', 'මලු පත්‍රය')}</span>
+    <div class="supplier-pack-page" style="width:${width}; margin:0 auto; padding:12mm 5mm 5mm 5mm; background:#fff; color:#000; font-family:Arial, sans-serif; box-sizing:border-box;">
+        <div style="${I('display:flex;justify-content:space-between;align-items:center;gap:3mm')}">
+            <span style="${I('font-weight:bold;font-size:12px')}">${SHOP_NAME}</span><span style="${I('font-weight:normal;font-size:11px')}">${tr('Pack sheet', 'මලු පත්‍රය')}</span>
         </div>
-        <div style="display:flex; justify-content:space-between; margin:3px 0 4px;">
-            <span style="font-size:16px; font-weight:bold; border:2px solid #000; padding:0 5px;">${(supplier || '').toUpperCase()}</span>
-            <span style="text-align:right;">${tr('Bill No', 'බිල් අංකය')}: <b>${billNo || ''}</b><br>${date || ''}</span>
+        <div style="${I('display:flex;justify-content:space-between;align-items:flex-start;margin:3px 0 6px')}">
+            <span style="${I('font-size:16px;font-weight:bold;border:2px solid #000;padding:0 5px')}">${(supplier || '').toUpperCase()}</span>
+            <span style="${I('text-align:right;font-weight:normal;font-size:11px;line-height:1.5')}">${tr('Bill No', 'බිල් අංකය')}: <span style="${I('font-weight:bold')}">${billNo || ''}</span><br>${date || ''}</span>
         </div>
-        <div style="display:flex; flex-wrap:wrap; gap:1.5mm; align-items:flex-start;">${cols}</div>
-        <style>
-            /* Narrow columns (like the New Supplier Bills pack sheet): the bill's own
-               "table { width: 100% }" rule must not stretch them across the page */
-            .supplier-pack-page table.pack-col { width: auto !important; min-width: 14mm; max-width: 24mm; table-layout: auto !important; margin: 0 !important; flex: 0 0 auto; }
-            .supplier-pack-page table.pack-col td, .supplier-pack-page table.pack-col th { width: auto !important; white-space: nowrap; }
-        </style>
+        <div style="${I('display:flex;flex-wrap:wrap;gap:1.5mm;align-items:flex-start;justify-content:flex-start')}">${cols}</div>
     </div>`;
 };
 
