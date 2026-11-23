@@ -346,17 +346,23 @@ export default function AccountsModal({ isOpen, onClose }) {
                                             <th className="text-end">{tr('Bills', 'බිල්පත්')}</th>
                                             <th className="text-end">{tr('Records', 'වාර්තා')}</th>
                                             <th className="text-end">{tr('Total (Rs.)', 'එකතුව (රු.)')}</th>
+                                            <th className="text-end">{tr('Advance', 'අත්තිකාරම්')}</th>
+                                            <th className="text-end">{tr('Hire', 'කුලී')}</th>
+                                            <th className="text-end">{tr('Net (Rs.)', 'ශුද්ධ (රු.)')}</th>
                                             <th>{tr('Last sale', 'අවසන් විකිණීම')}</th>
                                         </tr></thead>
                                         <tbody>
-                                            {filteredSuppliers.length === 0 && <tr><td colSpan={6} className="text-center text-muted py-3">{tr('No suppliers in sales or sales history.', 'විකුණුම් හෝ විකුණුම් ඉතිහාසයේ සැපයුම්කරුවන් නැත.')}</td></tr>}
+                                            {filteredSuppliers.length === 0 && <tr><td colSpan={9} className="text-center text-muted py-3">{tr('No suppliers in sales or sales history.', 'විකුණුම් හෝ විකුණුම් ඉතිහාසයේ සැපයුම්කරුවන් නැත.')}</td></tr>}
                                             {filteredSuppliers.map(s => (
                                                 <tr key={s.supplier_code} className="clickable" onClick={() => go('supplier', s.supplier_code)}>
                                                     <td className="fw-bold text-primary">{s.supplier_code}</td>
                                                     <td>{s.full_name || <span className="text-muted">—</span>}</td>
                                                     <td className="text-end">{s.bills}</td>
                                                     <td className="text-end">{s.records}</td>
-                                                    <td className="text-end fw-semibold">{money(s.total)}</td>
+                                                    <td className="text-end">{money(s.total)}</td>
+                                                    <td className="text-end text-danger">{num(s.advance) ? `-${money(s.advance)}` : '—'}</td>
+                                                    <td className="text-end text-danger">{num(s.hire) ? `-${money(s.hire)}` : '—'}</td>
+                                                    <td className="text-end fw-bold">{money(s.net ?? s.total)}</td>
                                                     <td>{s.in_today ? <span className="badge bg-success">{tr('Today', 'අද')}</span> : (s.last_date || '—')}</td>
                                                 </tr>
                                             ))}
@@ -372,7 +378,9 @@ export default function AccountsModal({ isOpen, onClose }) {
                                 <div className="bg-white rounded p-3 mb-3 d-flex flex-wrap gap-4">
                                     <div><div className="small text-muted">{tr('Supplier Code', 'සැපයුම්කරු කේතය')}</div><div className="fw-bold fs-5">{selectedCode}</div></div>
                                     <div><div className="small text-muted">{tr('Name', 'නම')}</div><div className="fw-bold fs-5">{supplierDetail.supplier?.name || '—'}</div></div>
-                                    <div className="ms-auto text-end"><div className="small text-muted">{tr('Grand Total', 'මුළු එකතුව')}</div><div className="fw-bold fs-4 text-success">Rs. {money((supplierDetail.bills || []).reduce((s, b) => s + num(b.total), 0))}</div></div>
+                                    <div className="ms-auto text-end"><div className="small text-muted">{tr('Total', 'එකතුව')}</div><div className="fw-bold fs-5">Rs. {money((supplierDetail.bills || []).reduce((s, b) => s + num(b.total), 0))}</div></div>
+                                    <div className="text-end"><div className="small text-muted">{tr('Advance + Hire', 'අත්තිකාරම් + කුලී')}</div><div className="fw-bold fs-5 text-danger">-{money((supplierDetail.bills || []).reduce((s, b) => s + num(b.advance) + num(b.hire), 0))}</div></div>
+                                    <div className="text-end"><div className="small text-muted">{tr('Net Total', 'ශුද්ධ එකතුව')}</div><div className="fw-bold fs-4 text-success">Rs. {money((supplierDetail.bills || []).reduce((s, b) => s + num(b.net ?? b.total), 0))}</div></div>
                                 </div>
                                 <div className="table-responsive">
                                     <table className="table table-sm table-bordered align-middle bg-white mb-0">
@@ -383,9 +391,12 @@ export default function AccountsModal({ isOpen, onClose }) {
                                             <th className="text-end">{tr('Bags', 'මලු')}</th>
                                             <th className="text-end">{tr('Weight (kg)', 'බර (kg)')}</th>
                                             <th className="text-end">{tr('Bill Total (Rs.)', 'බිල් එකතුව (රු.)')}</th>
+                                            <th className="text-end">{tr('Advance', 'අත්තිකාරම්')}</th>
+                                            <th className="text-end">{tr('Hire', 'කුලී')}</th>
+                                            <th className="text-end">{tr('Net (Rs.)', 'ශුද්ධ (රු.)')}</th>
                                         </tr></thead>
                                         <tbody>
-                                            {(supplierDetail.bills || []).length === 0 && <tr><td colSpan={6} className="text-center text-muted py-3">{tr('No records.', 'වාර්තා නොමැත.')}</td></tr>}
+                                            {(supplierDetail.bills || []).length === 0 && <tr><td colSpan={9} className="text-center text-muted py-3">{tr('No records.', 'වාර්තා නොමැත.')}</td></tr>}
                                             {(supplierDetail.bills || []).map(b => {
                                                 const key = b.bill_no || 'unprinted';
                                                 const isOpenRow = !!openBills[key];
@@ -397,10 +408,13 @@ export default function AccountsModal({ isOpen, onClose }) {
                                                             <td className="text-end">{b.records}</td>
                                                             <td className="text-end">{b.packs}</td>
                                                             <td className="text-end">{kg(b.weight)}</td>
-                                                            <td className="text-end fw-bold">{money(b.total)}</td>
+                                                            <td className="text-end">{money(b.total)}</td>
+                                                            <td className="text-end text-danger">{num(b.advance) ? `-${money(b.advance)}` : '—'}</td>
+                                                            <td className="text-end text-danger">{num(b.hire) ? `-${money(b.hire)}` : '—'}</td>
+                                                            <td className="text-end fw-bold">{money(b.net ?? b.total)}</td>
                                                         </tr>
                                                         {isOpenRow && (
-                                                            <tr><td colSpan={6} className="p-0">
+                                                            <tr><td colSpan={9} className="p-0">
                                                                 <table className="table table-sm mb-0" style={{ background: '#f9fbe7' }}>
                                                                     <tbody>
                                                                         {b.lines.map(l => (

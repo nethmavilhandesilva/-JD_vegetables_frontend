@@ -866,6 +866,29 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     const salesVersionRef = useRef(null);   // version of the list we hold (see SalesEntryController@index)
     const salesFetchRef = useRef(null);     // in-flight poll, so polls never pile up
 
+    // ---- Date filter: an earlier day's bills from sales_histories, shown read only ----
+    const [historyDate, setHistoryDate] = useState('');
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const historyDateRef = useRef('');
+    const historyBlocked = () => {
+        if (!historyDateRef.current) return false;
+        alert(tr(`You are viewing ${historyDateRef.current} (sales history, read only). Clear the date to enter or print today's bills.`,
+            `ඔබ ${historyDateRef.current} (විකුණුම් ඉතිහාසය, කියවීමට පමණි) බලමින් සිටී. අද බිල්පත් සඳහා දිනය ඉවත් කරන්න.`));
+        return true;
+    };
+    // Safety net: while a history day is shown nothing may write to today's sales
+    useEffect(() => {
+        if (!historyDate) return undefined;
+        const id = api.interceptors.request.use((config) => {
+            const method = String(config.method || 'get').toLowerCase();
+            if (method !== 'get' && String(config.url || '').startsWith('/sales')) {
+                return Promise.reject(new Error(tr('Read-only: a sales history date is selected.', 'කියවීමට පමණි: විකුණුම් ඉතිහාස දිනයක් තෝරා ඇත.')));
+            }
+            return config;
+        });
+        return () => api.interceptors.request.eject(id);
+    }, [historyDate]);
+
     // The "All Sales Records" table shows the same data, newest first
     const allSalesRecords = allSales;
     const isLoadingAllSales = isLoading;
@@ -1268,12 +1291,13 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     // Returns the newest sales list.
     const fetchSalesOnly = async ({ force = false } = {}) => {
         if (!force && salesFetchRef.current) return salesFetchRef.current;
+        if (historyDateRef.current) return allSalesRef.current; // history day shown: no live refresh
         const run = (async () => {
             try {
                 const listAtStart = allSalesRef.current;
                 const params = !force && salesVersionRef.current ? { version: salesVersionRef.current } : {};
                 const res = await api.get(routes.sales, { params });
-                if (res.data?.unchanged) return allSalesRef.current;
+                if (res.data?.unchanged || historyDateRef.current) return allSalesRef.current;
                 // While saves are still in flight, or if the list changed during this request,
                 // this answer may be older than what is on screen: skip it (the next poll,
                 // 3 s later, brings the newest data). Keeps fast entry smooth.
@@ -1298,6 +1322,33 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             return await run;
         } finally {
             if (salesFetchRef.current === run) salesFetchRef.current = null;
+        }
+    };
+
+    // Date filter: load that day's records from sales_histories (empty date = back to today's live sales)
+    const changeHistoryDate = async (date) => {
+        const reset = { selectedPrintedCustomer: null, selectedUnprintedCustomer: null, editingSaleId: null, selectedSalesIds: [], selectionCriteria: null };
+        if (!date) {
+            historyDateRef.current = '';
+            setHistoryDate('');
+            updateState(reset);
+            await fetchSalesOnly({ force: true });
+            return;
+        }
+        historyDateRef.current = date;
+        setHistoryDate(date);
+        setHistoryLoading(true);
+        try {
+            const res = await api.get('/sales/history', { params: { date } });
+            if (historyDateRef.current !== date) return; // another date was picked meanwhile
+            // History rows were all handled at day end: printed bills stay printed, the rest show as unprinted
+            const rows = (res.data?.sales || []).map(r => ({ ...r, bill_printed: r.bill_printed === 'Y' ? 'Y' : 'N', _history: true }));
+            allSalesRef.current = rows;
+            updateState({ ...reset, allSales: rows });
+        } catch (err) {
+            alert(tr('Could not load sales history: ', 'විකුණුම් ඉතිහාසය ලබා ගත නොහැක: ') + (err?.response?.data?.message || err.message));
+        } finally {
+            setHistoryLoading(false);
         }
     };
 
@@ -1815,6 +1866,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     ), [sortedAllSalesRecords, editingSaleId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleEditClick = (sale) => {
+        if (historyBlocked()) return;
         if (hasPending(sale)) return; // still saving: can be opened a moment later
         // If same record clicked again → clear fields EXCEPT customer/contact fields
         if (state.editingSaleId === sale.id) {
@@ -1943,6 +1995,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         });
     };
     const handleDeleteRecord = async (saleId, groupIds = null) => {
+        if (historyBlocked()) return;
         const ids = groupIds && groupIds.length > 0 ? groupIds : [saleId];
         if (ids.some(isTempId)) return; // still saving
         const question = ids.length > 1
@@ -2092,6 +2145,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     // server), and the item + price stay filled so the next pack is just weight, Enter, Enter.
     const handleSubmit = async (e, opts = {}) => {
         e.preventDefault();
+        if (historyBlocked()) return;
         const isPackEntry = !!opts.pack;
         const formData = isPackEntry ? { ...state.formData, packs: '1', kuliya: '' } : state.formData;
         // NOTE: no isSubmitting guard here — each Enter press is a distinct, legitimate
@@ -2366,6 +2420,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     // F5 hold: the screen clears at once; the hold is saved in the background
     const holdInFlightRef = useRef(false);
     const handleMarkAllProcessed = async () => {
+        if (historyBlocked()) return;
         if (holdInFlightRef.current) return;
         holdInFlightRef.current = true;
         try {
@@ -2481,6 +2536,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     // In your SalesEntry component, modify the handlePrintAndClear function:
 
     const handlePrintAndClear = async () => {
+        if (historyBlocked()) return;
         // If any record submitted moments ago is still mid-request, wait for it to land
         // before deciding what belongs on this bill — otherwise it can get left out.
         const pendingSaves = pendingSaveRequestsRef.current.slice();
@@ -2798,6 +2854,25 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                         <div className="se-header" style={{ position: 'relative', top: '-20px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: '6px', columnGap: '16px', flex: '1 1 auto', minWidth: 0, maxWidth: '100%', zIndex: 20 }}>
                                             <div className="font-bold text-lg whitespace-nowrap" style={{ color: 'red', fontSize: '1.35rem', whiteSpace: 'nowrap' }}>
                                                 {tr('Bill No:', 'බිල් අං:')} {currentBillNo}
+                                            </div>
+                                            {/* Date filter: show an earlier day's bills from sales history */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <input type="date" tabIndex={-1} value={historyDate}
+                                                    max={new Date(Date.now() - 86400000).toISOString().slice(0, 10)}
+                                                    onChange={(e) => changeHistoryDate(e.target.value)}
+                                                    title={tr('Show the bills of an earlier day (sales history)', 'පෙර දිනයක බිල්පත් පෙන්වන්න (විකුණුම් ඉතිහාසය)')}
+                                                    style={{ height: '32px', borderRadius: '6px', border: `2px solid ${historyDate ? '#f59e0b' : '#4a5568'}`, padding: '0 6px', fontWeight: 'bold', backgroundColor: historyDate ? '#fef3c7' : 'white', color: 'black' }} />
+                                                {historyDate && (
+                                                    <button type="button" tabIndex={-1} onClick={() => changeHistoryDate('')}
+                                                        style={{ height: '32px', padding: '0 10px', borderRadius: '6px', border: 'none', backgroundColor: '#f59e0b', color: 'black', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                                        ✕ {tr('Today', 'අද')}
+                                                    </button>
+                                                )}
+                                                {historyDate && (
+                                                    <span style={{ color: '#f59e0b', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                                                        {historyLoading ? tr('Loading...', 'පූරණය වෙමින්...') : tr('History · read only', 'ඉතිහාසය · කියවීමට පමණි')}
+                                                    </span>
+                                                )}
                                             </div>
                                             {/* Credit / Cash: chosen before entering the bill (Credit by default) */}
                                             <div style={{ display: 'flex', gap: '6px' }}>
