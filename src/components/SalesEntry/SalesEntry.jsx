@@ -818,6 +818,11 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     const [billType, setBillType] = useState('credit');
     const creditFlag = billType === 'cash' ? 'N' : 'Y';
     const togglePackMode = (on) => setPackMode(on);
+    // Keep customer + item (F8): after each record the customer code, item and price stay filled
+    // and the cursor skips those fields (only while ticked; unticked when the page opens)
+    const [keepCustomerItem, setKeepCustomerItem] = useState(false);
+    const keepCustomerItemRef = useRef(false);
+    keepCustomerItemRef.current = keepCustomerItem;
     const [lastPrintedBill, setLastPrintedBill] = useState(() => {
         try {
             const saved = localStorage.getItem('lastPrintedBill');
@@ -1525,12 +1530,24 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                     fetchLoanAmount(code);
                 }
 
+                // Keep customer + item: the item is already filled, go straight to the weight
+                if (keepCustomerItemRef.current && formData.item_code) {
+                    refs.weight.current?.focus();
+                    refs.weight.current?.select();
+                    return;
+                }
                 refs.item_code_select.current?.focus();
                 return;
             }
 
             // 5. Logic for SUPPLIER CODE input
             if (currentFieldName === "supplier_code") {
+                // Keep customer + item: customer and item already have values, skip them
+                if (keepCustomerItemRef.current && (formData.customer_code || autoCustomerCode) && formData.item_code) {
+                    refs.weight.current?.focus();
+                    refs.weight.current?.select();
+                    return;
+                }
                 // Supplier first, then the customer code
                 refs.customer_code_input.current?.focus();
                 refs.customer_code_input.current?.select();
@@ -2250,6 +2267,18 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 refs.weight.current.focus();
                 refs.weight.current.select();
             }
+        } else if (keepCustomerItemRef.current && !isEditing) {
+            // Keep customer + item ticked: customer, item and price stay; the cursor goes to the
+            // supplier code (selected, so the next farmer's code can be typed straight over it)
+            setFormData({
+                ...initialFormData, customer_code: customerCode, customer_name: currentCustomerName, telephone_no: currentTelephone, supplier_code: currentSupplierCode,
+                item_code: formData.item_code, item_name: formData.item_name, pack_due: formData.pack_due, price_per_kg: formData.price_per_kg,
+            });
+            updateState({ errors: {}, editingSaleId: null, isManualClear: false, priceManuallyChanged: false, gridPricePerKg: formData.price_per_kg });
+            if (refs.supplier_code.current) {
+                refs.supplier_code.current.focus();
+                refs.supplier_code.current.select();
+            }
         } else {
             setFormData({ ...initialFormData, customer_code: customerCode, customer_name: currentCustomerName, telephone_no: currentTelephone, supplier_code: currentSupplierCode });
             updateState({ errors: {}, editingSaleId: null, isManualClear: false, priceManuallyChanged: false, gridPricePerKg: "" });
@@ -2744,6 +2773,12 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 // This reloads the entire page from the server
                 window.location.reload();
             }
+            // F8: tick / untick "Keep customer + item"
+            if (e.key === "F8") {
+                e.preventDefault();
+                setKeepCustomerItem(on => !on);
+                return;
+            }
             // F9: tick / untick "Pack by pack"
             if (e.key === "F9") {
                 e.preventDefault();
@@ -2915,6 +2950,17 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                     />
                                                     <label htmlFor="bulkPrintCheckbox" style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                                         {tr('Bulk Printing', 'තොග මුද්‍රණය')}
+                                                    </label>
+                                                    <input
+                                                        type="checkbox"
+                                                        id="keepCustomerItemCheckbox"
+                                                        checked={keepCustomerItem}
+                                                        onChange={(e) => setKeepCustomerItem(e.target.checked)}
+                                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#38bdf8', marginLeft: '12px' }}
+                                                    />
+                                                    <label htmlFor="keepCustomerItemCheckbox" title={tr('After each record keep the customer code, item and price; the cursor skips them', 'සෑම වාර්තාවකටම පසු පාරිභෝගික කේතය, අයිතමය සහ මිල තබා ගන්න; කර්සරය ඒවා මඟ හරියි')}
+                                                        style={{ color: keepCustomerItem ? '#38bdf8' : 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                                        {tr('Keep customer + item', 'පාරිභෝගික + අයිතමය තබන්න')} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>(F8)</span>
                                                     </label>
                                                     <input
                                                         type="checkbox"

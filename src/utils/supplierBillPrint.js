@@ -341,8 +341,8 @@ export const buildSupplierA4Bill = (supplierDetails = [], {
                 <div class="total-row"><span>${tr('Grand Total', 'මුළු එකතුව')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalSales)}</span></div>
                 ${grandTotalPackCost > 0 ? `<div class="total-row"><span>${tr('Bags', 'මලු')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalPackCost)}</span></div>` : ''}
                 <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} +${formatNumber(grandKuliya)}</span></div>
-                <div class="total-row"><span>${tr('Advance', 'අත්තිකාරම්')}:</span><span style="color: red !important;">${tr('Rs.', 'රු.')} -${formatNumber(grandAdvanceAmount)}</span></div>
-                ${hireAmount > 0 ? `<div class="total-row"><span>${tr('Hire', 'කුලී')}:</span><span style="color: red !important;">${tr('Rs.', 'රු.')} -${formatNumber(hireAmount)}</span></div>` : ''}
+                <div class="total-row" style="font-weight: 900 !important;"><span style="font-weight: 900 !important;">${tr('Advance', 'අත්තිකාරම්')}:</span><span style="color: red !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(grandAdvanceAmount)}</span></div>
+                <div class="total-row" style="font-weight: 900 !important;"><span style="font-weight: 900 !important;">${tr('Hire', 'කුලී')}:</span><span style="color: red !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(hireAmount)}</span></div>
                 ${grandPaidAmount > 0 ? `<div class="total-row"><span>${tr('Paid Amount', 'ගෙවූ මුදල')}:</span><span>${tr('Rs.', 'රු.')} -${formatNumber(grandPaidAmount)}</span></div>` : ''}
                 <div class="net-total">
                     <span>${tr('Amount Payable', 'ගෙවිය යුතු මුදල')}:</span>
@@ -733,19 +733,18 @@ export const buildSupplierThermalBill = (supplierDetails = [], {
         <tr><td colspan="2" style="border-top:1px dashed #000; padding: 5px 0;"></td></tr>
         ` : ''}
 
-        <tr style="font-size:18px;">
-          <td style="font-size:15px; padding-top:5px;">${tr('Advance', 'අත්තිකාරම්')}</td>
-          <td style="text-align:right; padding-top:5px; color:#000;">
-            - ${advanceAmount.toFixed(2)}
+        <tr style="font-size:18px; font-weight:900;">
+          <td style="font-size:16px; padding-top:5px; font-weight:900;">${tr('Advance', 'අත්තිකාරම්')}</td>
+          <td style="text-align:right; padding-top:5px; color:#000; font-weight:900;">
+            - ${Number(advanceAmount || 0).toFixed(2)}
            </td>
           </tr>
-        ${hireAmount > 0 ? `
-        <tr style="font-size:18px;">
-          <td style="font-size:15px; padding-top:5px;">${tr('Hire', 'කුලී')}</td>
-          <td style="text-align:right; padding-top:5px; color:#000;">
-            - ${hireAmount.toFixed(2)}
+        <tr style="font-size:18px; font-weight:900;">
+          <td style="font-size:16px; padding-top:5px; font-weight:900;">${tr('Hire', 'කුලී')}</td>
+          <td style="text-align:right; padding-top:5px; color:#000; font-weight:900;">
+            - ${Number(hireAmount || 0).toFixed(2)}
            </td>
-          </tr>` : ''}
+          </tr>
 
         <tr style="font-weight:900;">
           <td style="font-size:18px; padding-top:10px;">${tr('Net Remaining Balance', 'ශුද්ධ ඉතිරි ශේෂය')}:</td>
