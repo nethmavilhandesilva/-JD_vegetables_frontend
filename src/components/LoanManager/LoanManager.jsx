@@ -4,6 +4,7 @@ import api from '../../api';
 import Sidebar from '../Sidebar';
 import { APP_BASE } from '../../config/paths';
 import { tr } from '../../i18n/language';
+import LoanDetailedReport from './LoanDetailedReport';
 
 const formatCustomerOptions = (customers) => customers.map(c => ({
     value: c.id,
@@ -89,11 +90,19 @@ const LoanManager = () => {
         }
     }, []);
 
+    // Date filter at the top: the records of the chosen day (Date column); empty = the working day
+    const [viewDate, setViewDate] = useState('');
+    const [workingDate, setWorkingDate] = useState('');
+    const viewDateRef = useRef('');
+    const [showDetailedReport, setShowDetailedReport] = useState(false);
+
     const fetchData = useCallback(async () => {
         try {
-            const { data } = await api.get('/customers-loans/data');
+            const params = viewDateRef.current ? { date: viewDateRef.current } : {};
+            const { data } = await api.get('/customers-loans/data', { params });
             setGrnCodes(data.grnCodes.map(code => ({ value: code, label: code })));
             setLoans(data.loans);
+            if (data.settingDate) setWorkingDate(String(data.settingDate).slice(0, 10));
         } catch (error) {
             console.error('Error fetching initial loan data:', error);
         } finally {
@@ -359,7 +368,27 @@ const LoanManager = () => {
                 `}</style>
 
                 <div className="custom-card">
-                    <h3 className="mb-4">{tr('Loan Management Board', 'ණය කළමනාකරණ පුවරුව')}</h3>
+                    <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+                        <h3 className="mb-0">{tr('Loan Management Board', 'ණය කළමනාකරණ පුවරුව')}</h3>
+                        <div className="d-flex align-items-center gap-2">
+                            <label className="fw-bold mb-0 text-nowrap">{tr('Show date', 'දිනය පෙන්වන්න')}</label>
+                            <input type="date" className="form-control form-control-sm" style={{ width: 170 }}
+                                value={viewDate || workingDate}
+                                onChange={(e) => {
+                                    const d = e.target.value === workingDate ? '' : e.target.value;
+                                    viewDateRef.current = d;
+                                    setViewDate(d);
+                                    setLoading(true);
+                                    fetchData();
+                                }} />
+                            {viewDate && (
+                                <button type="button" className="btn btn-sm btn-warning fw-bold text-nowrap"
+                                    onClick={() => { viewDateRef.current = ''; setViewDate(''); setLoading(true); fetchData(); }}>
+                                    ✕ {tr('Today', 'අද')}
+                                </button>
+                            )}
+                        </div>
+                    </div>
 
                     <form ref={formRef} onSubmit={e => handleSubmit(e, isReturns)} onKeyDown={handleFormKeyDown} className="p-3 border border-2 border-dark rounded bg-custom-dark">
                         <div className="row gy-2">
@@ -511,7 +540,11 @@ const LoanManager = () => {
                         </div>
                     </form>
 
-                    <h4 className="mt-4">{tr('Today\'s Loan Records', 'අදේණු ණය වාර්තා')}</h4>
+                    <h4 className="mt-4">
+                        {viewDate
+                            ? <>{tr('Loan Records of', 'ණය වාර්තා')} <span className="text-warning">{viewDate}</span></>
+                            : tr('Today\'s Loan Records', 'අදේණු ණය වාර්තා')}
+                    </h4>
                     <div className="table-responsive">
                         <table className="table table-bordered table-sm mt-2 bg-white text-dark">
                             <thead>
@@ -540,13 +573,18 @@ const LoanManager = () => {
                                         </tr>
                                     ))
                                 ) : (
-                                    <tr><td colSpan="6" className="text-center">{tr('No loan records found for today', 'අද සඳහා ණය වාර්තා කිසිවක් සොයාගත නොහැක')}</td></tr>
+                                    <tr><td colSpan="6" className="text-center">{viewDate ? tr(`No loan records found for ${viewDate}`, `${viewDate} සඳහා ණය වාර්තා කිසිවක් සොයාගත නොහැක`) : tr('No loan records found for today', 'අද සඳහා ණය වාර්තා කිසිවක් සොයාගත නොහැක')}</td></tr>
                                 )}
                             </tbody>
                         </table>
                         <div className="d-flex flex-wrap gap-2 mt-3">
                             <a href={`${APP_BASE}/loan-report`} className="btn btn-sm btn-dark">{tr('Loan Report', 'ණය වාර්තාව')}</a>
+                            <button type="button" className="btn btn-sm btn-warning fw-bold" onClick={() => setShowDetailedReport(true)}>
+                                📋 {tr('Detailed Loan Report', 'සවිස්තර ණය වාර්තාව')}
+                            </button>
                         </div>
+                        <LoanDetailedReport isOpen={showDetailedReport} onClose={() => setShowDetailedReport(false)}
+                            codeOptions={[...new Set([...customersRaw.map(c => c.short_name), ...suppliersRaw.map(s => s.code)].filter(Boolean).map(c => String(c).toUpperCase()))].sort()} />
                     </div>
                 </div>
             </div>
