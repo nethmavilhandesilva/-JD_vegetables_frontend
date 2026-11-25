@@ -3,9 +3,8 @@ import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import api from '../../api';
 import { tr } from '../../i18n/language';
-import { SHOP_NAME, SHOP_STALL_NO } from '../../config/shop';
 import { printHtml } from '../../utils/printHtml';
-import { billDate } from '../../utils/billDate';
+import { buildSupplierA4Bill, buildSupplierThermalBill } from '../../utils/supplierBillPrint';
 
 // New Supplier Bills dashboard.
 // Bills entered here are stored in the new tables new_supplier_bills /
@@ -538,134 +537,56 @@ export default function NewSupplierBillDashboard() {
         printHtml(buildBillHtml(bill));
     }
 
-    // Bill HTML (used for printing and for the on-screen preview)
+    // Bill HTML (used for printing and for the on-screen preview): exactly the supplier bill of
+    // the Supplier Bills page (utils/supplierBillPrint.js), in the A4 / thermal format chosen there.
+    // Each line's price and amount are printed after the commission is taken off; a pack-by-pack
+    // line is one record per pack (so the pack sheet lists every pack); bag cost = bags x 40.
     function buildBillHtml(bill) {
-        // The commission is not shown on the bill: each line's price and amount are printed
-        // after the commission is taken off, so the totals still add up to the net amount.
-        const rows = (bill.items || []).map((it, i) => {
+        const records = [];
+        (bill.items || []).forEach((it, i) => {
+            const weight = num(it.weight);
             const commission = num(it.commission_amount);
-            const netAmount = num(it.amount) - commission;
-            // Price column = price per kg minus the commission per kg (saved with each line)
             const commissionPerKg = it.commission_per_kg != null && it.commission_per_kg !== ''
                 ? num(it.commission_per_kg)
-                : (num(it.weight) > 0 ? commission / num(it.weight) : 0);
-            const netPrice = num(it.price_per_kg) - commissionPerKg;
-            return `
-            <tr>
-                <td>${i + 1}</td>
-                <td>${escapeHtml(it.item_code)} ${escapeHtml(it.item_name || '')}</td>
-                <td class="r">${num(it.packs) ? kg(it.packs) : ''}</td>
-                <td class="r">${kg(it.weight)}</td>
-                <td class="r">${money(netPrice)}</td>
-                <td class="r">${money(netAmount)}</td>
-            </tr>`;
-        }).join('');
-
-        // Second paper (pack sheet, printed after the bill): only the weights typed for the packs,
-        // one column per item name; the same item at another price stays in the same column.
-        // Bag cost on the bill: bags x Rs. 40 (same rule as Kuliya on the billing screen)
-        const billPacks = (bill.items || []).reduce((a, it) => a + num(it.packs), 0);
-        // Printed balance: net amount + bag cost - paid (the bag cost is added to what the supplier gets)
-        const bagCost = round2(billPacks * BAG_COST_PER_PACK);
-        const printBalance = round2(num(bill.net_amount) + bagCost - num(bill.paid_amount));
-        const packItems = (bill.items || []).filter((it) => Array.isArray(it.pack_weights) && it.pack_weights.length > 0);
-        const packColumns = [];
-        packItems.forEach((it) => {
-            const name = String(it.item_name || it.item_code || '').trim();
-            let col = packColumns.find((c) => c.name.toUpperCase() === name.toUpperCase());
-            if (!col) { col = { name, weights: [] }; packColumns.push(col); }
-            col.weights.push(...it.pack_weights.map(Number));
-        });
-        // Page 2 only (page 1 is the bill alone). Each item starts a new column; when an item has
-        // more packs than fit down the page, its weights carry on in the next column on the SAME
-        // page, so the sheet fills sideways instead of running onto a third page.
-        const ROWS_PER_COLUMN = 22; // weights that fit down a quarter-A4 page under the header
-        const packChunks = [];
-        packColumns.forEach((c) => {
-            for (let i = 0; i < c.weights.length; i += ROWS_PER_COLUMN) {
-                const last = i + ROWS_PER_COLUMN >= c.weights.length;
-                packChunks.push({
-                    name: c.name, cont: i > 0, start: i, weights: c.weights.slice(i, i + ROWS_PER_COLUMN),
-                    total: last ? c.weights.reduce((x, w) => x + w, 0) : null, count: c.weights.length,
+                : (weight > 0 ? commission / weight : 0);
+            const base = { item_code: it.item_code, item_name: it.item_name || it.item_code, CustomerPackCost: 0 };
+            const packs = Array.isArray(it.pack_weights) ? it.pack_weights.map(Number) : [];
+            if (packs.length) {
+                const prices = Array.isArray(it.pack_prices) && it.pack_prices.length === packs.length
+                    ? it.pack_prices.map(Number) : packs.map(() => num(it.price_per_kg));
+                packs.forEach((w, j) => {
+                    const netPrice = round2(prices[j] - commissionPerKg);
+                    records.push({ ...base, id: (i + 1) * 10000 + j, weight: w, packs: 1, SupplierPricePerKg: netPrice, SupplierTotal: round2(w * netPrice), Kuliya: BAG_COST_PER_PACK });
+                });
+            } else {
+                const bags = num(it.packs);
+                records.push({
+                    ...base, id: (i + 1) * 10000, weight, packs: bags,
+                    SupplierPricePerKg: round2(num(it.price_per_kg) - commissionPerKg),
+                    SupplierTotal: round2(num(it.amount) - commission),
+                    Kuliya: round2(bags * BAG_COST_PER_PACK),
                 });
             }
         });
-        const packColsHtml = packChunks.map((ch) => `
-                <table class="packcol">
-                    <thead><tr><th title="${escapeHtml(ch.name)}">${escapeHtml(ch.name)}${ch.cont ? ' ›' : ''}</th></tr></thead>
-                    <tbody>${ch.weights.map((w) => `<tr><td class="r">${kg(w)}</td></tr>`).join('')}
-                    ${ch.total != null ? `<tr class="b tot-row"><td class="r">${kg(ch.total)}<br><span style="font-weight:normal">${ch.count} ${escapeHtml(tr('packs', 'මලු'))}</span></td></tr>` : ''}</tbody>
-                </table>`).join('');
-        const packsPage = packItems.length ? `
-            <div class="page2 sheet" id="packsheet">
-                <div class="pack-head">
-                    <div style="display:flex;justify-content:space-between;align-items:center;gap:3mm">
-                        <b style="font-size:12px">${escapeHtml(SHOP_NAME)}</b>
-                        <span>${escapeHtml(tr('Pack sheet', 'මලු පත්‍රය'))}</span>
-                    </div>
-                    <div class="meta" style="margin:3px 0 4px">
-                        <div><span class="code">${escapeHtml(bill.supplier_code)}</span></div>
-                        <div class="r">${escapeHtml(tr('Bill No', 'බිල් අංකය'))}: <b>${escapeHtml(bill.bill_no)}</b><br>${escapeHtml(billDate(bill.bill_date))}</div>
-                    </div>
-                </div>
-                <div class="packcols">${packColsHtml}</div>
-            </div>` : '';
 
-        const html = `<!doctype html><html><head><meta charset="utf-8"><title>&nbsp;</title>
-            <style>
-                /* The shop prints on quarter-A4 paper (105mm x 148mm) fed through the MIDDLE of an A4
-                   printer. So the page is A4 and each bill is a 105mm-wide block in the horizontal
-                   centre, starting at the top: exactly the part of the A4 page that lands on the paper.
-                   margin:0 also stops the browser printing its own header (page title) on the bill. */
-                @page{size:A4;margin:0}
-                *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-                body{font-family:Arial,sans-serif;font-size:11px;margin:0;color:#000}
-                .sheet{width:105mm;max-height:148mm;margin:0 auto;padding:5mm 5mm 4mm 5mm;overflow:hidden}
-                h2{margin:0;text-align:center;font-size:15px} .sub{text-align:center;margin-bottom:6px;font-size:11px}
-                .meta{display:flex;justify-content:space-between;gap:4mm;margin-bottom:6px;line-height:1.5}
-                table{width:100%;border-collapse:collapse;table-layout:fixed} th,td{border:1px solid #444;padding:2px 3px;word-wrap:break-word} td.r{white-space:nowrap}
-                th{background:#eee;font-size:10px} .r{text-align:right} .tot td{border:none;padding:1px 4px}
-                .tot{width:65%;margin-left:auto;margin-top:6px;table-layout:auto} .b{font-weight:bold}
-                .page2{page-break-before:always;break-before:page}
-                .code{font-size:16px;font-weight:bold;border:2px solid #000;padding:0 5px}
-                @media screen{body{background:#f3f4f6}.sheet{background:#fff;margin:10px auto;min-height:148mm;box-shadow:0 0 6px rgba(0,0,0,.25)}.page2{margin-top:20px}}
-                .packcols{display:flex;flex-wrap:wrap;gap:1.5mm;align-items:flex-start}
-                .packcol{width:auto;min-width:14mm;table-layout:auto;font-size:10px}
-                .packcol th{font-size:9px;padding:1px 3px;max-width:22mm;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-                .packcol td{padding:0 3px;height:4.2mm;line-height:4.2mm}
-                .packcol .tot-row td{height:auto;line-height:1.2;padding:1px 3px}
-                .packtbl{font-size:11px;table-layout:auto} .packtbl th,.packtbl td{padding:2px 5px}
-                .packtbl tr{page-break-inside:avoid;break-inside:avoid}
-            </style></head><body>
-            <div class="sheet" id="billsheet">
-            <h2>${escapeHtml(SHOP_NAME)} (${escapeHtml(SHOP_STALL_NO)})</h2>
-            <div class="sub">${escapeHtml(tr('Supplier Bill', 'සැපයුම්කරු බිල්පත'))}</div>
-            <div class="meta">
-                <div><b>${escapeHtml(tr('Supplier', 'සැපයුම්කරු'))}:</b> <span class="code">${escapeHtml(bill.supplier_code)}</span> ${escapeHtml(bill.supplier_name || '')}
-                ${bill.reference_no ? `<br><b>${escapeHtml(tr('Ref No', 'යොමු අංකය'))}:</b> ${escapeHtml(bill.reference_no)}` : ''}</div>
-                <div class="r"><b>${escapeHtml(tr('Bill No', 'බිල් අංකය'))}:</b> ${escapeHtml(bill.bill_no)}<br>
-                <b>${escapeHtml(tr('Date', 'දිනය'))}:</b> ${escapeHtml(billDate(bill.bill_date))}<br>
-                <span style="font-size:11px">${escapeHtml(paymentLabel(bill.payment_type))}</span></div>
-            </div>
-            <table><colgroup><col style="width:6%"><col style="width:26%"><col style="width:10%"><col style="width:16%"><col style="width:16%"><col style="width:26%"></colgroup><thead><tr>
-                <th>#</th><th>${escapeHtml(tr('Item', 'භාණ්ඩය'))}</th><th class="r">${escapeHtml(tr('Packs', 'මලු'))}</th>
-                <th class="r">${escapeHtml(tr('Weight (kg)', 'බර (kg)'))}</th><th class="r">${escapeHtml(tr('Price/kg', 'මිල/kg'))}</th>
-                <th class="r">${escapeHtml(tr('Amount', 'මුදල'))}</th>
-            </tr></thead><tbody>${rows}</tbody></table>
-            <table class="tot">
-                <tr><td>${escapeHtml(tr('Total weight', 'මුළු බර'))}</td><td class="r">${kg(bill.total_weight)} kg</td></tr>
-                <tr><td>${escapeHtml(tr('Gross amount', 'දළ මුදල'))}</td><td class="r">${money(num(bill.gross_amount) - num(bill.commission_amount))}</td></tr>
-                ${num(bill.deductions) ? `<tr><td>${escapeHtml(tr('Deductions', 'අඩු කිරීම්'))}${bill.deduction_note ? ` (${escapeHtml(bill.deduction_note)})` : ''}</td><td class="r">-${money(bill.deductions)}</td></tr>` : ''}
-                <tr class="b"><td>${escapeHtml(tr('Net amount', 'ශුද්ධ මුදල'))}</td><td class="r">${money(bill.net_amount)}</td></tr>
-                <tr><td>${escapeHtml(tr('Bag Cost', 'මලු වියදම'))} (${kg(billPacks)} × ${BAG_COST_PER_PACK})</td><td class="r">+${money(bagCost)}</td></tr>
-                ${num(bill.paid_amount) ? `<tr><td>${escapeHtml(tr('Paid', 'ගෙවූ'))}</td><td class="r">-${money(bill.paid_amount)}</td></tr>` : ''}
-                <tr class="b"><td>${escapeHtml(tr('Balance', 'ශේෂය'))}</td><td class="r">${money(printBalance)}</td></tr>
-            </table>
-            ${bill.notes ? `<p><b>${escapeHtml(tr('Notes', 'සටහන්'))}:</b> ${escapeHtml(bill.notes)}</p>` : ''}
-            </div>
-            ${packsPage}
-            </body></html>`;
-        return html;
+        let format = 'a4', billSize = '3inch';
+        try {
+            format = localStorage.getItem('supplier_print_format_v2') || 'a4';
+            billSize = localStorage.getItem('supplier_bill_size') || '3inch';
+        } catch { /* storage blocked: defaults */ }
+        const options = {
+            selectedSupplier: bill.supplier_code || '',
+            currentBillNo: bill.bill_no || '',
+            printDate: bill.bill_date || null,
+            payingAmount: num(bill.paid_amount),
+            deductions: num(bill.deductions),
+            deductionNote: escapeHtml(bill.deduction_note || ''),
+            printPackSheet: (bill.items || []).some((it) => Array.isArray(it.pack_weights) && it.pack_weights.length > 0),
+            isBulkPrintEnabled: true,
+        };
+        return format === 'thermal'
+            ? buildSupplierThermalBill(records, { ...options, billSize })
+            : buildSupplierA4Bill(records, { ...options, billWidth: '105mm', topMargin: '0mm' });
     }
 
     // Preview (F2): the bill as it will print, built from what is on screen now

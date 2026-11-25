@@ -154,12 +154,14 @@ export const buildSupplierA4Bill = (supplierDetails = [], {
     advanceAmount = 0, hireAmount = 0, payingAmount = 0, farmerLoanTotal = 0, isBulkPrintEnabled = true,
     printDate = null, // date printed on the bill (default today), e.g. the sale date of an old bill
     printPackSheet = false, // page 2 (pack weights in columns) only when asked for
+    deductions = 0, deductionNote = '', // other deductions (New Supplier Bills); 0 = no line
 } = {}) => {
     const { totalsupplierSales, totalCustomerPackCost } = supplierBillTotals(supplierDetails);
         const date = billDate(printDate || undefined);
         const time = new Date().toLocaleTimeString('si-LK', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
         const paidAmountValue = parseFloat(payingAmount) || 0;
-        const netPayable = totalsupplierSales - advanceAmount - hireAmount - paidAmountValue + totalCustomerPackCost;
+        const deductionValue = parseFloat(deductions) || 0;
+        const netPayable = totalsupplierSales - advanceAmount - hireAmount - paidAmountValue - deductionValue + totalCustomerPackCost;
 
         // Format numbers WITHOUT unnecessary decimal places
         const formatNumber = (num) => {
@@ -343,6 +345,7 @@ export const buildSupplierA4Bill = (supplierDetails = [], {
                 <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} +${formatNumber(grandKuliya)}</span></div>
                 <div class="total-row" style="font-weight: 900 !important;"><span style="font-weight: 900 !important;">${tr('Advance', 'අත්තිකාරම්')}:</span><span style="color: red !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(grandAdvanceAmount)}</span></div>
                 <div class="total-row" style="font-weight: 900 !important;"><span style="font-weight: 900 !important;">${tr('Hire', 'කුලී')}:</span><span style="color: red !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(hireAmount)}</span></div>
+                ${deductionValue > 0 ? `<div class="total-row"><span>${tr('Deductions', 'අඩු කිරීම්')}${deductionNote ? ` (${deductionNote})` : ''}:</span><span>${tr('Rs.', 'රු.')} -${formatNumber(deductionValue)}</span></div>` : ''}
                 ${grandPaidAmount > 0 ? `<div class="total-row"><span>${tr('Paid Amount', 'ගෙවූ මුදල')}:</span><span>${tr('Rs.', 'රු.')} -${formatNumber(grandPaidAmount)}</span></div>` : ''}
                 <div class="net-total">
                     <span>${tr('Amount Payable', 'ගෙවිය යුතු මුදල')}:</span>
@@ -571,6 +574,7 @@ export const buildSupplierThermalBill = (supplierDetails = [], {
     advanceAmount = 0, hireAmount = 0, payingAmount = 0, farmerLoanTotal = 0, isBulkPrintEnabled = true,
     printDate = null, // date printed on the bill (default today), e.g. the sale date of an old bill
     printPackSheet = false, // page 2 (pack weights in columns) only when asked for
+    deductions = 0, deductionNote = '', // other deductions (New Supplier Bills); 0 = no line
 } = {}) => {
     const { totalsupplierSales, totalPacksSum, totalCustomerPackCost, itemSummaryData } = supplierBillTotals(supplierDetails);
         const date = billDate(printDate || undefined);
@@ -635,7 +639,8 @@ export const buildSupplierThermalBill = (supplierDetails = [], {
         // 🚀 CALCULATION FOR FINAL NET AMOUNT
         // We subtract both Advance and any current payment made
         // Bag cost (Kuliya) is added to what the supplier is paid
-        const netPayable = totalsupplierSales - advanceAmount - hireAmount - paidAmountValue + totalCustomerPackCost + totalKuliya(supplierDetails);
+        const deductionValue = parseFloat(deductions) || 0;
+        const netPayable = totalsupplierSales - advanceAmount - hireAmount - paidAmountValue - deductionValue + totalCustomerPackCost + totalKuliya(supplierDetails);
 
         return `
 <!DOCTYPE html>
@@ -745,6 +750,11 @@ export const buildSupplierThermalBill = (supplierDetails = [], {
             - ${Number(hireAmount || 0).toFixed(2)}
            </td>
           </tr>
+        ${deductionValue > 0 ? `
+        <tr style="font-size:18px;">
+          <td style="font-size:15px; padding-top:5px;">${tr('Deductions', 'අඩු කිරීම්')}${deductionNote ? ` (${deductionNote})` : ''}</td>
+          <td style="text-align:right; padding-top:5px; color:#000;">- ${deductionValue.toFixed(2)}</td>
+        </tr>` : ''}
 
         <tr style="font-weight:900;">
           <td style="font-size:18px; padding-top:10px;">${tr('Net Remaining Balance', 'ශුද්ධ ඉතිරි ශේෂය')}:</td>
