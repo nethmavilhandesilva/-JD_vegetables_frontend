@@ -1530,7 +1530,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                     fetchLoanAmount(code);
                 }
 
-                // Keep customer + item: the item is already filled, go straight to the weight
+                // Keep supplier + item + price: the item is already filled, go straight to the weight
                 if (keepCustomerItemRef.current && formData.item_code) {
                     refs.weight.current?.focus();
                     refs.weight.current?.select();
@@ -1542,7 +1542,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
 
             // 5. Logic for SUPPLIER CODE input
             if (currentFieldName === "supplier_code") {
-                // Keep customer + item: customer and item already have values, skip them
+                // Keep supplier + item + price: customer and item already have values, skip them
                 if (keepCustomerItemRef.current && (formData.customer_code || autoCustomerCode) && formData.item_code) {
                     refs.weight.current?.focus();
                     refs.weight.current?.select();
@@ -2268,16 +2268,17 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 refs.weight.current.select();
             }
         } else if (keepCustomerItemRef.current && !isEditing) {
-            // Keep customer + item ticked: customer, item and price stay; the cursor goes to the
-            // supplier code (selected, so the next farmer's code can be typed straight over it)
+            // Keep supplier + item + price ticked: supplier code, item and price stay; the customer
+            // code is cleared and the cursor goes there (Enter then skips the item, straight to weight)
             setFormData({
-                ...initialFormData, customer_code: customerCode, customer_name: currentCustomerName, telephone_no: currentTelephone, supplier_code: currentSupplierCode,
+                ...initialFormData, supplier_code: currentSupplierCode,
                 item_code: formData.item_code, item_name: formData.item_name, pack_due: formData.pack_due, price_per_kg: formData.price_per_kg,
             });
-            updateState({ errors: {}, editingSaleId: null, isManualClear: false, priceManuallyChanged: false, gridPricePerKg: formData.price_per_kg });
-            if (refs.supplier_code.current) {
-                refs.supplier_code.current.focus();
-                refs.supplier_code.current.select();
+            // isManualClear: the customer box stays empty (no customer filled in from the last record)
+            updateState({ errors: {}, editingSaleId: null, isManualClear: true, priceManuallyChanged: false, gridPricePerKg: formData.price_per_kg, loanAmount: 0 });
+            if (refs.customer_code_input.current) {
+                refs.customer_code_input.current.focus();
+                refs.customer_code_input.current.select();
             }
         } else {
             setFormData({ ...initialFormData, customer_code: customerCode, customer_name: currentCustomerName, telephone_no: currentTelephone, supplier_code: currentSupplierCode });
@@ -2958,9 +2959,9 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                         onChange={(e) => setKeepCustomerItem(e.target.checked)}
                                                         style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#38bdf8', marginLeft: '12px' }}
                                                     />
-                                                    <label htmlFor="keepCustomerItemCheckbox" title={tr('After each record keep the customer code, item and price; the cursor skips them', 'සෑම වාර්තාවකටම පසු පාරිභෝගික කේතය, අයිතමය සහ මිල තබා ගන්න; කර්සරය ඒවා මඟ හරියි')}
+                                                    <label htmlFor="keepCustomerItemCheckbox" title={tr('After each record keep the supplier code, item and price; type the customer code, Enter goes straight to the weight', 'සෑම වාර්තාවකටම පසු සැපයුම්කරු කේතය, අයිතමය සහ මිල තබා ගන්න; පාරිභෝගික කේතය ටයිප් කර Enter කළ විට කෙලින්ම බරට යයි')}
                                                         style={{ color: keepCustomerItem ? '#38bdf8' : 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                                        {tr('Keep customer + item', 'පාරිභෝගික + අයිතමය තබන්න')} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>(F8)</span>
+                                                        {tr('Keep supplier + item + price', 'සැපයුම්කරු + අයිතමය + මිල තබන්න')} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>(F8)</span>
                                                     </label>
                                                     <input
                                                         type="checkbox"
