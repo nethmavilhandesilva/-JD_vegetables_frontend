@@ -52,6 +52,11 @@ export default function AccountsModal({ isOpen, onClose }) {
     const [suppliers, setSuppliers] = useState([]);
     const [supplierDetail, setSupplierDetail] = useState(null);
     const [openBills, setOpenBills] = useState({});
+    // Customers: Credit (still owing) / Received (every bill fully received) lists, and settling bills
+    const [customerTab, setCustomerTab] = useState('credit');
+    const [settleForm, setSettleForm] = useState(null); // { key, billNo, date, amount, received_date, note }
+    const [settleMsg, setSettleMsg] = useState({ type: '', text: '' });
+    const [savingSettle, setSavingSettle] = useState(false);
     const [editingLine, setEditingLine] = useState(null); // supplier bill record being edited
     const [editingSiblings, setEditingSiblings] = useState([]); // same item records of that bill
 
@@ -99,8 +104,10 @@ export default function AccountsModal({ isOpen, onClose }) {
     // ---------- customers ----------
     const filteredCustomers = useMemo(() => {
         const q = search.trim().toUpperCase();
-        return q ? customers.filter(c => c.customer_code.includes(q) || (c.full_name || '').toUpperCase().includes(q)) : customers;
-    }, [customers, search]);
+        const inTab = customers.filter(c => (customerTab === 'received' ? !!c.fully_received : !c.fully_received));
+        return q ? inTab.filter(c => c.customer_code.includes(q) || (c.full_name || '').toUpperCase().includes(q)) : inTab;
+    }, [customers, search, customerTab]);
+    const receivedCount = useMemo(() => customers.filter(c => c.fully_received).length, [customers]);
 
     const customerBills = useMemo(() => {
         if (!customerDetail) return [];
@@ -124,12 +131,52 @@ export default function AccountsModal({ isOpen, onClose }) {
                 packs: lines.reduce((s, l) => s + num(l.packs), 0),
                 kuliya: lines.reduce((s, l) => s + num(l.Kuliya), 0),
                 total: lines.reduce((s, l) => s + customerLineTotal(l), 0),
+                // Settlements are saved against bill date + bill no
+                settleKey: lines[0].bill_no ? `${String(lines[0].Date || '').slice(0, 10)}|${lines[0].bill_no}` : null,
             }))
+            .map(b => {
+                const settlements = b.settleKey ? (customerDetail.settlements || []).filter(x => x.bill_key === b.settleKey) : [];
+                const received = settlements.reduce((s, x) => s + num(x.amount), 0);
+                return { ...b, settlements, received, balance: b.total - received, fullyReceived: b.total > 0 && received >= b.total - 0.009 };
+            })
             // Unprinted first, then newest day first, then bill number
             .sort((a, b) => (b.billNo === null) - (a.billNo === null)
                 || String(b.date || '').localeCompare(String(a.date || ''))
                 || (parseInt(a.billNo) || 0) - (parseInt(b.billNo) || 0));
     }, [customerDetail]);
+
+    const reloadCustomer = () => load(async () => setCustomerDetail((await api.get(`/accounts/customers/${encodeURIComponent(selectedCode)}`)).data));
+
+    const saveSettlement = async (e) => {
+        e.preventDefault();
+        if (!settleForm || savingSettle) return;
+        const amount = Number(settleForm.amount);
+        if (!Number.isFinite(amount) || amount <= 0) { setSettleMsg({ type: 'error', text: tr('Enter the amount received.', 'ලැබුණු මුදල ඇතුළත් කරන්න.') }); return; }
+        setSavingSettle(true);
+        try {
+            await api.post(`/accounts/customers/${encodeURIComponent(selectedCode)}/settlements`, {
+                bill_key: settleForm.key, bill_no: settleForm.billNo, bill_date: settleForm.date || null,
+                amount, received_date: settleForm.received_date, note: settleForm.note.trim() || null,
+            });
+            setSettleForm(null);
+            setSettleMsg({ type: 'ok', text: tr('Payment saved.', 'ගෙවීම සුරකින ලදී.') });
+            reloadCustomer();
+        } catch (err) {
+            setSettleMsg({ type: 'error', text: apiError(err, tr('Could not save the payment.', 'ගෙවීම සුරැකීමට නොහැකි විය.')) });
+        } finally {
+            setSavingSettle(false);
+        }
+    };
+
+    const deleteSettlement = async (x) => {
+        if (!window.confirm(tr(`Remove the payment of Rs. ${money(x.amount)}?`, `රු. ${money(x.amount)} ගෙවීම ඉවත් කරන්නද?`))) return;
+        try {
+            await api.delete(`/accounts/customer-settlements/${x.id}`);
+            reloadCustomer();
+        } catch (err) {
+            setSettleMsg({ type: 'error', text: apiError(err, tr('Could not remove the payment.', 'ගෙවීම ඉවත් කළ නොහැක.')) });
+        }
+    };
 
     // ---------- suppliers ----------
     const filteredSuppliers = useMemo(() => {
@@ -245,6 +292,14 @@ export default function AccountsModal({ isOpen, onClose }) {
                         {/* ---------- CUSTOMERS list ---------- */}
                         {view === 'customers' && !loading && (
                             <>
+                                <div className="btn-group mb-2" role="group">
+                                    <button type="button" className={`btn btn-sm fw-bold ${customerTab === 'credit' ? 'btn-danger' : 'btn-outline-danger'}`} onClick={() => setCustomerTab('credit')}>
+                                        {tr('Credit', 'ණය')} ({customers.length - receivedCount})
+                                    </button>
+                                    <button type="button" className={`btn btn-sm fw-bold ${customerTab === 'received' ? 'btn-success' : 'btn-outline-success'}`} onClick={() => setCustomerTab('received')}>
+                                        {tr('Received', 'ලැබුණු')} ({receivedCount})
+                                    </button>
+                                </div>
                                 {searchBox(tr('Search customer code or name...', 'පාරිභෝගික කේතය හෝ නම සොයන්න...'))}
                                 <div className="table-responsive">
                                     <table className="table table-sm table-bordered table-hover align-middle bg-white mb-0">
@@ -252,19 +307,21 @@ export default function AccountsModal({ isOpen, onClose }) {
                                             <th>{tr('Customer Code', 'පාරිභෝගික කේතය')}</th>
                                             <th>{tr('Full Name', 'සම්පූර්ණ නම')}</th>
                                             <th className="text-end">{tr('Bills', 'බිල්පත්')}</th>
-                                            <th className="text-end">{tr('Records', 'වාර්තා')}</th>
                                             <th className="text-end">{tr('Total (Rs.)', 'එකතුව (රු.)')}</th>
+                                            <th className="text-end">{tr('Received', 'ලැබුණු')}</th>
+                                            <th className="text-end">{tr('Balance', 'ශේෂය')}</th>
                                             <th>{tr('Last sale', 'අවසන් විකිණීම')}</th>
                                         </tr></thead>
                                         <tbody>
-                                            {filteredCustomers.length === 0 && <tr><td colSpan={6} className="text-center text-muted py-3">{tr('No customers in sales or sales history.', 'විකුණුම් හෝ විකුණුම් ඉතිහාසයේ පාරිභෝගිකයින් නැත.')}</td></tr>}
+                                            {filteredCustomers.length === 0 && <tr><td colSpan={7} className="text-center text-muted py-3">{customerTab === 'received' ? tr('No fully received customers yet.', 'තවම සම්පූර්ණයෙන් ලැබුණු පාරිභෝගිකයින් නැත.') : tr('No customers with credit.', 'ණය ඇති පාරිභෝගිකයින් නැත.')}</td></tr>}
                                             {filteredCustomers.map(c => (
                                                 <tr key={c.customer_code} className="clickable" onClick={() => go('customer', c.customer_code)}>
                                                     <td className="fw-bold text-primary">{c.customer_code}</td>
                                                     <td>{c.full_name || <span className="text-muted">—</span>}</td>
                                                     <td className="text-end">{c.bills}{c.unprinted_records > 0 && <span className="badge bg-warning text-dark ms-1">{tr('+ unprinted', '+ මුද්‍රණය නොකළ')}</span>}</td>
-                                                    <td className="text-end">{c.records}</td>
-                                                    <td className="text-end fw-semibold">{money(c.total)}</td>
+                                                    <td className="text-end">{money(c.total)}</td>
+                                                    <td className="text-end text-success">{num(c.received) ? money(c.received) : '—'}</td>
+                                                    <td className={`text-end fw-bold ${num(c.balance) > 0.009 ? 'text-danger' : 'text-success'}`}>{money(c.balance ?? c.total)}</td>
                                                     <td>{c.in_today ? <span className="badge bg-success">{tr('Today', 'අද')}</span> : (c.last_date || '—')}</td>
                                                 </tr>
                                             ))}
@@ -281,56 +338,85 @@ export default function AccountsModal({ isOpen, onClose }) {
                                     <div><div className="small text-muted">{tr('Customer Code', 'පාරිභෝගික කේතය')}</div><div className="fw-bold fs-5">{selectedCode}</div></div>
                                     <div><div className="small text-muted">{tr('Full Name', 'සම්පූර්ණ නම')}</div><div className="fw-bold fs-5">{customerDetail.customer?.name || customerDetail.records?.[0]?.customer_name || '—'}</div></div>
                                     {customerDetail.customer?.telephone_no && <div><div className="small text-muted">{tr('Phone', 'දුරකථන')}</div><div className="fw-bold">{customerDetail.customer.telephone_no}</div></div>}
-                                    <div className="ms-auto text-end"><div className="small text-muted">{tr('Grand Total', 'මුළු එකතුව')}</div><div className="fw-bold fs-4 text-success">Rs. {money(customerBills.reduce((s, b) => s + b.total, 0))}</div></div>
+                                    <div className="ms-auto text-end"><div className="small text-muted">{tr('Total', 'එකතුව')}</div><div className="fw-bold fs-5">Rs. {money(customerBills.reduce((s, b) => s + b.total, 0))}</div></div>
+                                    <div className="text-end"><div className="small text-muted">{tr('Received', 'ලැබුණු')}</div><div className="fw-bold fs-5 text-success">Rs. {money(customerBills.reduce((s, b) => s + b.received, 0))}</div></div>
+                                    <div className="text-end"><div className="small text-muted">{tr('Balance', 'ශේෂය')}</div><div className="fw-bold fs-4 text-danger">Rs. {money(customerBills.reduce((s, b) => s + b.balance, 0))}</div></div>
                                 </div>
-                                {customerBills.length === 0 && <div className="text-muted text-center py-3">{tr('No records.', 'වාර්තා නොමැත.')}</div>}
-                                {customerBills.map(b => (
-                                    <div className="bill-card" key={b.key}>
-                                        <div className="bill-head">
-                                            <span>
-                                                {b.billNo ? `${tr('Bill No', 'බිල් අංකය')}: ${b.billNo}` : tr('Not printed yet', 'තවම මුද්‍රණය කර නැත')}{' '}
-                                                {b.date && <span className="text-muted fw-normal me-1">{b.date}</span>}
-                                                <span className={`badge ${b.printed ? 'bg-success' : 'bg-warning text-dark'}`}>{b.printed ? tr('Printed', 'මුද්‍රිත') : tr('Unprinted', 'මුද්‍රණය නොකළ')}</span>{' '}
-                                                {b.credit
-                                                    ? <span className="badge bg-info text-dark">{tr('Credit', 'ණය')}</span>
-                                                    : <span className="badge bg-success">{tr('Cash', 'මුදල්')}</span>}
-                                            </span>
-                                            <span>{tr('Bill Total', 'බිල් එකතුව')}: Rs. {money(b.total)}</span>
-                                        </div>
-                                        <div className="table-responsive">
-                                            <table className="table table-sm table-bordered mb-0 align-middle">
-                                                <thead><tr>
-                                                    <th>#</th><th>{tr('Item', 'භාණ්ඩය')}</th><th>{tr('Supplier', 'සැපයුම්කරු')}</th>
-                                                    <th className="text-end">{tr('Weight (kg)', 'බර (kg)')}</th><th className="text-end">{tr('Price', 'මිල')}</th>
-                                                    <th className="text-end">{tr('Bags', 'මලු')}</th><th className="text-end">{tr('Bag Cost', 'මලු වියදම')}</th>
-                                                    <th className="text-end">{tr('Kuliya', 'කුලිය')}</th><th className="text-end">{tr('Total', 'එකතුව')}</th>
-                                                </tr></thead>
-                                                <tbody>
-                                                    {b.lines.map((l, i) => (
-                                                        <tr key={`${l.source || ''}-${l.id}`}>
-                                                            <td>{i + 1}</td>
-                                                            <td>{l.item_name}</td>
-                                                            <td>{l.supplier_code}</td>
-                                                            <td className="text-end">{kg(l.weight)}</td>
-                                                            <td className="text-end">{money(l.price_per_kg)}</td>
-                                                            <td className="text-end">{num(l.packs)}</td>
-                                                            <td className="text-end">{money(num(l.packs) * num(l.CustomerPackCost))}</td>
-                                                            <td className="text-end">{money(l.Kuliya)}</td>
-                                                            <td className="text-end fw-semibold">{money(customerLineTotal(l))}</td>
+                                {settleMsg.text && <div className={`alert alert-${settleMsg.type === 'error' ? 'danger' : 'success'} py-2`}>{settleMsg.text}</div>}
+                                <div className="table-responsive">
+                                    <table className="table table-sm table-bordered align-middle bg-white mb-0">
+                                        <thead><tr>
+                                            <th>{tr('Date', 'දිනය')}</th>
+                                            <th>{tr('Bill No', 'බිල් අංකය')}</th>
+                                            <th className="text-end">{tr('Total (Rs.)', 'එකතුව (රු.)')}</th>
+                                            <th className="text-end">{tr('Received', 'ලැබුණු')}</th>
+                                            <th className="text-end">{tr('Balance', 'ශේෂය')}</th>
+                                            <th>{tr('Status', 'තත්ත්වය')}</th>
+                                            <th></th>
+                                        </tr></thead>
+                                        <tbody>
+                                            {customerBills.length === 0 && <tr><td colSpan={7} className="text-center text-muted py-3">{tr('No records.', 'වාර්තා නොමැත.')}</td></tr>}
+                                            {customerBills.map(b => (
+                                                <React.Fragment key={b.key}>
+                                                    <tr>
+                                                        <td className="text-nowrap">{b.date ? String(b.date).slice(0, 10) : '—'}</td>
+                                                        <td>{b.billNo || <span className="text-muted">{tr('Not printed yet', 'තවම මුද්‍රණය කර නැත')}</span>}</td>
+                                                        <td className="text-end fw-semibold">{money(b.total)}</td>
+                                                        <td className="text-end text-success">{b.received ? money(b.received) : '—'}</td>
+                                                        <td className={`text-end fw-bold ${b.balance > 0.009 ? 'text-danger' : 'text-success'}`}>{money(b.balance)}</td>
+                                                        <td>
+                                                            {b.fullyReceived
+                                                                ? <span className="badge bg-success">{tr('Received', 'ලැබුණු')}</span>
+                                                                : b.received > 0
+                                                                    ? <span className="badge bg-warning text-dark">{tr('Part paid', 'කොටසක් ගෙවූ')}</span>
+                                                                    : <span className="badge bg-danger">{tr('Credit', 'ණය')}</span>}
+                                                        </td>
+                                                        <td className="text-end">
+                                                            {b.settleKey && !b.fullyReceived && (
+                                                                <button type="button" className="btn btn-sm btn-success py-0"
+                                                                    onClick={() => { setSettleMsg({ type: '', text: '' }); setSettleForm({ key: b.settleKey, billNo: b.billNo, date: String(b.date || '').slice(0, 10), amount: String(Math.round(b.balance * 100) / 100), received_date: new Date().toISOString().slice(0, 10), note: '' }); }}>
+                                                                    {tr('Settle', 'පියවන්න')}
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                    {settleForm?.key === b.settleKey && b.settleKey && (
+                                                        <tr style={{ background: '#e8f5e9' }}>
+                                                            <td colSpan={7}>
+                                                                <form className="d-flex flex-wrap align-items-end gap-2" onSubmit={saveSettlement}>
+                                                                    <div>
+                                                                        <label className="small fw-bold d-block">{tr('Received date', 'ලැබුණු දිනය')}</label>
+                                                                        <input type="date" className="form-control form-control-sm" required value={settleForm.received_date} onChange={e => setSettleForm(f => ({ ...f, received_date: e.target.value }))} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="small fw-bold d-block">{tr('Amount received', 'ලැබුණු මුදල')}</label>
+                                                                        <input type="number" step="any" min="0" className="form-control form-control-sm" required autoFocus value={settleForm.amount} onChange={e => setSettleForm(f => ({ ...f, amount: e.target.value }))} />
+                                                                    </div>
+                                                                    <div style={{ flex: '1 1 160px' }}>
+                                                                        <label className="small fw-bold d-block">{tr('Note', 'සටහන')}</label>
+                                                                        <input className="form-control form-control-sm" value={settleForm.note} onChange={e => setSettleForm(f => ({ ...f, note: e.target.value }))} placeholder={tr('Optional (cash / cheque no)', 'විකල්ප (මුදල් / චෙක් අංකය)')} />
+                                                                    </div>
+                                                                    <button type="submit" className="btn btn-sm btn-success fw-bold" disabled={savingSettle}>{savingSettle ? '...' : tr('Save', 'සුරකින්න')}</button>
+                                                                    <button type="button" className="btn btn-sm btn-secondary" onClick={() => setSettleForm(null)}>{tr('Cancel', 'අවලංගු')}</button>
+                                                                </form>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                    {b.settlements.map(x => (
+                                                        <tr key={`set-${x.id}`} className="small" style={{ background: '#f9fbe7' }}>
+                                                            <td colSpan={3} className="ps-4 text-muted">↳ {tr('Received on', 'ලැබුණු දිනය')} {String(x.received_date).slice(0, 10)}{x.note ? ` · ${x.note}` : ''}</td>
+                                                            <td className="text-end text-success">{money(x.amount)}</td>
+                                                            <td colSpan={2}></td>
+                                                            <td className="text-end">
+                                                                <button type="button" className="btn btn-sm btn-link text-danger p-0" title={tr('Remove this payment', 'මෙම ගෙවීම ඉවත් කරන්න')} onClick={() => deleteSettlement(x)}>✕</button>
+                                                            </td>
                                                         </tr>
                                                     ))}
-                                                    <tr className="fw-bold" style={{ background: '#f1f8e9' }}>
-                                                        <td colSpan={3}>{tr('Totals', 'එකතු')}</td>
-                                                        <td className="text-end">{kg(b.weight)}</td><td></td>
-                                                        <td className="text-end">{b.packs}</td><td></td>
-                                                        <td className="text-end">{money(b.kuliya)}</td>
-                                                        <td className="text-end">{money(b.total)}</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                ))}
+                                                </React.Fragment>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </>
                         )}
 
