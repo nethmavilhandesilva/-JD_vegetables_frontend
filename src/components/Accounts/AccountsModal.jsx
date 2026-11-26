@@ -107,7 +107,7 @@ export default function AccountsModal({ isOpen, onClose }) {
         const q = search.trim().toUpperCase();
         // A customer is in Credit while any bill is open and in Received for the settled bills (can be both)
         const inTab = customers.filter(c => (customerTab === 'received' ? !!c.received : !!c.credit));
-        return q ? inTab.filter(c => c.customer_code.includes(q) || (c.full_name || '').toUpperCase().includes(q)) : inTab;
+        return q ? inTab.filter(c => String(c.customer_code ?? '').toUpperCase().includes(q) || String(c.full_name ?? '').toUpperCase().includes(q)) : inTab;
     }, [customers, search, customerTab]);
     const creditCount = useMemo(() => customers.filter(c => c.credit).length, [customers]);
     const receivedCount = useMemo(() => customers.filter(c => c.received).length, [customers]);
@@ -239,7 +239,7 @@ export default function AccountsModal({ isOpen, onClose }) {
     // ---------- suppliers ----------
     const filteredSuppliers = useMemo(() => {
         const q = search.trim().toUpperCase();
-        return q ? suppliers.filter(s => s.supplier_code.includes(q) || (s.full_name || '').toUpperCase().includes(q)) : suppliers;
+        return q ? suppliers.filter(s => String(s.supplier_code ?? '').toUpperCase().includes(q) || String(s.full_name ?? '').toUpperCase().includes(q)) : suppliers;
     }, [suppliers, search]);
 
     // ---------- workers ----------
