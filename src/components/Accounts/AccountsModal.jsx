@@ -54,7 +54,8 @@ export default function AccountsModal({ isOpen, onClose }) {
     const [openBills, setOpenBills] = useState({});
     // Customers: Credit (still owing) / Received (every bill fully received) lists, and settling bills
     const [customerTab, setCustomerTab] = useState('credit');
-    const [settleForm, setSettleForm] = useState(null); // { key, billNo, date, amount, received_date, note }
+    const [settleForm, setSettleForm] = useState(null); // { key, billNo, date, total, balance, amount, useCredit, received_date, note, askPartial }
+    const [receiptForm, setReceiptForm] = useState(null); // received amount without a bill: { amount, received_date, note }
     const [settleMsg, setSettleMsg] = useState({ type: '', text: '' });
     const [savingSettle, setSavingSettle] = useState(false);
     const [editingLine, setEditingLine] = useState(null); // supplier bill record being edited
@@ -104,10 +105,12 @@ export default function AccountsModal({ isOpen, onClose }) {
     // ---------- customers ----------
     const filteredCustomers = useMemo(() => {
         const q = search.trim().toUpperCase();
-        const inTab = customers.filter(c => (customerTab === 'received' ? !!c.fully_received : !c.fully_received));
+        // A customer is in Credit while any bill is open and in Received for the settled bills (can be both)
+        const inTab = customers.filter(c => (customerTab === 'received' ? !!c.received : !!c.credit));
         return q ? inTab.filter(c => c.customer_code.includes(q) || (c.full_name || '').toUpperCase().includes(q)) : inTab;
     }, [customers, search, customerTab]);
-    const receivedCount = useMemo(() => customers.filter(c => c.fully_received).length, [customers]);
+    const creditCount = useMemo(() => customers.filter(c => c.credit).length, [customers]);
+    const receivedCount = useMemo(() => customers.filter(c => c.received).length, [customers]);
 
     const customerBills = useMemo(() => {
         if (!customerDetail) return [];
@@ -137,7 +140,10 @@ export default function AccountsModal({ isOpen, onClose }) {
             .map(b => {
                 const settlements = b.settleKey ? (customerDetail.settlements || []).filter(x => x.bill_key === b.settleKey) : [];
                 const received = settlements.reduce((s, x) => s + num(x.amount), 0);
-                return { ...b, settlements, received, balance: b.total - received, fullyReceived: b.total > 0 && received >= b.total - 0.009 };
+                // Settled: received covers the total, or closed with a smaller amount ("fully settle")
+                const closed = settlements.some(x => x.closes_bill);
+                const fullyReceived = !!b.settleKey && b.total > 0 && (closed || received >= b.total - 0.009);
+                return { ...b, settlements, received, closed, short: closed ? Math.max(0, b.total - received) : 0, balance: fullyReceived ? 0 : b.total - received, fullyReceived };
             })
             // Unprinted first, then newest day first, then bill number
             .sort((a, b) => (b.billNo === null) - (a.billNo === null)
@@ -146,23 +152,75 @@ export default function AccountsModal({ isOpen, onClose }) {
     }, [customerDetail]);
 
     const reloadCustomer = () => load(async () => setCustomerDetail((await api.get(`/accounts/customers/${encodeURIComponent(selectedCode)}`)).data));
+    const availableCredit = num(customerDetail?.available_credit);
+    // Bills shown on the customer page: open ones (Credit) or settled ones (Received)
+    const shownCustomerBills = useMemo(
+        () => customerBills.filter(b => (customerTab === 'received' ? b.fullyReceived : !b.fullyReceived)),
+        [customerBills, customerTab]
+    );
 
-    const saveSettlement = async (e) => {
-        e.preventDefault();
+    const openSettle = (b) => {
+        setSettleMsg({ type: '', text: '' });
+        const balance = Math.round(b.balance * 100) / 100;
+        const credit = Math.min(availableCredit, balance);
+        setSettleForm({
+            key: b.settleKey, billNo: b.billNo, date: String(b.date || '').slice(0, 10), total: b.total, balance,
+            // The customer's received amount is used first; the rest is typed as received now
+            useCredit: credit > 0, amount: String(Math.round((balance - credit) * 100) / 100),
+            received_date: new Date().toISOString().slice(0, 10), note: '', askPartial: false,
+        });
+    };
+    const settleCreditUsed = settleForm?.useCredit ? Math.min(availableCredit, settleForm.balance) : 0;
+
+    // Full amount = bill settled. Less than the balance = ask: fully settle with it, or partial payment.
+    const saveSettlement = async (e, mode = null) => {
+        e?.preventDefault();
         if (!settleForm || savingSettle) return;
-        const amount = Number(settleForm.amount);
-        if (!Number.isFinite(amount) || amount <= 0) { setSettleMsg({ type: 'error', text: tr('Enter the amount received.', 'ලැබුණු මුදල ඇතුළත් කරන්න.') }); return; }
+        const amount = settleForm.amount === '' ? 0 : Number(settleForm.amount);
+        if (!Number.isFinite(amount) || amount < 0) { setSettleMsg({ type: 'error', text: tr('Enter the amount received.', 'ලැබුණු මුදල ඇතුළත් කරන්න.') }); return; }
+        const paying = amount + settleCreditUsed;
+        if (paying <= 0) { setSettleMsg({ type: 'error', text: tr('Enter the amount received.', 'ලැබුණු මුදල ඇතුළත් කරන්න.') }); return; }
+        const isFull = paying >= settleForm.balance - 0.009;
+        if (!isFull && !mode) { setSettleForm(f => ({ ...f, askPartial: true })); return; }
         setSavingSettle(true);
         try {
             await api.post(`/accounts/customers/${encodeURIComponent(selectedCode)}/settlements`, {
                 bill_key: settleForm.key, bill_no: settleForm.billNo, bill_date: settleForm.date || null,
-                amount, received_date: settleForm.received_date, note: settleForm.note.trim() || null,
+                amount, credit_used: settleCreditUsed, received_date: settleForm.received_date,
+                note: settleForm.note.trim() || null,
+                closes_bill: isFull || mode === 'full',
             });
             setSettleForm(null);
-            setSettleMsg({ type: 'ok', text: tr('Payment saved.', 'ගෙවීම සුරකින ලදී.') });
+            setSettleMsg({
+                type: 'ok',
+                text: isFull || mode === 'full'
+                    ? tr('Bill settled: moved to Received.', 'බිල්පත පියවා ඇත: ලැබුණු ලැයිස්තුවට ගෙන යන ලදී.')
+                    : tr('Part payment saved.', 'කොටස් ගෙවීම සුරකින ලදී.'),
+            });
             reloadCustomer();
         } catch (err) {
             setSettleMsg({ type: 'error', text: apiError(err, tr('Could not save the payment.', 'ගෙවීම සුරැකීමට නොහැකි විය.')) });
+        } finally {
+            setSavingSettle(false);
+        }
+    };
+
+    // Received amount without a bill: kept for the customer and used when bills are settled
+    const saveReceipt = async (e) => {
+        e.preventDefault();
+        if (!receiptForm || savingSettle) return;
+        const amount = Number(receiptForm.amount);
+        if (!Number.isFinite(amount) || amount <= 0) { setSettleMsg({ type: 'error', text: tr('Enter the amount received.', 'ලැබුණු මුදල ඇතුළත් කරන්න.') }); return; }
+        setSavingSettle(true);
+        try {
+            await api.post(`/accounts/customers/${encodeURIComponent(selectedCode)}/settlements`, {
+                bill_key: null, amount, received_date: receiptForm.received_date, note: receiptForm.note.trim() || null,
+            });
+            setReceiptForm(null);
+            setSettleMsg({ type: 'ok', text: tr('Received amount saved. It is used first when you settle a bill.', 'ලැබුණු මුදල සුරකින ලදී. බිල්පතක් පියවන විට එය මුලින්ම භාවිත වේ.') });
+            reloadCustomer();
+        } catch (err) {
+            setSettleMsg({ type: 'error', text: apiError(err, tr('Could not save the amount.', 'මුදල සුරැකීමට නොහැකි විය.')) });
         } finally {
             setSavingSettle(false);
         }
@@ -294,7 +352,7 @@ export default function AccountsModal({ isOpen, onClose }) {
                             <>
                                 <div className="btn-group mb-2" role="group">
                                     <button type="button" className={`btn btn-sm fw-bold ${customerTab === 'credit' ? 'btn-danger' : 'btn-outline-danger'}`} onClick={() => setCustomerTab('credit')}>
-                                        {tr('Credit', 'ණය')} ({customers.length - receivedCount})
+                                        {tr('Credit', 'ණය')} ({creditCount})
                                     </button>
                                     <button type="button" className={`btn btn-sm fw-bold ${customerTab === 'received' ? 'btn-success' : 'btn-outline-success'}`} onClick={() => setCustomerTab('received')}>
                                         {tr('Received', 'ලැබුණු')} ({receivedCount})
@@ -305,44 +363,101 @@ export default function AccountsModal({ isOpen, onClose }) {
                                     <table className="table table-sm table-bordered table-hover align-middle bg-white mb-0">
                                         <thead><tr>
                                             <th>{tr('Customer Code', 'පාරිභෝගික කේතය')}</th>
-                                            <th>{tr('Full Name', 'සම්පූර්ණ නම')}</th>
-                                            <th className="text-end">{tr('Bills', 'බිල්පත්')}</th>
+                                            <th className="text-end">{customerTab === 'received' ? tr('Settled bills', 'පියවූ බිල්පත්') : tr('Open bills', 'ණය බිල්පත්')}</th>
                                             <th className="text-end">{tr('Total (Rs.)', 'එකතුව (රු.)')}</th>
-                                            <th className="text-end">{tr('Received', 'ලැබුණු')}</th>
-                                            <th className="text-end">{tr('Balance', 'ශේෂය')}</th>
-                                            <th>{tr('Last sale', 'අවසන් විකිණීම')}</th>
+                                            {customerTab === 'credit' && <th className="text-end">{tr('Balance', 'ශේෂය')}</th>}
+                                            <th>{customerTab === 'received' ? tr('Last received', 'අවසන් ලැබීම') : tr('Last sale', 'අවසන් විකිණීම')}</th>
                                         </tr></thead>
                                         <tbody>
-                                            {filteredCustomers.length === 0 && <tr><td colSpan={7} className="text-center text-muted py-3">{customerTab === 'received' ? tr('No fully received customers yet.', 'තවම සම්පූර්ණයෙන් ලැබුණු පාරිභෝගිකයින් නැත.') : tr('No customers with credit.', 'ණය ඇති පාරිභෝගිකයින් නැත.')}</td></tr>}
-                                            {filteredCustomers.map(c => (
-                                                <tr key={c.customer_code} className="clickable" onClick={() => go('customer', c.customer_code)}>
-                                                    <td className="fw-bold text-primary">{c.customer_code}</td>
-                                                    <td>{c.full_name || <span className="text-muted">—</span>}</td>
-                                                    <td className="text-end">{c.bills}{c.unprinted_records > 0 && <span className="badge bg-warning text-dark ms-1">{tr('+ unprinted', '+ මුද්‍රණය නොකළ')}</span>}</td>
-                                                    <td className="text-end">{money(c.total)}</td>
-                                                    <td className="text-end text-success">{num(c.received) ? money(c.received) : '—'}</td>
-                                                    <td className={`text-end fw-bold ${num(c.balance) > 0.009 ? 'text-danger' : 'text-success'}`}>{money(c.balance ?? c.total)}</td>
-                                                    <td>{c.in_today ? <span className="badge bg-success">{tr('Today', 'අද')}</span> : (c.last_date || '—')}</td>
-                                                </tr>
-                                            ))}
+                                            {filteredCustomers.length === 0 && <tr><td colSpan={5} className="text-center text-muted py-3">{customerTab === 'received' ? tr('No settled bills yet.', 'තවම පියවූ බිල්පත් නැත.') : tr('No customers with credit.', 'ණය ඇති පාරිභෝගිකයින් නැත.')}</td></tr>}
+                                            {filteredCustomers.map(c => {
+                                                const part = customerTab === 'received' ? c.received : c.credit;
+                                                const alsoOther = customerTab === 'received' ? !!c.credit : !!c.received;
+                                                return (
+                                                    <tr key={c.customer_code} className="clickable" onClick={() => go('customer', c.customer_code)}>
+                                                        <td className="fw-bold text-primary">
+                                                            {c.customer_code}
+                                                            {alsoOther && (
+                                                                <span className={`badge ms-2 ${customerTab === 'received' ? 'bg-danger' : 'bg-success'}`} style={{ fontSize: '0.65rem' }}>
+                                                                    {customerTab === 'received' ? tr('also has credit', 'ණයද ඇත') : tr('some bills settled', 'බිල්පත් කිහිපයක් පියවා ඇත')}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="text-end">{part.bills}{customerTab === 'credit' && c.unprinted_records > 0 && <span className="badge bg-warning text-dark ms-1">{tr('+ unprinted', '+ මුද්‍රණය නොකළ')}</span>}</td>
+                                                        <td className="text-end">{money(part.total)}</td>
+                                                        {customerTab === 'credit' && <td className={`text-end fw-bold ${num(part.balance) > 0.009 ? 'text-danger' : 'text-success'}`}>{money(part.balance)}</td>}
+                                                        <td>{customerTab === 'received'
+                                                            ? (part.last_received || part.last_date || '—')
+                                                            : (c.in_today ? <span className="badge bg-success">{tr('Today', 'අද')}</span> : (part.last_date || '—'))}</td>
+                                                    </tr>
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>
                             </>
                         )}
 
-                        {/* ---------- CUSTOMER bill details ---------- */}
+                        {/* ---------- CUSTOMER bills (open or settled) ---------- */}
                         {view === 'customer' && customerDetail && !loading && (
                             <>
-                                <div className="bg-white rounded p-3 mb-3 d-flex flex-wrap gap-4">
+                                <div className="bg-white rounded p-3 mb-3 d-flex flex-wrap align-items-center gap-4">
                                     <div><div className="small text-muted">{tr('Customer Code', 'පාරිභෝගික කේතය')}</div><div className="fw-bold fs-5">{selectedCode}</div></div>
-                                    <div><div className="small text-muted">{tr('Full Name', 'සම්පූර්ණ නම')}</div><div className="fw-bold fs-5">{customerDetail.customer?.name || customerDetail.records?.[0]?.customer_name || '—'}</div></div>
-                                    {customerDetail.customer?.telephone_no && <div><div className="small text-muted">{tr('Phone', 'දුරකථන')}</div><div className="fw-bold">{customerDetail.customer.telephone_no}</div></div>}
-                                    <div className="ms-auto text-end"><div className="small text-muted">{tr('Total', 'එකතුව')}</div><div className="fw-bold fs-5">Rs. {money(customerBills.reduce((s, b) => s + b.total, 0))}</div></div>
-                                    <div className="text-end"><div className="small text-muted">{tr('Received', 'ලැබුණු')}</div><div className="fw-bold fs-5 text-success">Rs. {money(customerBills.reduce((s, b) => s + b.received, 0))}</div></div>
-                                    <div className="text-end"><div className="small text-muted">{tr('Balance', 'ශේෂය')}</div><div className="fw-bold fs-4 text-danger">Rs. {money(customerBills.reduce((s, b) => s + b.balance, 0))}</div></div>
+                                    <div className="btn-group" role="group">
+                                        <button type="button" className={`btn btn-sm fw-bold ${customerTab === 'credit' ? 'btn-danger' : 'btn-outline-danger'}`} onClick={() => setCustomerTab('credit')}>
+                                            {tr('Credit bills', 'ණය බිල්පත්')} ({customerBills.filter(b => !b.fullyReceived).length})
+                                        </button>
+                                        <button type="button" className={`btn btn-sm fw-bold ${customerTab === 'received' ? 'btn-success' : 'btn-outline-success'}`} onClick={() => setCustomerTab('received')}>
+                                            {tr('Settled bills', 'පියවූ බිල්පත්')} ({customerBills.filter(b => b.fullyReceived).length})
+                                        </button>
+                                    </div>
+                                    <div className="ms-auto text-end"><div className="small text-muted">{tr('Open balance', 'ණය ශේෂය')}</div><div className="fw-bold fs-5 text-danger">Rs. {money(customerBills.reduce((s, b) => s + b.balance, 0))}</div></div>
+                                    <div className="text-end">
+                                        <div className="small text-muted">{tr('Received amount (not used yet)', 'ලැබුණු මුදල (තවම භාවිත නොකළ)')}</div>
+                                        <div className="fw-bold fs-5 text-success">Rs. {money(availableCredit)}</div>
+                                    </div>
+                                    <div className="text-end"><div className="small text-muted">{tr('Still owed', 'තවම ගෙවිය යුතු')}</div><div className="fw-bold fs-4 text-danger">Rs. {money(Math.max(0, customerBills.reduce((s, b) => s + b.balance, 0) - availableCredit))}</div></div>
+                                    <button type="button" className="btn btn-sm btn-outline-success fw-bold"
+                                        onClick={() => { setSettleMsg({ type: '', text: '' }); setReceiptForm({ amount: '', received_date: new Date().toISOString().slice(0, 10), note: '' }); }}>
+                                        + {tr('Enter received amount', 'ලැබුණු මුදල ඇතුළත් කරන්න')}
+                                    </button>
                                 </div>
+
+                                {receiptForm && (
+                                    <form className="d-flex flex-wrap align-items-end gap-2 p-2 mb-3 rounded" style={{ background: '#e8f5e9' }} onSubmit={saveReceipt}>
+                                        <div>
+                                            <label className="small fw-bold d-block">{tr('Received date', 'ලැබුණු දිනය')}</label>
+                                            <input type="date" className="form-control form-control-sm" required value={receiptForm.received_date} onChange={e => setReceiptForm(f => ({ ...f, received_date: e.target.value }))} />
+                                        </div>
+                                        <div>
+                                            <label className="small fw-bold d-block">{tr('Amount received', 'ලැබුණු මුදල')}</label>
+                                            <input type="number" step="any" min="0" className="form-control form-control-sm" required autoFocus value={receiptForm.amount} onChange={e => setReceiptForm(f => ({ ...f, amount: e.target.value }))} />
+                                        </div>
+                                        <div style={{ flex: '1 1 160px' }}>
+                                            <label className="small fw-bold d-block">{tr('Note', 'සටහන')}</label>
+                                            <input className="form-control form-control-sm" value={receiptForm.note} onChange={e => setReceiptForm(f => ({ ...f, note: e.target.value }))} placeholder={tr('Optional (cash / cheque no)', 'විකල්ප (මුදල් / චෙක් අංකය)')} />
+                                        </div>
+                                        <button type="submit" className="btn btn-sm btn-success fw-bold" disabled={savingSettle}>{savingSettle ? '...' : tr('Save', 'සුරකින්න')}</button>
+                                        <button type="button" className="btn btn-sm btn-secondary" onClick={() => setReceiptForm(null)}>{tr('Cancel', 'අවලංගු')}</button>
+                                        <div className="w-100 small text-muted">{tr('This amount is kept for the customer and deducted first when you settle a bill.', 'මෙම මුදල පාරිභෝගිකයා සඳහා තබා බිල්පතක් පියවන විට මුලින්ම අඩු කෙරේ.')}</div>
+                                    </form>
+                                )}
+
                                 {settleMsg.text && <div className={`alert alert-${settleMsg.type === 'error' ? 'danger' : 'success'} py-2`}>{settleMsg.text}</div>}
+
+                                {/* received amounts entered without a bill */}
+                                {(customerDetail.settlements || []).some(x => !x.bill_key) && (
+                                    <div className="small mb-2">
+                                        <b>{tr('Received amounts', 'ලැබුණු මුදල්')}:</b>{' '}
+                                        {(customerDetail.settlements || []).filter(x => !x.bill_key).map(x => (
+                                            <span key={x.id} className="badge bg-light text-dark border me-1">
+                                                {String(x.received_date).slice(0, 10)} · Rs. {money(x.amount)}{x.note ? ` · ${x.note}` : ''}
+                                                <button type="button" className="btn btn-link btn-sm text-danger p-0 ms-1" style={{ fontSize: '0.75rem' }} onClick={() => deleteSettlement(x)}>✕</button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+
                                 <div className="table-responsive">
                                     <table className="table table-sm table-bordered align-middle bg-white mb-0">
                                         <thead><tr>
@@ -355,10 +470,10 @@ export default function AccountsModal({ isOpen, onClose }) {
                                             <th></th>
                                         </tr></thead>
                                         <tbody>
-                                            {customerBills.length === 0 && <tr><td colSpan={7} className="text-center text-muted py-3">{tr('No records.', 'වාර්තා නොමැත.')}</td></tr>}
-                                            {customerBills.map(b => (
+                                            {shownCustomerBills.length === 0 && <tr><td colSpan={7} className="text-center text-muted py-3">{customerTab === 'received' ? tr('No settled bills.', 'පියවූ බිල්පත් නැත.') : tr('No open bills.', 'ණය බිල්පත් නැත.')}</td></tr>}
+                                            {shownCustomerBills.map(b => (
                                                 <React.Fragment key={b.key}>
-                                                    <tr>
+                                                    <tr style={b.fullyReceived ? { background: '#f0fdf4' } : undefined}>
                                                         <td className="text-nowrap">{b.date ? String(b.date).slice(0, 10) : '—'}</td>
                                                         <td>{b.billNo || <span className="text-muted">{tr('Not printed yet', 'තවම මුද්‍රණය කර නැත')}</span>}</td>
                                                         <td className="text-end fw-semibold">{money(b.total)}</td>
@@ -366,15 +481,14 @@ export default function AccountsModal({ isOpen, onClose }) {
                                                         <td className={`text-end fw-bold ${b.balance > 0.009 ? 'text-danger' : 'text-success'}`}>{money(b.balance)}</td>
                                                         <td>
                                                             {b.fullyReceived
-                                                                ? <span className="badge bg-success">{tr('Received', 'ලැබුණු')}</span>
+                                                                ? <span className="badge bg-success">{tr('Settled', 'පියවා ඇත')}{b.short > 0.009 ? ` (${tr('short', 'අඩු')} ${money(b.short)})` : ''}</span>
                                                                 : b.received > 0
                                                                     ? <span className="badge bg-warning text-dark">{tr('Part paid', 'කොටසක් ගෙවූ')}</span>
                                                                     : <span className="badge bg-danger">{tr('Credit', 'ණය')}</span>}
                                                         </td>
                                                         <td className="text-end">
                                                             {b.settleKey && !b.fullyReceived && (
-                                                                <button type="button" className="btn btn-sm btn-success py-0"
-                                                                    onClick={() => { setSettleMsg({ type: '', text: '' }); setSettleForm({ key: b.settleKey, billNo: b.billNo, date: String(b.date || '').slice(0, 10), amount: String(Math.round(b.balance * 100) / 100), received_date: new Date().toISOString().slice(0, 10), note: '' }); }}>
+                                                                <button type="button" className="btn btn-sm btn-success py-0" onClick={() => openSettle(b)}>
                                                                     {tr('Settle', 'පියවන්න')}
                                                                 </button>
                                                             )}
@@ -383,28 +497,63 @@ export default function AccountsModal({ isOpen, onClose }) {
                                                     {settleForm?.key === b.settleKey && b.settleKey && (
                                                         <tr style={{ background: '#e8f5e9' }}>
                                                             <td colSpan={7}>
-                                                                <form className="d-flex flex-wrap align-items-end gap-2" onSubmit={saveSettlement}>
+                                                                <form className="d-flex flex-wrap align-items-end gap-2" onSubmit={(e) => saveSettlement(e)}>
+                                                                    <div className="w-100 small">
+                                                                        {tr('Bill balance', 'බිල් ශේෂය')}: <b>Rs. {money(settleForm.balance)}</b>
+                                                                        {availableCredit > 0 && (
+                                                                            <label className="ms-3" style={{ cursor: 'pointer' }}>
+                                                                                <input type="checkbox" className="form-check-input me-1" checked={settleForm.useCredit}
+                                                                                    onChange={e => {
+                                                                                        const use = e.target.checked;
+                                                                                        const credit = use ? Math.min(availableCredit, settleForm.balance) : 0;
+                                                                                        setSettleForm(f => ({ ...f, useCredit: use, askPartial: false, amount: String(Math.round((f.balance - credit) * 100) / 100) }));
+                                                                                    }} />
+                                                                                {tr('Deduct the received amount', 'ලැබුණු මුදල අඩු කරන්න')}: <b className="text-success">Rs. {money(Math.min(availableCredit, settleForm.balance))}</b>
+                                                                            </label>
+                                                                        )}
+                                                                    </div>
                                                                     <div>
                                                                         <label className="small fw-bold d-block">{tr('Received date', 'ලැබුණු දිනය')}</label>
                                                                         <input type="date" className="form-control form-control-sm" required value={settleForm.received_date} onChange={e => setSettleForm(f => ({ ...f, received_date: e.target.value }))} />
                                                                     </div>
                                                                     <div>
-                                                                        <label className="small fw-bold d-block">{tr('Amount received', 'ලැබුණු මුදල')}</label>
-                                                                        <input type="number" step="any" min="0" className="form-control form-control-sm" required autoFocus value={settleForm.amount} onChange={e => setSettleForm(f => ({ ...f, amount: e.target.value }))} />
+                                                                        <label className="small fw-bold d-block">{settleCreditUsed > 0 ? tr('Amount received now', 'දැන් ලැබුණු මුදල') : tr('Amount received', 'ලැබුණු මුදල')}</label>
+                                                                        <input type="number" step="any" min="0" className="form-control form-control-sm" autoFocus value={settleForm.amount} onChange={e => setSettleForm(f => ({ ...f, amount: e.target.value, askPartial: false }))} />
                                                                     </div>
                                                                     <div style={{ flex: '1 1 160px' }}>
                                                                         <label className="small fw-bold d-block">{tr('Note', 'සටහන')}</label>
                                                                         <input className="form-control form-control-sm" value={settleForm.note} onChange={e => setSettleForm(f => ({ ...f, note: e.target.value }))} placeholder={tr('Optional (cash / cheque no)', 'විකල්ප (මුදල් / චෙක් අංකය)')} />
                                                                     </div>
-                                                                    <button type="submit" className="btn btn-sm btn-success fw-bold" disabled={savingSettle}>{savingSettle ? '...' : tr('Save', 'සුරකින්න')}</button>
+                                                                    {!settleForm.askPartial && <button type="submit" className="btn btn-sm btn-success fw-bold" disabled={savingSettle}>{savingSettle ? '...' : tr('Save', 'සුරකින්න')}</button>}
                                                                     <button type="button" className="btn btn-sm btn-secondary" onClick={() => setSettleForm(null)}>{tr('Cancel', 'අවලංගු')}</button>
+                                                                    {settleForm.askPartial && (
+                                                                        <div className="w-100 p-2 rounded border border-warning" style={{ background: '#fffbeb' }}>
+                                                                            <div className="fw-bold mb-2">
+                                                                                {tr(`Rs. ${money((Number(settleForm.amount) || 0) + settleCreditUsed)} is less than the bill balance Rs. ${money(settleForm.balance)}. Do you want to fully settle this bill with this amount, or settle it partially?`,
+                                                                                    `රු. ${money((Number(settleForm.amount) || 0) + settleCreditUsed)} බිල් ශේෂය රු. ${money(settleForm.balance)} ට වඩා අඩුයි. මෙම මුදලින් බිල්පත සම්පූර්ණයෙන් පියවන්නද, නැතහොත් කොටසක් පියවන්නද?`)}
+                                                                            </div>
+                                                                            <div className="d-flex flex-wrap gap-2">
+                                                                                <button type="button" className="btn btn-sm btn-success fw-bold" disabled={savingSettle} onClick={(e) => saveSettlement(e, 'full')}>
+                                                                                    ✓ {tr('Fully settle (move to Received)', 'සම්පූර්ණයෙන් පියවන්න (ලැබුණු වෙත)')}
+                                                                                </button>
+                                                                                <button type="button" className="btn btn-sm btn-warning fw-bold" disabled={savingSettle} onClick={(e) => saveSettlement(e, 'partial')}>
+                                                                                    {tr('Partial payment (keep as credit)', 'කොටස් ගෙවීම (ණය ලෙස තබන්න)')}
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
                                                                 </form>
                                                             </td>
                                                         </tr>
                                                     )}
                                                     {b.settlements.map(x => (
                                                         <tr key={`set-${x.id}`} className="small" style={{ background: '#f9fbe7' }}>
-                                                            <td colSpan={3} className="ps-4 text-muted">↳ {tr('Received on', 'ලැබුණු දිනය')} {String(x.received_date).slice(0, 10)}{x.note ? ` · ${x.note}` : ''}</td>
+                                                            <td colSpan={3} className="ps-4 text-muted">
+                                                                ↳ {tr('Received on', 'ලැබුණු දිනය')} {String(x.received_date).slice(0, 10)}
+                                                                {x.from_credit ? ` · ${tr('from received amount', 'ලැබුණු මුදලෙන්')}` : ''}
+                                                                {x.note && !x.from_credit ? ` · ${x.note}` : ''}
+                                                                {x.closes_bill ? ` · ${tr('bill closed', 'බිල්පත වසා ඇත')}` : ''}
+                                                            </td>
                                                             <td className="text-end text-success">{money(x.amount)}</td>
                                                             <td colSpan={2}></td>
                                                             <td className="text-end">
