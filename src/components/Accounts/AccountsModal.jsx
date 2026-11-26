@@ -306,7 +306,16 @@ export default function AccountsModal({ isOpen, onClose }) {
 
     const searchBox = (placeholder) => (
         <input type="text" className="form-control mb-3" placeholder={placeholder} value={search}
-            onChange={(e) => setSearch(e.target.value)} autoFocus />
+            onChange={(e) => setSearch(e.target.value)} autoFocus
+            onKeyDown={(e) => {
+                if (e.key !== 'Enter') return;
+                // Keep Enter inside the modal so page/browser handlers behind it don't react
+                e.preventDefault();
+                e.stopPropagation();
+                if (!search.trim()) return;
+                if (view === 'customers' && filteredCustomers.length > 0) go('customer', filteredCustomers[0].customer_code);
+                if (view === 'suppliers' && filteredSuppliers.length > 0) go('supplier', filteredSuppliers[0].supplier_code);
+            }} />
     );
 
     return (
