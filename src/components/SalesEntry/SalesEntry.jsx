@@ -816,7 +816,8 @@ const initialFormData = { customer_code: "", customer_name: "", supplier_code: "
 const fieldOrder = ["telephone_no", "supplier_code", "customer_code_input", "customer_code_select", "item_code_select", "weight", "price_per_kg_grid_item", "packs", "kuliya"];
 const skipMap = { telephone_no: "supplier_code", supplier_code: "customer_code_input", customer_code_input: "item_code_select", customer_code_select: "item_code_select", given_amount: "customer_code_input", item_code_select: "weight", price_per_kg: "packs", price_per_kg_grid_item: "packs", packs: "kuliya", kuliya: null };
 
-// Sales Entry screen. "Dual Bill" shows two panels side by side: [Printed | Bill 1 | Bill 2 | Unprinted]
+// Sales Entry screen. "Dual Bill" shows two bills side by side (the Printed / Unprinted lists are
+// shown again with "Single bill")
 export default function SalesEntry(props) {
     const [dualMode, setDualMode] = useState(() => localStorage.getItem('dualBillMode') === '1');
     const [activeLane, setActiveLane] = useState('A');
@@ -827,7 +828,7 @@ export default function SalesEntry(props) {
     };
     if (!dualMode) return <SalesEntryPanel {...props} onToggleDual={toggleDual} />;
     return (
-        <div className="dual-bill-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, width: '100%' }}>
+        <div className="dual-bill-layout" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(720px, 1fr))', gap: 0, width: '100%', overflowX: 'auto' }}>
             {['A', 'B'].map(lane => (
                 <SalesEntryPanel key={lane} {...props} lane={lane} isActiveLane={activeLane === lane}
                     onActivate={() => setActiveLane(lane)} onToggleDual={toggleDual} />
@@ -2927,8 +2928,8 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
             {isLoading && (<div className="fixed top-0 left-0 right-0 bg-blue-500 text-white py-1 text-center text-sm z-50">Refreshing data...</div>)}
             {state.isPrinting && (<div className="fixed top-0 left-0 right-0 bg-yellow-500 text-black py-1 text-center text-sm z-50">Printing in progress... Please wait</div>)}
 
-            <div className="three-column-layout" style={{ opacity: isLoading ? 0.7 : 1, display: 'grid', gridTemplateColumns: lane === 'A' ? '200px minmax(0, 1fr)' : lane === 'B' ? 'minmax(0, 1fr) 200px' : '200px 1fr 200px', gap: lane ? '8px' : '16px', padding: lane ? '10px 4px' : '10px', marginTop: '-149px' }}>
-                {lane !== 'B' && <div className="left-sidebar" style={{ backgroundColor: '#1ec139ff', borderRadius: '0.75rem', maxHeight: '80.5vh', overflowY: 'auto' }}>
+            <div className="three-column-layout" style={{ opacity: isLoading ? 0.7 : 1, display: 'grid', gridTemplateColumns: lane ? 'minmax(0, 1fr)' : '200px 1fr 200px', gap: lane ? '8px' : '16px', padding: lane ? '10px 4px' : '10px', marginTop: '-149px' }}>
+                {!lane && <div className="left-sidebar" style={{ backgroundColor: '#1ec139ff', borderRadius: '0.75rem', maxHeight: '80.5vh', overflowY: 'auto' }}>
                     {hasData ? (
                         <CustomerList customers={printedCustomers} type="printed" searchQuery={searchQueries.printed} onSearchChange={setPrintedSearch} selectedPrintedCustomer={selectedPrintedCustomer} selectedUnprintedCustomer={selectedUnprintedCustomer} handleCustomerClick={stableCustomerClick} formatDecimal={formatDecimal} allSales={allSales} isCashFilterActive={state.isCashFilterActive} toggleCashFilter={toggleCashFilterStable} />
                     ) : (
@@ -2945,7 +2946,7 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
                     )}
                 </div>}
 
-                <div className="center-form flex flex-col" style={{ backgroundColor: '#111439ff', padding: lane ? '20px 12px' : '20px', borderRadius: '0.75rem', color: 'white', minHeight: '100vh', height: 'auto', boxSizing: 'border-box', gridColumnStart: lane === 'B' ? 1 : 2, gridColumnEnd: lane === 'B' ? 2 : 3, minWidth: 0,
+                <div className="center-form flex flex-col" style={{ backgroundColor: '#111439ff', padding: lane ? '20px 12px' : '20px', borderRadius: '0.75rem', color: 'white', minHeight: '100vh', height: 'auto', boxSizing: 'border-box', gridColumnStart: lane ? 1 : 2, gridColumnEnd: lane ? 2 : 3,
                     outline: lane && isActiveLane ? `3px solid ${lane === 'A' ? '#38bdf8' : '#f472b6'}` : 'none', outlineOffset: '-3px' }}>
                     {currentUser?.role === 'Admin' ? (
                         <AdminView
@@ -3686,7 +3687,7 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
                     )}
                 </div>
 
-                {lane !== 'A' && <div className="right-sidebar" style={{ backgroundColor: '#1ec139ff', borderRadius: '0.75rem', maxHeight: '80.5vh', overflowY: 'auto', gridColumnStart: lane === 'B' ? 2 : 3, gridColumnEnd: lane === 'B' ? 3 : 4 }}>
+                {!lane && <div className="right-sidebar" style={{ backgroundColor: '#1ec139ff', borderRadius: '0.75rem', maxHeight: '80.5vh', overflowY: 'auto', gridColumnStart: lane === 'B' ? 2 : 3, gridColumnEnd: lane === 'B' ? 3 : 4 }}>
                     {hasData ? (
                         <CustomerList customers={unprintedCustomers} type="unprinted" searchQuery={searchQueries.unprinted} onSearchChange={setUnprintedSearch} selectedPrintedCustomer={selectedPrintedCustomer} selectedUnprintedCustomer={selectedUnprintedCustomer} handleCustomerClick={stableCustomerClick} formatDecimal={formatDecimal} allSales={allSales} />
                     ) : (

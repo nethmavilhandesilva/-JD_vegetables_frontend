@@ -286,3 +286,22 @@ html, body {
 .center-form .all-sales-scroll::-webkit-scrollbar-track {
     background: #1f2937;
 }
+
+/* Dual Bill system (Sales Entry): two bills side by side, each takes half the screen.
+   Undo the fixed single-bill widths and margins above. */
+.dual-bill-panel.sales-layout {
+    max-width: none !important;
+    width: 100%;
+}
+.dual-bill-panel .three-column-layout {
+    display: grid !important;
+    width: auto !important;
+    max-width: none !important;
+}
+.dual-bill-panel .center-form {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
