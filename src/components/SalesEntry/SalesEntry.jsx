@@ -823,6 +823,12 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     const [keepCustomerItem, setKeepCustomerItem] = useState(false);
     const keepCustomerItemRef = useRef(false);
     keepCustomerItemRef.current = keepCustomerItem;
+    // Keep supplier + item on F5: the next bill starts with the last record's supplier code and
+    // item filled; the cursor goes to the customer code and skips them (unticked when the page opens)
+    const [keepOnHold, setKeepOnHold] = useState(false);
+    const keepOnHoldRef = useRef(false);
+    keepOnHoldRef.current = keepOnHold;
+    const lastEntryRef = useRef(null); // { supplier_code, item_code, item_name, pack_due } of the last record entered
     const [lastPrintedBill, setLastPrintedBill] = useState(() => {
         try {
             const saved = localStorage.getItem('lastPrintedBill');
@@ -1531,7 +1537,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 }
 
                 // Keep supplier + item + price: the item is already filled, go straight to the weight
-                if (keepCustomerItemRef.current && formData.item_code) {
+                if ((keepCustomerItemRef.current || keepOnHoldRef.current) && formData.item_code) {
                     refs.weight.current?.focus();
                     refs.weight.current?.select();
                     return;
@@ -2210,6 +2216,9 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         }
         const customerCode = (formData.customer_code || autoCustomerCode).toUpperCase();
         const currentSupplierCode = formData.supplier_code;
+        if (currentSupplierCode && formData.item_code) {
+            lastEntryRef.current = { supplier_code: currentSupplierCode, item_code: formData.item_code, item_name: formData.item_name, pack_due: formData.pack_due };
+        }
         const currentCustomerName = formData.customer_name;
         const currentTelephone = formData.telephone_no;
         const shouldUpdateRelatedPrice = state.priceManuallyChanged;
@@ -2467,7 +2476,16 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             handleClearForm();
             setBillType('credit'); // next bill starts as Credit
             updateState({ selectedUnprintedCustomer: null, selectedPrintedCustomer: null });
-            refs.supplier_code.current?.focus(); // next bill starts with the supplier code
+            const last = lastEntryRef.current;
+            if (keepOnHoldRef.current && last) {
+                // Keep supplier + item on F5: they stay filled, the cursor starts at the customer code
+                const item = items.find(i => String(i.no) === String(last.item_code));
+                setFormData(prev => ({ ...prev, supplier_code: last.supplier_code, item_code: last.item_code, item_name: last.item_name, pack_due: last.pack_due }));
+                updateState({ packCost: parseFloat(item?.pack_cost) || 0 });
+                setTimeout(() => { refs.customer_code_input.current?.focus(); refs.customer_code_input.current?.select(); }, 0);
+            } else {
+                refs.supplier_code.current?.focus(); // next bill starts with the supplier code
+            }
 
             try {
                 const response = await api.post(routes.markAllProcessed, { sales_ids: [...ids] });
@@ -2962,6 +2980,17 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                     <label htmlFor="keepCustomerItemCheckbox" title={tr('After each record keep the supplier code, item and price; type the customer code, Enter goes straight to the weight', 'සෑම වාර්තාවකටම පසු සැපයුම්කරු කේතය, අයිතමය සහ මිල තබා ගන්න; පාරිභෝගික කේතය ටයිප් කර Enter කළ විට කෙලින්ම බරට යයි')}
                                                         style={{ color: keepCustomerItem ? '#38bdf8' : 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                                         {tr('Keep supplier + item + price', 'සැපයුම්කරු + අයිතමය + මිල තබන්න')} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>(F8)</span>
+                                                    </label>
+                                                    <input
+                                                        type="checkbox"
+                                                        id="keepOnHoldCheckbox"
+                                                        checked={keepOnHold}
+                                                        onChange={(e) => setKeepOnHold(e.target.checked)}
+                                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#f472b6', marginLeft: '12px' }}
+                                                    />
+                                                    <label htmlFor="keepOnHoldCheckbox" title={tr('After F5 the next bill starts with the last supplier code and item filled; the cursor goes to the customer code', 'F5 න් පසු ඊළඟ බිල්පත අවසන් සැපයුම්කරු කේතය සහ අයිතමය සමඟ ආරම්භ වේ; කර්සරය පාරිභෝගික කේතයට යයි')}
+                                                        style={{ color: keepOnHold ? '#f472b6' : 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                                        {tr('Keep supplier + item on F5', 'F5 හිදී සැපයුම්කරු + අයිතමය තබන්න')}
                                                     </label>
                                                     <input
                                                         type="checkbox"
