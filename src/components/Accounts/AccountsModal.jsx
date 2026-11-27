@@ -58,6 +58,13 @@ export default function AccountsModal({ isOpen, onClose }) {
     const [receiptForm, setReceiptForm] = useState(null); // received amount without a bill: { amount, received_date, note }
     const [settleMsg, setSettleMsg] = useState({ type: '', text: '' });
     const [savingSettle, setSavingSettle] = useState(false);
+    // Loan typed in by hand from the Customers list: { customer_code, ref_no, amount, loan_date }
+    const today = () => new Date().toISOString().slice(0, 10);
+    const emptyLoan = () => ({ customer_code: '', ref_no: '', amount: '', loan_date: today() });
+    const [loanForm, setLoanForm] = useState(emptyLoan);
+    const [loanMsg, setLoanMsg] = useState({ type: '', text: '', code: null, key: null });
+    const [savingLoan, setSavingLoan] = useState(false);
+    const [pendingSettleKey, setPendingSettleKey] = useState(null); // open Settle for this bill once the customer loads
     const [editingLine, setEditingLine] = useState(null); // supplier bill record being edited
     const [editingSiblings, setEditingSiblings] = useState([]); // same item records of that bill
 
@@ -89,6 +96,8 @@ export default function AccountsModal({ isOpen, onClose }) {
         setSearch('');
         setError('');
         setOpenBills({});
+        setSettleForm(null);
+        setLoanMsg({ type: '', text: '', code: null, key: null });
         if (next === 'customers') load(async () => setCustomers((await api.get('/accounts/customers')).data.customers || []));
         if (next === 'suppliers') load(async () => setSuppliers((await api.get('/accounts/suppliers')).data.suppliers || []));
         if (next === 'customer') { setCustomerDetail(null); load(async () => setCustomerDetail((await api.get(`/accounts/customers/${encodeURIComponent(code)}`)).data)); }
@@ -137,6 +146,12 @@ export default function AccountsModal({ isOpen, onClose }) {
                 // Settlements are saved against bill date + bill no
                 settleKey: lines[0].bill_no ? `${String(lines[0].Date || '').slice(0, 10)}|${lines[0].bill_no}` : null,
             }))
+            // Loans typed in by hand are bills too (settled the same way)
+            .concat((customerDetail.loans || []).map(l => ({
+                key: l.bill_key, billNo: l.ref_no || tr('Loan', 'ණය'), date: l.loan_date, printed: true, credit: true,
+                lines: [], weight: 0, packs: 0, kuliya: 0, total: num(l.amount), settleKey: l.bill_key,
+                loan: l,
+            })))
             .map(b => {
                 const settlements = b.settleKey ? (customerDetail.settlements || []).filter(x => x.bill_key === b.settleKey) : [];
                 const received = settlements.reduce((s, x) => s + num(x.amount), 0);
@@ -170,6 +185,51 @@ export default function AccountsModal({ isOpen, onClose }) {
             received_date: new Date().toISOString().slice(0, 10), note: '', askPartial: false,
         });
     };
+    useEffect(() => {
+        if (!pendingSettleKey || view !== 'customer') return;
+        const b = customerBills.find(x => x.settleKey === pendingSettleKey);
+        if (b) { setPendingSettleKey(null); setCustomerTab('credit'); if (!b.fullyReceived) openSettle(b); }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [customerBills, pendingSettleKey, view]);
+
+    const saveLoan = async () => {
+        if (savingLoan) return;
+        const code = loanForm.customer_code.trim().toUpperCase();
+        const amount = Number(loanForm.amount);
+        if (!code) { setLoanMsg({ type: 'error', text: tr('Enter the customer code.', 'පාරිභෝගික කේතය ඇතුළත් කරන්න.') }); return; }
+        if (!Number.isFinite(amount) || amount <= 0) { setLoanMsg({ type: 'error', text: tr('Enter the loan amount.', 'ණය මුදල ඇතුළත් කරන්න.') }); return; }
+        setSavingLoan(true);
+        try {
+            const res = await api.post('/accounts/customer-loans', {
+                customer_code: code, amount, loan_date: loanForm.loan_date || today(), ref_no: loanForm.ref_no.trim() || null,
+            });
+            setLoanForm(emptyLoan());
+            setLoanMsg({ type: 'ok', text: tr(`Loan Rs. ${money(amount)} added for ${code}.`, `${code} සඳහා රු. ${money(amount)} ණය එක් කරන ලදී.`), code, key: `loan|${res.data.id}` });
+            setCustomers((await api.get('/accounts/customers')).data.customers || []);
+        } catch (err) {
+            setLoanMsg({ type: 'error', text: apiError(err, tr('Could not save the loan.', 'ණය සුරැකීමට නොහැකි විය.')) });
+        } finally {
+            setSavingLoan(false);
+        }
+    };
+    const loanKeyDown = (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        e.stopPropagation();
+        saveLoan();
+    };
+
+    const deleteLoan = async (l) => {
+        if (!window.confirm(tr(`Delete the loan of Rs. ${money(l.amount)} and its payments?`, `රු. ${money(l.amount)} ණය සහ එහි ගෙවීම් මකන්නද?`))) return;
+        try {
+            await api.delete(`/accounts/customer-loans/${l.id}`);
+            setSettleForm(null);
+            reloadCustomer();
+        } catch (err) {
+            setSettleMsg({ type: 'error', text: apiError(err, tr('Could not delete the loan.', 'ණය මැකිය නොහැක.')) });
+        }
+    };
+
     const settleCreditUsed = settleForm?.useCredit ? Math.min(availableCredit, settleForm.balance) : 0;
 
     // Full amount = bill settled. Less than the balance = ask: fully settle with it, or partial payment.
@@ -368,6 +428,20 @@ export default function AccountsModal({ isOpen, onClose }) {
                                     </button>
                                 </div>
                                 {searchBox(tr('Search customer code or name...', 'පාරිභෝගික කේතය හෝ නම සොයන්න...'))}
+                                {loanMsg.text && (
+                                    <div className={`alert alert-${loanMsg.type === 'error' ? 'danger' : 'success'} py-2 d-flex align-items-center gap-2`}>
+                                        <span>{loanMsg.text}</span>
+                                        {loanMsg.code && (
+                                            <button type="button" className="btn btn-sm btn-success fw-bold ms-auto"
+                                                onClick={() => { setPendingSettleKey(loanMsg.key); go('customer', loanMsg.code); }}>
+                                                {tr('Settle now', 'දැන් පියවන්න')}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                                <datalist id="accounts-customer-codes">
+                                    {customers.map(c => <option key={c.customer_code} value={c.customer_code}>{c.full_name || ''}</option>)}
+                                </datalist>
                                 <div className="table-responsive">
                                     <table className="table table-sm table-bordered table-hover align-middle bg-white mb-0">
                                         <thead><tr>
@@ -378,6 +452,36 @@ export default function AccountsModal({ isOpen, onClose }) {
                                             <th>{customerTab === 'received' ? tr('Last received', 'අවසන් ලැබීම') : tr('Last sale', 'අවසන් විකිණීම')}</th>
                                         </tr></thead>
                                         <tbody>
+                                            {customerTab === 'credit' && (
+                                                <tr style={{ background: '#fff8e1' }}>
+                                                    <td>
+                                                        <div className="d-flex gap-1">
+                                                            <input className="form-control form-control-sm fw-bold" list="accounts-customer-codes"
+                                                                placeholder={tr('+ New loan: customer code', '+ නව ණය: පාරිභෝගික කේතය')}
+                                                                value={loanForm.customer_code} onKeyDown={loanKeyDown}
+                                                                onChange={e => setLoanForm(f => ({ ...f, customer_code: e.target.value.toUpperCase() }))} />
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <input className="form-control form-control-sm text-end" placeholder={tr('Ref / bill no', 'යොමු / බිල් අංකය')}
+                                                            value={loanForm.ref_no} onKeyDown={loanKeyDown} onChange={e => setLoanForm(f => ({ ...f, ref_no: e.target.value }))} />
+                                                    </td>
+                                                    <td>
+                                                        <input type="number" step="any" min="0" className="form-control form-control-sm text-end" placeholder={tr('Amount', 'මුදල')}
+                                                            value={loanForm.amount} onKeyDown={loanKeyDown} onChange={e => setLoanForm(f => ({ ...f, amount: e.target.value }))} />
+                                                    </td>
+                                                    <td className="text-end fw-bold text-danger">{loanForm.amount ? money(loanForm.amount) : ''}</td>
+                                                    <td>
+                                                        <div className="d-flex gap-1">
+                                                            <input type="date" className="form-control form-control-sm" value={loanForm.loan_date} onKeyDown={loanKeyDown}
+                                                                onChange={e => setLoanForm(f => ({ ...f, loan_date: e.target.value }))} />
+                                                            <button type="button" className="btn btn-sm btn-success fw-bold text-nowrap" disabled={savingLoan} onClick={saveLoan}>
+                                                                {savingLoan ? '...' : tr('Add', 'එක් කරන්න')}
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
                                             {filteredCustomers.length === 0 && <tr><td colSpan={5} className="text-center text-muted py-3">{customerTab === 'received' ? tr('No settled bills yet.', 'තවම පියවූ බිල්පත් නැත.') : tr('No customers with credit.', 'ණය ඇති පාරිභෝගිකයින් නැත.')}</td></tr>}
                                             {filteredCustomers.map(c => {
                                                 const part = customerTab === 'received' ? c.received : c.credit;
@@ -484,7 +588,10 @@ export default function AccountsModal({ isOpen, onClose }) {
                                                 <React.Fragment key={b.key}>
                                                     <tr style={b.fullyReceived ? { background: '#f0fdf4' } : undefined}>
                                                         <td className="text-nowrap">{b.date ? String(b.date).slice(0, 10) : '—'}</td>
-                                                        <td>{b.billNo || <span className="text-muted">{tr('Not printed yet', 'තවම මුද්‍රණය කර නැත')}</span>}</td>
+                                                        <td>
+                                                            {b.billNo || <span className="text-muted">{tr('Not printed yet', 'තවම මුද්‍රණය කර නැත')}</span>}
+                                                            {b.loan && <span className="badge bg-warning text-dark ms-2">{tr('Loan entry', 'ණය ඇතුළත් කිරීම')}</span>}
+                                                        </td>
                                                         <td className="text-end fw-semibold">{money(b.total)}</td>
                                                         <td className="text-end text-success">{b.received ? money(b.received) : '—'}</td>
                                                         <td className={`text-end fw-bold ${b.balance > 0.009 ? 'text-danger' : 'text-success'}`}>{money(b.balance)}</td>
@@ -500,6 +607,9 @@ export default function AccountsModal({ isOpen, onClose }) {
                                                                 <button type="button" className="btn btn-sm btn-success py-0" onClick={() => openSettle(b)}>
                                                                     {tr('Settle', 'පියවන්න')}
                                                                 </button>
+                                                            )}
+                                                            {b.loan && (
+                                                                <button type="button" className="btn btn-sm btn-link text-danger p-0 ms-2" title={tr('Delete this loan', 'මෙම ණය මකන්න')} onClick={() => deleteLoan(b.loan)}>✕</button>
                                                             )}
                                                         </td>
                                                     </tr>
