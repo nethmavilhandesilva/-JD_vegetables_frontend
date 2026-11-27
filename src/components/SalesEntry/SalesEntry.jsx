@@ -789,6 +789,25 @@ const TEMP_ID_BASE = 9e15;
 let tempIdCounter = 0;
 const nextTempId = () => TEMP_ID_BASE + (++tempIdCounter);
 const isTempId = (id) => typeof id === 'number' && id >= TEMP_ID_BASE;
+// Dual Bill system: two bills are entered at once on one screen. Records typed into Bill 2 are
+// remembered here (by id, kept across reloads); every other new record belongs to Bill 1.
+const LANE_B_KEY = 'dualBillLaneB';
+const laneBIds = new Set((() => { try { return JSON.parse(localStorage.getItem(LANE_B_KEY)) || []; } catch { return []; } })());
+const laneListeners = new Set();
+const laneChanged = () => {
+    try { localStorage.setItem(LANE_B_KEY, JSON.stringify([...laneBIds])); } catch { /* storage full or blocked */ }
+    laneListeners.forEach(fn => fn());
+};
+const addLaneB = (ids) => { ids.forEach(id => id && laneBIds.add(id)); laneChanged(); };
+const removeLaneB = (ids) => { let changed = false; ids.forEach(id => { changed = laneBIds.delete(id) || changed; }); if (changed) laneChanged(); };
+const isLaneB = (s) => s._lane === 'B' || laneBIds.has(s.id);
+// A record on the bill being entered: not printed (Y) and not on hold (N)
+const isNewSale = (s) => s.id && s.bill_printed !== 'Y' && s.bill_printed !== 'N';
+const useLaneVersion = () => {
+    const [v, setV] = useState(0);
+    useEffect(() => { const fn = () => setV(x => x + 1); laneListeners.add(fn); return () => laneListeners.delete(fn); }, []);
+    return v;
+};
 const hasPending = (row) => !!row && (row._pending || (row.group_members || []).some(m => m._pending));
 // One shared formatter: creating Intl.NumberFormat per value was slow on large tables
 const DECIMAL_FORMAT = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -797,7 +816,33 @@ const initialFormData = { customer_code: "", customer_name: "", supplier_code: "
 const fieldOrder = ["telephone_no", "supplier_code", "customer_code_input", "customer_code_select", "item_code_select", "weight", "price_per_kg_grid_item", "packs", "kuliya"];
 const skipMap = { telephone_no: "supplier_code", supplier_code: "customer_code_input", customer_code_input: "item_code_select", customer_code_select: "item_code_select", given_amount: "customer_code_input", item_code_select: "weight", price_per_kg: "packs", price_per_kg_grid_item: "packs", packs: "kuliya", kuliya: null };
 
-export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMode: propSetPrintMode }) {
+// Sales Entry screen. "Dual Bill" shows two panels side by side: [Printed | Bill 1 | Bill 2 | Unprinted]
+export default function SalesEntry(props) {
+    const [dualMode, setDualMode] = useState(() => localStorage.getItem('dualBillMode') === '1');
+    const [activeLane, setActiveLane] = useState('A');
+    const toggleDual = (on) => {
+        setDualMode(on);
+        setActiveLane('A');
+        try { localStorage.setItem('dualBillMode', on ? '1' : '0'); } catch { /* ignore */ }
+    };
+    if (!dualMode) return <SalesEntryPanel {...props} onToggleDual={toggleDual} />;
+    return (
+        <div className="dual-bill-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, width: '100%' }}>
+            {['A', 'B'].map(lane => (
+                <SalesEntryPanel key={lane} {...props} lane={lane} isActiveLane={activeLane === lane}
+                    onActivate={() => setActiveLane(lane)} onToggleDual={toggleDual} />
+            ))}
+        </div>
+    );
+}
+
+// lane: null = single bill; 'A' / 'B' = Bill 1 / Bill 2 of the Dual Bill system.
+// Only the active lane (the one last clicked or typed in) answers F1, F5, F8, F9 and F2.
+function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSetPrintMode, lane = null, isActiveLane = true, onActivate, onToggleDual }) {
+    const laneVersion = useLaneVersion();
+    const inLane = (s) => !lane || (lane === 'B') === isLaneB(s);
+    const activeLaneRef = useRef(isActiveLane);
+    activeLaneRef.current = isActiveLane;
     const [localPrintMode, setLocalPrintMode] = useState(propPrintMode || 'a4');
 
     // Use propPrintMode if available, otherwise use local state
@@ -1200,10 +1245,11 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     }, [allSales]);
 
     const { newSales, printedSales, unprintedSales } = useMemo(() => ({
-        newSales: allSales.filter(s => s.id && s.bill_printed !== 'Y' && s.bill_printed !== 'N'),
+        newSales: allSales.filter(s => isNewSale(s) && inLane(s)),
         printedSales: allSales.filter(s => s.bill_printed === 'Y'),
         unprintedSales: allSales.filter(s => s.bill_printed === 'N' || !s.bill_printed || s.bill_printed === '')
-    }), [allSales]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }), [allSales, lane, laneVersion]);
 
     const filterCustomers = (sales, query, searchByBillNo = false) => {
         const allCustomers = [...new Set(sales.map(s => s.customer_code))];
@@ -1491,7 +1537,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     }, []);
 
     // New bill: the supplier code is entered first
-    useEffect(() => { fetchInitialData(); refs.supplier_code.current?.focus(); }, []);
+    useEffect(() => { fetchInitialData(); if (lane !== 'B') refs.supplier_code.current?.focus(); }, []);
 
     const handleKeyDown = async (e, currentFieldName) => {
         if (e.key === "Enter") {
@@ -2321,6 +2367,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             commitSales(list => list.concat({
                 ...shownFields,
                 id: tempId,
+                ...(lane === 'B' ? { _lane: 'B' } : {}),
                 bill_printed: billPrintedStatus,
                 bill_no: billNoToUse,
                 created_at: new Date().toISOString(),
@@ -2335,6 +2382,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 const response = await api[method](url, payload);
                 const updatedSales = response.data.sales || [response.data.sale || response.data.data || response.data];
                 const updatedIds = updatedSales.map(s => s.id);
+                if (lane === 'B') addLaneB(updatedIds); // before the record shows, so Bill 1 never takes it
                 commitSales(list => list
                     .filter(s => s.id !== tempId && !updatedIds.includes(s.id))
                     .concat(updatedSales));
@@ -2468,9 +2516,11 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             if (pendingSaves.length > 0) await Promise.allSettled(pendingSaves);
 
             const current = allSalesRef.current;
-            const salesToProcess = current.filter(s => s.id && !isTempId(s.id) && s.bill_printed !== 'Y');
+            // Dual Bill: only this bill's new records (the other bill keeps its own)
+            const salesToProcess = current.filter(s => s.id && !isTempId(s.id) && s.bill_printed !== 'Y' && (!isNewSale(s) || inLane(s)));
             if (salesToProcess.length === 0) return;
             const ids = new Set(salesToProcess.map(s => s.id));
+            if (lane) removeLaneB([...ids]); // on hold now: no longer on Bill 2
 
             commitSales(list => list.map(s => (ids.has(s.id) ? { ...s, bill_printed: "N" } : s)));
             handleClearForm();
@@ -2597,7 +2647,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
         const freshAllSales = allSalesRef.current.filter(s => !isTempId(s.id));
 
         // Recompute the same selection the sidebar/table currently shows, against fresh data
-        const freshNewSales = freshAllSales.filter(s => s.id && s.bill_printed !== 'Y' && s.bill_printed !== 'N');
+        const freshNewSales = freshAllSales.filter(s => isNewSale(s) && inLane(s));
         const freshUnprintedSales = freshAllSales.filter(s => s.bill_printed === 'N' || !s.bill_printed || s.bill_printed === '');
         const freshPrintedSales = freshAllSales.filter(s => s.bill_printed === 'Y');
 
@@ -2744,6 +2794,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
             // Update local state immediately (optimistic, no page reload). Uses a functional
             // setState so this doesn't clobber any save that resolved into allSales meanwhile.
             const markedIds = new Set(idsToMark);
+            if (lane) removeLaneB(idsToMark); // printed: no longer on Bill 2
             allSalesRef.current = allSalesRef.current.map(s => (markedIds.has(s.id) ? { ...s, bill_printed: "Y", bill_no: billNo, credit_transaction: job.creditFlag } : s));
             setState(prev => ({
                 ...prev,
@@ -2792,6 +2843,8 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                 // This reloads the entire page from the server
                 window.location.reload();
             }
+            // Dual Bill: the other bill's panel ignores the function keys
+            if (lane && !activeLaneRef.current) return;
             // F8: tick / untick "Keep customer + item"
             if (e.key === "F8") {
                 e.preventDefault();
@@ -2869,12 +2922,13 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
     const hasData = allSales.length > 0 || customers.length > 0 || items.length > 0 || suppliers.length > 0;
     //context related to bulkupdate
     return (
-        <div className="sales-layout" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div className={`sales-layout${lane ? ' dual-bill-panel' : ''}`} style={{ maxWidth: lane ? 'none' : '1400px', margin: '0 auto', minWidth: 0 }}
+            onMouseDownCapture={lane ? onActivate : undefined} onFocusCapture={lane ? onActivate : undefined}>
             {isLoading && (<div className="fixed top-0 left-0 right-0 bg-blue-500 text-white py-1 text-center text-sm z-50">Refreshing data...</div>)}
             {state.isPrinting && (<div className="fixed top-0 left-0 right-0 bg-yellow-500 text-black py-1 text-center text-sm z-50">Printing in progress... Please wait</div>)}
 
-            <div className="three-column-layout" style={{ opacity: isLoading ? 0.7 : 1, display: 'grid', gridTemplateColumns: '200px 1fr 200px', gap: '16px', padding: '10px', marginTop: '-149px' }}>
-                <div className="left-sidebar" style={{ backgroundColor: '#1ec139ff', borderRadius: '0.75rem', maxHeight: '80.5vh', overflowY: 'auto' }}>
+            <div className="three-column-layout" style={{ opacity: isLoading ? 0.7 : 1, display: 'grid', gridTemplateColumns: lane === 'A' ? '200px minmax(0, 1fr)' : lane === 'B' ? 'minmax(0, 1fr) 200px' : '200px 1fr 200px', gap: lane ? '8px' : '16px', padding: lane ? '10px 4px' : '10px', marginTop: '-149px' }}>
+                {lane !== 'B' && <div className="left-sidebar" style={{ backgroundColor: '#1ec139ff', borderRadius: '0.75rem', maxHeight: '80.5vh', overflowY: 'auto' }}>
                     {hasData ? (
                         <CustomerList customers={printedCustomers} type="printed" searchQuery={searchQueries.printed} onSearchChange={setPrintedSearch} selectedPrintedCustomer={selectedPrintedCustomer} selectedUnprintedCustomer={selectedUnprintedCustomer} handleCustomerClick={stableCustomerClick} formatDecimal={formatDecimal} allSales={allSales} isCashFilterActive={state.isCashFilterActive} toggleCashFilter={toggleCashFilterStable} />
                     ) : (
@@ -2889,9 +2943,10 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                             </div>
                         </div>
                     )}
-                </div>
+                </div>}
 
-                <div className="center-form flex flex-col" style={{ backgroundColor: '#111439ff', padding: '20px', borderRadius: '0.75rem', color: 'white', minHeight: '100vh', height: 'auto', boxSizing: 'border-box', gridColumnStart: 2, gridColumnEnd: 3 }}>
+                <div className="center-form flex flex-col" style={{ backgroundColor: '#111439ff', padding: lane ? '20px 12px' : '20px', borderRadius: '0.75rem', color: 'white', minHeight: '100vh', height: 'auto', boxSizing: 'border-box', gridColumnStart: lane === 'B' ? 1 : 2, gridColumnEnd: lane === 'B' ? 2 : 3, minWidth: 0,
+                    outline: lane && isActiveLane ? `3px solid ${lane === 'A' ? '#38bdf8' : '#f472b6'}` : 'none', outlineOffset: '-3px' }}>
                     {currentUser?.role === 'Admin' ? (
                         <AdminView
                             ref={adminViewRef}
@@ -2928,6 +2983,29 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                                                     </span>
                                                 )}
                                             </div>
+                                            {/* Dual Bill system: enter two bills at once (Bill 1 left, Bill 2 right) */}
+                                            {lane && (
+                                                <span style={{ padding: '4px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.95rem', whiteSpace: 'nowrap',
+                                                    backgroundColor: lane === 'A' ? '#38bdf8' : '#f472b6', color: '#111439', opacity: isActiveLane ? 1 : 0.6 }}>
+                                                    {lane === 'A' ? tr('Bill 1', 'බිල 1') : tr('Bill 2', 'බිල 2')}
+                                                </span>
+                                            )}
+                                            {lane !== 'B' && onToggleDual && (
+                                                <button type="button" tabIndex={-1}
+                                                    onClick={() => {
+                                                        if (!lane) { onToggleDual(true); return; }
+                                                        if (allSalesRef.current.some(s => isNewSale(s) && isLaneB(s))) {
+                                                            alert(tr('Bill 2 still has records. Print it (F1) or hold it (F5) first.', 'බිල 2 හි තවම වාර්තා ඇත. පළමුව එය මුද්‍රණය (F1) හෝ රඳවා (F5) කරන්න.'));
+                                                            return;
+                                                        }
+                                                        onToggleDual(false);
+                                                    }}
+                                                    title={lane ? tr('Back to one bill', 'එක් බිලකට ආපසු') : tr('Enter two bills at once on this screen', 'මෙම තිරයේ බිල්පත් දෙකක් එකවර ඇතුළත් කරන්න')}
+                                                    style={{ padding: '4px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '0.95rem', cursor: 'pointer', whiteSpace: 'nowrap',
+                                                        border: '2px solid #a78bfa', backgroundColor: lane ? '#a78bfa' : 'transparent', color: lane ? '#111439' : '#a78bfa' }}>
+                                                    {lane ? `✕ ${tr('Single bill', 'තනි බිල')}` : `⧉ ${tr('Dual Bill', 'ද්විත්ව බිල')}`}
+                                                </button>
+                                            )}
                                             {/* Credit / Cash: chosen before entering the bill (Credit by default) */}
                                             <div style={{ display: 'flex', gap: '6px' }}>
                                                 {[
@@ -3608,7 +3686,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                     )}
                 </div>
 
-                <div className="right-sidebar" style={{ backgroundColor: '#1ec139ff', borderRadius: '0.75rem', maxHeight: '80.5vh', overflowY: 'auto', gridColumnStart: 3, gridColumnEnd: 4 }}>
+                {lane !== 'A' && <div className="right-sidebar" style={{ backgroundColor: '#1ec139ff', borderRadius: '0.75rem', maxHeight: '80.5vh', overflowY: 'auto', gridColumnStart: lane === 'B' ? 2 : 3, gridColumnEnd: lane === 'B' ? 3 : 4 }}>
                     {hasData ? (
                         <CustomerList customers={unprintedCustomers} type="unprinted" searchQuery={searchQueries.unprinted} onSearchChange={setUnprintedSearch} selectedPrintedCustomer={selectedPrintedCustomer} selectedUnprintedCustomer={selectedUnprintedCustomer} handleCustomerClick={stableCustomerClick} formatDecimal={formatDecimal} allSales={allSales} />
                     ) : (
@@ -3621,7 +3699,7 @@ export default function SalesEntry({ printMode: propPrintMode = 'a4', setPrintMo
                             </div>
                         </div>
                     )}
-                </div>
+                </div>}
             </div>
             {renderBillPreviewModal()}
             {printJob && (
