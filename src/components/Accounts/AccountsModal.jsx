@@ -152,9 +152,15 @@ export default function AccountsModal({ isOpen, onClose }) {
                 lines: [], weight: 0, packs: 0, kuliya: 0, total: num(l.amount), settleKey: l.bill_key,
                 loan: l,
             })))
+            // Customer bills made on the New Supplier Bills page (money paid with the bill counts as received)
+            .concat((customerDetail.page_bills || []).map(pb => ({
+                key: pb.bill_key, billNo: pb.bill_no, date: pb.bill_date, printed: true, credit: pb.payment_type !== 'cash',
+                lines: [], weight: 0, packs: 0, kuliya: 0, total: num(pb.total), settleKey: pb.bill_key,
+                prepaid: num(pb.prepaid), pageBill: true,
+            })))
             .map(b => {
                 const settlements = b.settleKey ? (customerDetail.settlements || []).filter(x => x.bill_key === b.settleKey) : [];
-                const received = settlements.reduce((s, x) => s + num(x.amount), 0);
+                const received = settlements.reduce((s, x) => s + num(x.amount), 0) + num(b.prepaid);
                 // Settled: received covers the total, or closed with a smaller amount ("fully settle")
                 const closed = settlements.some(x => x.closes_bill);
                 const fullyReceived = !!b.settleKey && b.total > 0 && (closed || received >= b.total - 0.009);
@@ -591,6 +597,7 @@ export default function AccountsModal({ isOpen, onClose }) {
                                                         <td>
                                                             {b.billNo || <span className="text-muted">{tr('Not printed yet', 'තවම මුද්‍රණය කර නැත')}</span>}
                                                             {b.loan && <span className="badge bg-warning text-dark ms-2">{tr('Loan entry', 'ණය ඇතුළත් කිරීම')}</span>}
+                                                            {b.pageBill && <span className="badge bg-info text-dark ms-2">{tr('Customer bill', 'පාරිභෝගික බිල')}{b.prepaid > 0 ? ` · ${tr('paid with bill', 'බිල සමඟ ගෙවූ')} ${money(b.prepaid)}` : ''}</span>}
                                                         </td>
                                                         <td className="text-end fw-semibold">{money(b.total)}</td>
                                                         <td className="text-end text-success">{b.received ? money(b.received) : '—'}</td>

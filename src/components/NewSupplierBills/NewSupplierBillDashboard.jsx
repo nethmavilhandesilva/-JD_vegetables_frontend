@@ -5,6 +5,7 @@ import api from '../../api';
 import { tr } from '../../i18n/language';
 import { printHtml } from '../../utils/printHtml';
 import { buildSupplierA4Bill, buildSupplierThermalBill } from '../../utils/supplierBillPrint';
+import { A4BillHTML, ThermalBillHTML } from '../BillTemplates';
 
 // New Supplier Bills dashboard.
 // Bills entered here are stored in the new tables new_supplier_bills /
@@ -12,6 +13,9 @@ import { buildSupplierA4Bill, buildSupplierThermalBill } from '../../utils/suppl
 // Shortcuts (same idea as Sales Entry): F5 = hold the bill (save, not printed),
 // F4 = save and print. Layout copies Sales Entry: Printed list on the left,
 // entry screen in the middle, Unprinted (held) list on the right.
+// Two modes: Supplier bill (commission taken off, supplier bill print) and Customer bill
+// (no commission, printed like a Sales Entry customer bill, listed in Accounts > Customers).
+// A customer bill keeps the customer code in supplier_code (bill_type = 'customer', number CB-).
 
 const today = () => {
     const d = new Date();
@@ -59,10 +63,16 @@ const selectStyles = {
 
 const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-export default function NewSupplierBillDashboard() {
+export default function NewSupplierBillDashboard({ printMode = 'a4' }) {
     // ---------- master data ----------
     const [suppliers, setSuppliers] = useState([]);
+    const [customers, setCustomers] = useState([]);
     const [items, setItems] = useState([]);
+    // Supplier bill / Customer bill (kept when the page is opened again)
+    const [billMode, setBillMode] = useState(() => {
+        try { return localStorage.getItem('nsbBillMode') === 'customer' ? 'customer' : 'supplier'; } catch { return 'supplier'; }
+    });
+    const isCustomerMode = billMode === 'customer';
 
     // ---------- entry form ----------
     const [form, setForm] = useState(emptyForm);
@@ -105,6 +115,12 @@ export default function NewSupplierBillDashboard() {
         () => suppliers.map((s) => ({ value: s.code, label: `${s.code} - ${s.name ?? ''}`, name: s.name })),
         [suppliers]
     );
+    const customerOptions = useMemo(
+        () => customers.map((c) => ({ value: c.code, label: `${c.code} - ${c.name ?? ''}`, name: c.name })),
+        [customers]
+    );
+    // Supplier or customer picker, by mode
+    const partyOptions = isCustomerMode ? customerOptions : supplierOptions;
     const itemOptions = useMemo(
         () => items.map((i) => ({ value: i.no, label: `${i.no} - ${i.type ?? ''}`, name: i.type })),
         [items]
@@ -114,6 +130,7 @@ export default function NewSupplierBillDashboard() {
         api.get('/new-supplier-bills/options')
             .then((res) => {
                 setSuppliers(res.data?.suppliers || []);
+                setCustomers(res.data?.customers || []);
                 setItems(res.data?.items || []);
             })
             .catch(() => setFormError(tr('Could not load suppliers and items.', 'සැපයුම්කරුවන් සහ භාණ්ඩ ලබා ගත නොහැක.')));
@@ -131,6 +148,7 @@ export default function NewSupplierBillDashboard() {
             if (f.print_status) params.print_status = f.print_status;
             if (f.payment_type) params.payment_type = f.payment_type;
             if (f.search.trim()) params.search = f.search.trim();
+            params.bill_type = billMode;
             const res = await api.get('/new-supplier-bills', { params });
             setBills(res.data?.bills || []);
             setSummary(res.data?.summary || null);
@@ -141,7 +159,7 @@ export default function NewSupplierBillDashboard() {
         } finally {
             setLoadingList(false);
         }
-    }, []);
+    }, [billMode]);
 
     // Sidebars: unprinted = held bills of every date (so nothing waiting is missed),
     // printed = bills printed today (by print time, not bill date), so a held bill from
@@ -152,8 +170,9 @@ export default function NewSupplierBillDashboard() {
             const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
             const [held, printed] = await Promise.all([
-                api.get('/new-supplier-bills', { params: { print_status: 'held' } }),
+                api.get('/new-supplier-bills', { params: { print_status: 'held', bill_type: billMode } }),
                 api.get('/new-supplier-bills', { params: {
+                    bill_type: billMode,
                     print_status: 'printed',
                     printed_from: dayStart.toISOString(),
                     printed_to: dayEnd.toISOString(),
@@ -163,7 +182,7 @@ export default function NewSupplierBillDashboard() {
             setHeldBills(held.data?.bills || []);
             setPrintedBills(printed.data?.bills || []);
         } catch { /* errors show in the report */ }
-    }, []);
+    }, [billMode]);
 
     const refreshLists = () => { loadSidebars(); if (showReport) loadBills(filters); };
 
@@ -175,7 +194,7 @@ export default function NewSupplierBillDashboard() {
     const commissionFetching = useRef(new Set());
     const supplierCode = form.supplier?.value || '';
     const rateKey = (itemCode, price) => `${String(itemCode || '').toUpperCase()}|${supplierCode.toUpperCase()}|${num(price)}`;
-    const rateFor = (itemCode, price) => commissionRates[rateKey(itemCode, price)] ?? 0;
+    const rateFor = (itemCode, price) => (isCustomerMode ? 0 : commissionRates[rateKey(itemCode, price)] ?? 0);
     // Pack lines: each pack keeps its own price, so value and commission add up pack by pack
     const isPackLine = (l) => Array.isArray(l.pack_weights) && l.pack_weights.length > 0;
     const pricesOf = (l) => (Array.isArray(l.pack_prices) && l.pack_prices.length === l.pack_weights.length
@@ -195,6 +214,7 @@ export default function NewSupplierBillDashboard() {
         : `${l.pack_weights.map((w) => kg(w)).join(' + ')} kg`);
 
     useEffect(() => {
+        if (isCustomerMode) return; // customer bills have no commission
         const wanted = [];
         [...lines, line].forEach((l) => {
             if (!l.item?.value) return;
@@ -210,7 +230,7 @@ export default function NewSupplierBillDashboard() {
                 .catch(() => { /* shown as 0 until saved; the server always calculates it */ })
                 .finally(() => commissionFetching.current.delete(key));
         });
-    }, [lines, line.item, line.price_per_kg, supplierCode]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [lines, line.item, line.price_per_kg, supplierCode, isCustomerMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const totals = useMemo(() => {
         const gross = round2(lines.reduce((s, l) => s + lineValue(l), 0));
@@ -220,7 +240,7 @@ export default function NewSupplierBillDashboard() {
         const net = round2(gross - commission - num(form.deductions));
         const balance = round2(net - num(form.paid_amount));
         return { gross, commission, weight, packs, net, balance };
-    }, [lines, form.deductions, form.paid_amount, commissionRates, supplierCode]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [lines, form.deductions, form.paid_amount, commissionRates, supplierCode, isCustomerMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const lineAmount = round2(num(line.weight) * num(line.price_per_kg));
 
@@ -383,7 +403,7 @@ export default function NewSupplierBillDashboard() {
             }
         }
 
-        if (!form.supplier) { setFormError(tr('Select a supplier.', 'සැපයුම්කරුවෙකු තෝරන්න.')); return; }
+        if (!form.supplier) { setFormError(isCustomerMode ? tr('Select a customer.', 'පාරිභෝගිකයෙකු තෝරන්න.') : tr('Select a supplier.', 'සැපයුම්කරුවෙකු තෝරන්න.')); return; }
         if (!form.bill_date) { setFormError(tr('Select the bill date.', 'බිල්පත් දිනය තෝරන්න.')); return; }
         if (pendingPartial) { setFormError(tr('Finish or clear the item line first.', 'පළමුව භාණ්ඩ පේළිය සම්පූර්ණ කරන්න හෝ හිස් කරන්න.')); return; }
         if (allLines.length === 0) { setFormError(tr('Add at least one item.', 'අවම වශයෙන් එක් භාණ්ඩයක් එක් කරන්න.')); return; }
@@ -398,6 +418,7 @@ export default function NewSupplierBillDashboard() {
             supplier_name: form.supplier.name || null,
             reference_no: form.reference_no.trim() || null,
             payment_type: form.payment_type === 'cash' ? 'cash' : 'credit',
+            bill_type: billMode,
             deductions: num(form.deductions),
             deduction_note: form.deduction_note.trim() || null,
             paid_amount: num(form.paid_amount),
@@ -473,7 +494,7 @@ export default function NewSupplierBillDashboard() {
     const startEdit = async (bill) => {
         try {
             const full = await fetchBill(bill.id);
-            const supplier = supplierOptions.find((o) => o.value.toUpperCase() === full.supplier_code.toUpperCase())
+            const supplier = partyOptions.find((o) => o.value.toUpperCase() === full.supplier_code.toUpperCase())
                 || { value: full.supplier_code, label: `${full.supplier_code} - ${full.supplier_name ?? ''}`, name: full.supplier_name };
             setForm({
                 bill_date: full.bill_date,
@@ -542,6 +563,7 @@ export default function NewSupplierBillDashboard() {
     // Each line's price and amount are printed after the commission is taken off; a pack-by-pack
     // line is one record per pack (so the pack sheet lists every pack); bag cost = bags x 40.
     function buildBillHtml(bill) {
+        if ((bill.bill_type || billMode) === 'customer') return buildCustomerBillHtml(bill);
         const records = [];
         (bill.items || []).forEach((it, i) => {
             const weight = num(it.weight);
@@ -589,6 +611,28 @@ export default function NewSupplierBillDashboard() {
             : buildSupplierA4Bill(records, { ...options, billWidth: '105mm', topMargin: '0mm' });
     }
 
+    // Customer bill: printed like a Sales Entry customer bill (A4 / thermal from Print Mode).
+    // Each line is weight x price; no commission, bag cost or kuliya.
+    function buildCustomerBillHtml(bill) {
+        const salesData = (bill.items || []).map((it, i) => {
+            const packs = Array.isArray(it.pack_weights) ? it.pack_weights.map(Number) : [];
+            return {
+                id: i + 1, item_code: it.item_code, item_name: it.item_name || it.item_code,
+                weight: num(it.weight), price_per_kg: num(it.price_per_kg), packs: num(it.packs),
+                Kuliya: 0, CustomerPackCost: 0,
+                ...(packs.length ? {
+                    pack_weights: packs,
+                    pack_prices: Array.isArray(it.pack_prices) && it.pack_prices.length === packs.length ? it.pack_prices.map(Number) : packs.map(() => num(it.price_per_kg)),
+                } : {}),
+            };
+        });
+        const args = {
+            salesData, billNo: bill.bill_no || '', customerName: bill.supplier_code || '', mobile: '',
+            globalLoanAmount: 0, paymentType: bill.payment_type === 'cash' ? 'N' : 'Y',
+        };
+        return printMode === 'a4' ? A4BillHTML(args) : ThermalBillHTML(args);
+    }
+
     // Preview (F2): the bill as it will print, built from what is on screen now
     const openPreview = () => {
         const pendingComplete = line.item && num(line.weight) > 0 && line.price_per_kg !== '';
@@ -609,7 +653,7 @@ export default function NewSupplierBillDashboard() {
             bill_date: form.bill_date,
             supplier_code: form.supplier?.value || '', supplier_name: form.supplier?.name || '',
             reference_no: form.reference_no, notes: form.notes, deduction_note: form.deduction_note,
-            payment_type: form.payment_type,
+            payment_type: form.payment_type, bill_type: billMode,
             items, total_weight: items.reduce((a, it) => a + it.weight, 0), gross_amount: gross, commission_amount: commission,
             deductions: num(form.deductions), net_amount: net, paid_amount: num(form.paid_amount), balance_amount: round2(net - num(form.paid_amount)),
         }));
@@ -618,6 +662,19 @@ export default function NewSupplierBillDashboard() {
     previewRef.current = openPreview;
 
     const openReport = () => { setShowReport(true); loadBills(filters); };
+
+    const switchMode = (mode) => {
+        if (mode === billMode) return;
+        if ((lines.length > 0 || editingBill) && !window.confirm(tr('Clear the bill on screen and switch?', 'තිරයේ ඇති බිල්පත හිස් කර මාරු වන්නද?'))) return;
+        resetForm();
+        setMessage('');
+        setFilters((f) => ({ ...f, supplier: null }));
+        setBillMode(mode);
+        try { localStorage.setItem('nsbBillMode', mode); } catch { /* ignore */ }
+        setTimeout(() => supplierRef.current?.focus(), 0);
+    };
+    // Report of the mode now shown (the sidebars reload through loadSidebars)
+    useEffect(() => { if (reportOpenRef.current) loadBills(filters); }, [billMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const applyFilters = (e) => { e?.preventDefault(); loadBills(filters); };
     const clearFilters = () => {
@@ -680,7 +737,7 @@ export default function NewSupplierBillDashboard() {
                         onBlur={(e) => e.currentTarget.setAttribute('readonly', '')}
                         value={sideSearch[type]}
                         onChange={(e) => setSideSearch({ ...sideSearch, [type]: e.target.value.toUpperCase() })}
-                        placeholder={isPrinted ? tr('Search bill no / code...', 'සෙවීම බිල්පත් අංකය/කේතය...') : tr('Search supplier code...', 'සැපයුම්කරු කේතය සොයන්න...')}
+                        placeholder={isPrinted ? tr('Search bill no / code...', 'සෙවීම බිල්පත් අංකය/කේතය...') : isCustomerMode ? tr('Search customer code...', 'පාරිභෝගික කේතය සොයන්න...') : tr('Search supplier code...', 'සැපයුම්කරු කේතය සොයන්න...')}
                         style={{ width: 169, display: 'block', margin: '0 auto 2px', borderRadius: '0.75rem', border: '1px solid #ccc', padding: '1px 12px', textTransform: 'uppercase', fontSize: 13 }}
                     />
                 </div>
@@ -742,6 +799,19 @@ export default function NewSupplierBillDashboard() {
                 <div className="nsb-center" style={{ backgroundColor: '#111439ff', padding: 20, borderRadius: '0.75rem', color: 'white', minHeight: '80.5vh', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
                     {/* header */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+                        {/* Supplier bill / Customer bill */}
+                        <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '2px solid #a78bfa' }}>
+                            {[
+                                ['supplier', tr('Supplier bill', 'සැපයුම්කරු බිල')],
+                                ['customer', tr('Customer bill', 'පාරිභෝගික බිල')],
+                            ].map(([mode, text]) => (
+                                <button key={mode} type="button" tabIndex={-1} onClick={() => switchMode(mode)}
+                                    style={{ padding: '4px 14px', border: 'none', fontWeight: 'bold', fontSize: '0.95rem', cursor: 'pointer',
+                                        backgroundColor: billMode === mode ? '#a78bfa' : 'transparent', color: billMode === mode ? '#111439' : '#a78bfa' }}>
+                                    {billMode === mode ? '✓ ' : ''}{text}
+                                </button>
+                            ))}
+                        </div>
                         <div style={{ color: 'red', fontWeight: 'bold', fontSize: '1.35rem', whiteSpace: 'nowrap' }}>
                             {tr('Bill No:', 'බිල් අං:')} {editingBill ? editingBill.bill_no : tr('New', 'නව')}
                         </div>
@@ -787,34 +857,34 @@ export default function NewSupplierBillDashboard() {
                             <input type="date" style={darkInput} value={form.bill_date} onChange={(e) => setForm({ ...form, bill_date: e.target.value })} />
                         </div>
                         <div style={{ gridColumn: 'span 5' }}>
-                            <label style={label}>{tr('Supplier', 'සැපයුම්කරු')}</label>
-                            {/* Pick an existing supplier, or type a new code and press Enter */}
+                            <label style={label}>{isCustomerMode ? tr('Customer', 'පාරිභෝගිකයා') : tr('Supplier', 'සැපයුම්කරු')}</label>
+                            {/* Pick an existing supplier / customer, or type a new code and press Enter */}
                             <CreatableSelect
                                 ref={supplierRef}
                                 autoFocus
-                                options={supplierOptions}
+                                options={partyOptions}
                                 value={form.supplier}
                                 onChange={(opt) => { setForm({ ...form, supplier: opt }); if (opt) setTimeout(() => itemRef.current?.focus(), 0); }}
                                 onCreateOption={(input) => {
                                     const code = input.trim().toUpperCase();
                                     if (!code) return;
-                                    const existing = supplierOptions.find(o => o.value.toUpperCase() === code);
+                                    const existing = partyOptions.find(o => o.value.toUpperCase() === code);
                                     setForm({ ...form, supplier: existing || { value: code, label: code, name: null, isNew: true } });
                                     setTimeout(() => itemRef.current?.focus(), 0);
                                 }}
                                 isValidNewOption={(input) => {
                                     const code = input.trim().toUpperCase();
-                                    return code.length > 0 && code.length <= 50 && !supplierOptions.some(o => o.value.toUpperCase() === code);
+                                    return code.length > 0 && code.length <= 50 && !partyOptions.some(o => o.value.toUpperCase() === code);
                                 }}
-                                formatCreateLabel={(input) => `${tr('New supplier code', 'නව සැපයුම්කරු කේතය')}: ${input.trim().toUpperCase()}`}
-                                placeholder={tr('Type or pick a supplier code...', 'සැපයුම්කරු කේතය ටයිප් කරන්න හෝ තෝරන්න...')}
+                                formatCreateLabel={(input) => `${isCustomerMode ? tr('New customer code', 'නව පාරිභෝගික කේතය') : tr('New supplier code', 'නව සැපයුම්කරු කේතය')}: ${input.trim().toUpperCase()}`}
+                                placeholder={isCustomerMode ? tr('Type or pick a customer code...', 'පාරිභෝගික කේතය ටයිප් කරන්න හෝ තෝරන්න...') : tr('Type or pick a supplier code...', 'සැපයුම්කරු කේතය ටයිප් කරන්න හෝ තෝරන්න...')}
                                 styles={whiteSelect}
                                 menuPortalTarget={document.body}
                                 isClearable
                             />
                         </div>
                         <div style={{ gridColumn: 'span 4' }}>
-                            <label style={label}>{tr('Supplier ref / bill no', 'සැපයුම්කරු යොමු / බිල් අංකය')}</label>
+                            <label style={label}>{isCustomerMode ? tr('Ref / bill no', 'යොමු / බිල් අංකය') : tr('Supplier ref / bill no', 'සැපයුම්කරු යොමු / බිල් අංකය')}</label>
                             <input type="text" style={darkInput} maxLength={100} value={form.reference_no}
                                 onChange={(e) => setForm({ ...form, reference_no: e.target.value })} placeholder={tr('Optional', 'අත්‍යවශ්‍ය නැත')} />
                         </div>
@@ -993,7 +1063,9 @@ export default function NewSupplierBillDashboard() {
                         )}
                         {lines.length === 0 && (
                             <div style={{ textAlign: 'center', color: '#94a3b8', padding: '30px 0', border: '1px dashed #4b5563', borderRadius: '0.75rem' }}>
-                                {tr('No items added yet. Pick a supplier, then add items.', 'තවම භාණ්ඩ එක් කර නැත. සැපයුම්කරු තෝරා භාණ්ඩ එක් කරන්න.')}
+                                {isCustomerMode
+                                    ? tr('No items added yet. Pick a customer, then add items.', 'තවම භාණ්ඩ එක් කර නැත. පාරිභෝගිකයා තෝරා භාණ්ඩ එක් කරන්න.')
+                                    : tr('No items added yet. Pick a supplier, then add items.', 'තවම භාණ්ඩ එක් කර නැත. සැපයුම්කරු තෝරා භාණ්ඩ එක් කරන්න.')}
                             </div>
                         )}
                     </div>
@@ -1003,8 +1075,8 @@ export default function NewSupplierBillDashboard() {
                         {[
                             [tr('Weight:', 'බර:'), `${kg(totals.weight)} kg`, 'white'],
                             [tr('Total:', 'එකතුව:'), money(totals.gross), 'white'],
-                            [tr('Commission:', 'කොමිස්:'), `-${money(totals.commission)}`, '#f87171'],
-                            [tr('Deductions:', 'අඩු කිරීම්:'), `-${money(form.deductions)}`, '#f87171'],
+                            ...(isCustomerMode ? [] : [[tr('Commission:', 'කොමිස්:'), `-${money(totals.commission)}`, '#f87171']]),
+                            [isCustomerMode ? tr('Discount:', 'වට්ටම:') : tr('Deductions:', 'අඩු කිරීම්:'), `-${money(form.deductions)}`, '#f87171'],
                             [tr('Net:', 'ශුද්ධ:'), money(totals.net), '#facc15'],
                             [tr('Balance:', 'ශේෂය:'), money(totals.balance), totals.balance > 0 ? '#f87171' : '#4ade80'],
                         ].map(([l, v, c], i, arr) => (
@@ -1018,11 +1090,11 @@ export default function NewSupplierBillDashboard() {
                     {/* payment fields */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', columnGap: 8, rowGap: 8, marginTop: 10, alignItems: 'end' }}>
                         <div style={{ gridColumn: 'span 2' }}>
-                            <label style={label}>{tr('Deductions', 'අඩු කිරීම්')}</label>
+                            <label style={label}>{isCustomerMode ? tr('Discount', 'වට්ටම') : tr('Deductions', 'අඩු කිරීම්')}</label>
                             <input type="number" min="0" step="any" style={darkInput} value={form.deductions} onChange={(e) => setForm({ ...form, deductions: e.target.value })} />
                         </div>
                         <div style={{ gridColumn: 'span 3' }}>
-                            <label style={label}>{tr('Deduction reason', 'අඩු කිරීමට හේතුව')}</label>
+                            <label style={label}>{isCustomerMode ? tr('Discount reason', 'වට්ටමට හේතුව') : tr('Deduction reason', 'අඩු කිරීමට හේතුව')}</label>
                             <input type="text" style={darkInput} maxLength={255} value={form.deduction_note}
                                 onChange={(e) => setForm({ ...form, deduction_note: e.target.value })} placeholder={tr('e.g. transport', 'උදා: ප්‍රවාහන')} />
                         </div>
@@ -1087,7 +1159,7 @@ export default function NewSupplierBillDashboard() {
                     <div className="modal-dialog modal-xl modal-dialog-scrollable">
                         <div className="modal-content">
                             <div className="modal-header" style={{ background: '#1b5e20', color: '#fff' }}>
-                                <h5 className="modal-title">{tr('Supplier Bills Report', 'සැපයුම්කරු බිල්පත් වාර්තාව')}</h5>
+                                <h5 className="modal-title">{isCustomerMode ? tr('Customer Bills Report', 'පාරිභෝගික බිල්පත් වාර්තාව') : tr('Supplier Bills Report', 'සැපයුම්කරු බිල්පත් වාර්තාව')}</h5>
                                 <button type="button" className="btn-close btn-close-white" onClick={() => setShowReport(false)} aria-label="Close" />
                             </div>
                             <div className="modal-body">
@@ -1103,8 +1175,8 @@ export default function NewSupplierBillDashboard() {
                                             onChange={(e) => setFilters({ ...filters, end_date: e.target.value })} />
                                     </div>
                                     <div className="col-12 col-md-4">
-                                        <label className="form-label small mb-1">{tr('Supplier', 'සැපයුම්කරු')}</label>
-                                        <Select options={supplierOptions} value={filters.supplier} isClearable
+                                        <label className="form-label small mb-1">{isCustomerMode ? tr('Customer', 'පාරිභෝගිකයා') : tr('Supplier', 'සැපයුම්කරු')}</label>
+                                        <Select options={partyOptions} value={filters.supplier} isClearable
                                             onChange={(opt) => setFilters({ ...filters, supplier: opt })}
                                             placeholder={tr('All', 'සියල්ල')} styles={selectStyles} menuPortalTarget={document.body} />
                                     </div>
@@ -1191,7 +1263,7 @@ export default function NewSupplierBillDashboard() {
                                             <tr>
                                                 <th>{tr('Bill No', 'බිල් අංකය')}</th>
                                                 <th>{tr('Date', 'දිනය')}</th>
-                                                <th>{tr('Supplier', 'සැපයුම්කරු')}</th>
+                                                <th>{isCustomerMode ? tr('Customer', 'පාරිභෝගිකයා') : tr('Supplier', 'සැපයුම්කරු')}</th>
                                                 <th className="text-end">{tr('Items', 'භාණ්ඩ')}</th>
                                                 <th className="text-end">{tr('Weight', 'බර')}</th>
                                                 <th className="text-end">{tr('Net', 'ශුද්ධ')}</th>

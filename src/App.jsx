@@ -567,7 +567,7 @@ export default function App() {
                                 printMode={printMode}
                                 setPrintMode={setPrintMode}
                             >
-                                <NewSupplierBillDashboard />
+                                <NewSupplierBillDashboard printMode={printMode} />
                             </Layout>
                         </ProtectedRoute>
                     }
