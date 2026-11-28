@@ -838,7 +838,7 @@ export default function SalesEntry(props) {
 }
 
 // lane: null = single bill; 'A' / 'B' = Bill 1 / Bill 2 of the Dual Bill system.
-// Only the active lane (the one last clicked or typed in) answers F1, F5, F8, F9 and F2.
+// Only the active lane (the one last clicked or typed in) answers F1, F5, F9 and F2.
 function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSetPrintMode, lane = null, isActiveLane = true, onActivate, onToggleDual }) {
     const laneVersion = useLaneVersion();
     const inLane = (s) => !lane || (lane === 'B') === isLaneB(s);
@@ -864,11 +864,6 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
     const [billType, setBillType] = useState('credit');
     const creditFlag = billType === 'cash' ? 'N' : 'Y';
     const togglePackMode = (on) => setPackMode(on);
-    // Keep customer + item (F8): after each record the customer code, item and price stay filled
-    // and the cursor skips those fields (only while ticked; unticked when the page opens)
-    const [keepCustomerItem, setKeepCustomerItem] = useState(false);
-    const keepCustomerItemRef = useRef(false);
-    keepCustomerItemRef.current = keepCustomerItem;
     // Keep supplier + item on F5: the next bill starts with the last record's supplier code and
     // item filled; the cursor goes to the customer code and skips them (unticked when the page opens)
     const [keepOnHold, setKeepOnHold] = useState(false);
@@ -1591,8 +1586,8 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
                     fetchLoanAmount(code);
                 }
 
-                // Keep supplier + item + price: the item is already filled, go straight to the weight
-                if ((keepCustomerItemRef.current || keepOnHoldRef.current) && formData.item_code) {
+                // Keep supplier + item on F5: the item is already filled, go straight to the weight
+                if (keepOnHoldRef.current && formData.item_code) {
                     refs.weight.current?.focus();
                     refs.weight.current?.select();
                     return;
@@ -1603,12 +1598,6 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
 
             // 5. Logic for SUPPLIER CODE input
             if (currentFieldName === "supplier_code") {
-                // Keep supplier + item + price: customer and item already have values, skip them
-                if (keepCustomerItemRef.current && (formData.customer_code || autoCustomerCode) && formData.item_code) {
-                    refs.weight.current?.focus();
-                    refs.weight.current?.select();
-                    return;
-                }
                 // Supplier first, then the customer code
                 refs.customer_code_input.current?.focus();
                 refs.customer_code_input.current?.select();
@@ -2336,19 +2325,6 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
                 refs.weight.current.focus();
                 refs.weight.current.select();
             }
-        } else if (keepCustomerItemRef.current && !isEditing) {
-            // Keep supplier + item + price ticked: supplier code, item and price stay; the customer
-            // code is cleared and the cursor goes there (Enter then skips the item, straight to weight)
-            setFormData({
-                ...initialFormData, supplier_code: currentSupplierCode,
-                item_code: formData.item_code, item_name: formData.item_name, pack_due: formData.pack_due, price_per_kg: formData.price_per_kg,
-            });
-            // isManualClear: the customer box stays empty (no customer filled in from the last record)
-            updateState({ errors: {}, editingSaleId: null, isManualClear: true, priceManuallyChanged: false, gridPricePerKg: formData.price_per_kg, loanAmount: 0 });
-            if (refs.customer_code_input.current) {
-                refs.customer_code_input.current.focus();
-                refs.customer_code_input.current.select();
-            }
         } else {
             setFormData({ ...initialFormData, customer_code: customerCode, customer_name: currentCustomerName, telephone_no: currentTelephone, supplier_code: currentSupplierCode });
             updateState({ errors: {}, editingSaleId: null, isManualClear: false, priceManuallyChanged: false, gridPricePerKg: "" });
@@ -2860,12 +2836,6 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
             }
             // Dual Bill: the other bill's panel ignores the function keys
             if (lane && !activeLaneRef.current) return;
-            // F8: tick / untick "Keep customer + item"
-            if (e.key === "F8") {
-                e.preventDefault();
-                setKeepCustomerItem(on => !on);
-                return;
-            }
             // F9: tick / untick "Pack by pack"
             if (e.key === "F9") {
                 e.preventDefault();
@@ -3062,17 +3032,6 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
                                                     />
                                                     <label htmlFor="bulkPrintCheckbox" style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                                         {tr('Bulk Printing', 'තොග මුද්‍රණය')}
-                                                    </label>
-                                                    <input
-                                                        type="checkbox"
-                                                        id="keepCustomerItemCheckbox"
-                                                        checked={keepCustomerItem}
-                                                        onChange={(e) => setKeepCustomerItem(e.target.checked)}
-                                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#38bdf8', marginLeft: '12px' }}
-                                                    />
-                                                    <label htmlFor="keepCustomerItemCheckbox" title={tr('After each record keep the supplier code, item and price; type the customer code, Enter goes straight to the weight', 'සෑම වාර්තාවකටම පසු සැපයුම්කරු කේතය, අයිතමය සහ මිල තබා ගන්න; පාරිභෝගික කේතය ටයිප් කර Enter කළ විට කෙලින්ම බරට යයි')}
-                                                        style={{ color: keepCustomerItem ? '#38bdf8' : 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                                        {tr('Keep supplier + item + price', 'සැපයුම්කරු + අයිතමය + මිල තබන්න')} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>(F8)</span>
                                                     </label>
                                                     <input
                                                         type="checkbox"
