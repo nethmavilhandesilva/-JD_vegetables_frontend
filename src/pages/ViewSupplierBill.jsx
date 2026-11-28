@@ -5,6 +5,7 @@ import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/sh
 import { API_BASE_URL } from '../config/paths';
 import { tr } from '../i18n/language';
 import { billDate, totalKuliya } from '../utils/billDate';
+import { supplierChargesBoxRow } from '../utils/supplierBillPrint';
 
 const ViewSupplierBill = () => {
     const { token } = useParams();
@@ -211,19 +212,10 @@ const ViewSupplierBill = () => {
             <td style="text-align:right;"><span style="font-size:${fontSizeTotal}; padding:5px 10px;">${totalCustomerPackCost.toFixed(2)}</span></td>
         </tr>` : ''}
 
-        <tr style="font-size:18px;">
-            <td style="font-size:15px; padding-top:5px;">${tr('Advance', 'අත්තිකාරම්')}</td>
-            <td style="text-align:right; padding-top:5px; color:#000;">
-                - ${advanceAmount.toFixed(2)}
-            </td>
-        </tr>
-        ${hireAmount > 0 ? `
-        <tr style="font-size:18px;">
-            <td style="font-size:15px; padding-top:5px;">${tr('Hire', 'කුලී')}</td>
-            <td style="text-align:right; padding-top:5px; color:#000;">
-                - ${hireAmount.toFixed(2)}
-            </td>
-        </tr>` : ''}
+        ${supplierChargesBoxRow([
+            [tr('Advance', 'අත්තිකාරම්'), `- ${advanceAmount.toFixed(2)}`],
+            [tr('Hire', 'කුලී'), `- ${hireAmount.toFixed(2)}`],
+        ])}
 
         <tr style="font-weight:900;">
             <td style="font-size:18px; padding-top:10px;">${tr('Net Remaining Balance', 'ශුද්ධ ඉතිරි ශේෂය')}:</td>

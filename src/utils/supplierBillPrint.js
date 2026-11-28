@@ -5,6 +5,18 @@ import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/sh
 import { tr } from '../i18n/language';
 import { billDate, totalKuliya } from './billDate';
 
+// Advance and Hire on every supplier bill: bold black text inside a thick black box, so
+// the amounts taken off the bill stand out. `lines` = [[label, amountText], ...].
+// Returns one table row (colspan 2) for the thermal-style bills.
+export const supplierChargesBoxRow = (lines, { fontSize = '18px' } = {}) => `
+        <tr>
+          <td colspan="2" style="padding-top:6px;">
+            <div style="border:3px solid #000; padding:4px 8px; color:#000; font-weight:900;">
+              ${lines.map(([label, value]) => `<div style="display:flex; justify-content:space-between; gap:10px; font-size:${fontSize}; font-weight:900; color:#000; padding:2px 0;"><span style="font-weight:900; color:#000;">${label}</span><span style="font-weight:900; color:#000; white-space:nowrap;">${value}</span></div>`).join('')}
+            </div>
+          </td>
+        </tr>`;
+
 // Bulk Printing (same idea as the sales entry page): on the printed supplier bill, lines
 // for the same item, price and pack cost are merged into one line (whatever the customer)
 // with their weight, packs and amount added up. Only the printout changes, not the saved
@@ -343,8 +355,10 @@ export const buildSupplierA4Bill = (supplierDetails = [], {
                 <div class="total-row"><span>${tr('Grand Total', 'මුළු එකතුව')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalSales)}</span></div>
                 ${grandTotalPackCost > 0 ? `<div class="total-row"><span>${tr('Bags', 'මලු')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalPackCost)}</span></div>` : ''}
                 <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} +${formatNumber(grandKuliya)}</span></div>
-                <div class="total-row" style="font-weight: 900 !important; color: #000 !important;"><span style="color: #000 !important; font-weight: 900 !important;">${tr('Advance', 'අත්තිකාරම්')}:</span><span style="color: #000 !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(grandAdvanceAmount)}</span></div>
-                <div class="total-row" style="font-weight: 900 !important; color: #000 !important;"><span style="color: #000 !important; font-weight: 900 !important;">${tr('Hire', 'කුලී')}:</span><span style="color: #000 !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(hireAmount)}</span></div>
+                <div style="border: 3px solid #000 !important; padding: 1mm 2mm; margin: 1mm 0; color: #000 !important; font-weight: 900 !important;">
+                    <div style="display: flex; justify-content: space-between; color: #000 !important; font-weight: 900 !important; font-size: 1.1em;"><span style="color: #000 !important; font-weight: 900 !important;">${tr('Advance', 'අත්තිකාරම්')}:</span><span style="color: #000 !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(grandAdvanceAmount)}</span></div>
+                    <div style="display: flex; justify-content: space-between; color: #000 !important; font-weight: 900 !important; font-size: 1.1em;"><span style="color: #000 !important; font-weight: 900 !important;">${tr('Hire', 'කුලී')}:</span><span style="color: #000 !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(hireAmount)}</span></div>
+                </div>
                 ${deductionValue > 0 ? `<div class="total-row"><span>${tr('Deductions', 'අඩු කිරීම්')}${deductionNote ? ` (${deductionNote})` : ''}:</span><span>${tr('Rs.', 'රු.')} -${formatNumber(deductionValue)}</span></div>` : ''}
                 ${grandPaidAmount > 0 ? `<div class="total-row"><span>${tr('Paid Amount', 'ගෙවූ මුදල')}:</span><span>${tr('Rs.', 'රු.')} -${formatNumber(grandPaidAmount)}</span></div>` : ''}
                 <div class="net-total">
@@ -738,18 +752,10 @@ export const buildSupplierThermalBill = (supplierDetails = [], {
         <tr><td colspan="2" style="border-top:1px dashed #000; padding: 5px 0;"></td></tr>
         ` : ''}
 
-        <tr style="font-size:18px; font-weight:900;">
-          <td style="font-size:16px; padding-top:5px; font-weight:900;">${tr('Advance', 'අත්තිකාරම්')}</td>
-          <td style="text-align:right; padding-top:5px; color:#000; font-weight:900;">
-            - ${Number(advanceAmount || 0).toFixed(2)}
-           </td>
-          </tr>
-        <tr style="font-size:18px; font-weight:900;">
-          <td style="font-size:16px; padding-top:5px; font-weight:900;">${tr('Hire', 'කුලී')}</td>
-          <td style="text-align:right; padding-top:5px; color:#000; font-weight:900;">
-            - ${Number(hireAmount || 0).toFixed(2)}
-           </td>
-          </tr>
+        ${supplierChargesBoxRow([
+            [tr('Advance', 'අත්තිකාරම්'), `- ${Number(advanceAmount || 0).toFixed(2)}`],
+            [tr('Hire', 'කුලී'), `- ${Number(hireAmount || 0).toFixed(2)}`],
+        ])}
         ${deductionValue > 0 ? `
         <tr style="font-size:18px;">
           <td style="font-size:15px; padding-top:5px;">${tr('Deductions', 'අඩු කිරීම්')}${deductionNote ? ` (${deductionNote})` : ''}</td>

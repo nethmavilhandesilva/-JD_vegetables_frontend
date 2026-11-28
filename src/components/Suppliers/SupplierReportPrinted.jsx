@@ -5,6 +5,7 @@ import { SHOP_PHONE, SHOP_TAGLINE } from '../../config/shop';
 import { STORAGE_URL } from '../../config/paths';
 import { tr } from '../../i18n/language';
 import { billDate, totalKuliya } from '../../utils/billDate';
+import { supplierChargesBoxRow } from '../../utils/supplierBillPrint';
 
 const SupplierReport = () => {
     const navigate = useNavigate();
@@ -641,12 +642,7 @@ const handleUnprintedBillClick = async (supplierCode, billNo) => {
         </tr>
         ` : ''}
 
-        <tr style="font-size:18px;">
-          <td style="font-size:15px; padding-top:5px;">${tr('Advance', 'අත්තිකාරම්')}</td>
-          <td style="text-align:right; padding-top:5px; color:#000;">
-            - ${advanceAmount.toFixed(2)}
-          </td>
-        </tr>
+        ${supplierChargesBoxRow([[tr('Advance', 'අත්තිකාරම්'), `- ${advanceAmount.toFixed(2)}`]])}
 
         <tr style="font-weight:900;">
           <td style="font-size:18px; padding-top:10px;">${tr('Net Remaining Balance', 'ශුද්ධ ඉතිරි ශේෂය')}:</td>

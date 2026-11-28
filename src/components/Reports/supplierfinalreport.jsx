@@ -100,6 +100,51 @@ const SupplierReport = () => {
         }
     };
 
+    // Hire of each bill block on this page, by group key: printed bills show the hire saved
+    // with their bill number, unbilled blocks the supplier's pending hire (taken off the
+    // next printed bill). Edited from the block header.
+    const groupInfo = (key, rows, type) => ({
+        code: rows[0]?.supplier_code || (type === 'billed' ? key.split(' - Bill: ')[0] : key),
+        billNo: type === 'billed' ? (rows[0]?.supplier_bill_no || '') : '',
+    });
+    const [hireByGroup, setHireByGroup] = useState({});
+    const [hireEdit, setHireEdit] = useState(null); // { gk, value, saving }
+    useEffect(() => {
+        let cancelled = false;
+        const all = [
+            ...Object.entries(reportData.nonBilled || {}).map(([k, rows]) => ['nonBilled', k, rows]),
+            ...Object.entries(reportData.billed || {}).map(([k, rows]) => ['billed', k, rows]),
+        ];
+        Promise.all(all.map(async ([type, key, rows]) => {
+            const { code, billNo } = groupInfo(key, rows, type);
+            const c = await fetchCharges(code, billNo);
+            return [`${type}|${key}`, c.hireAmount];
+        })).then((pairs) => { if (!cancelled) setHireByGroup(Object.fromEntries(pairs)); });
+        return () => { cancelled = true; };
+    }, [reportData]);
+
+    const saveHire = async (type, key, rows) => {
+        const amount = parseFloat(hireEdit?.value);
+        if (hireEdit?.value === '' || !Number.isFinite(amount) || amount < 0) {
+            alert(tr('Enter a valid amount (0 or more).', 'වලංගු මුදලක් ඇතුළත් කරන්න (0 හෝ වැඩි).'));
+            return;
+        }
+        const { code, billNo } = groupInfo(key, rows, type);
+        setHireEdit((h) => ({ ...h, saving: true }));
+        try {
+            if (billNo) {
+                await api.put(`/suppliers/bill/${encodeURIComponent(billNo)}/hire`, { hire_amount: amount });
+            } else {
+                await api.post('/suppliers/hire', { code, hire_amount: amount });
+            }
+            setHireByGroup((m) => ({ ...m, [`${type}|${key}`]: amount }));
+            setHireEdit(null);
+        } catch (error) {
+            alert(`${tr('Could not save the hire amount', 'කුලී මුදල සුරැකීමට නොහැකි විය')}: ${error.response?.data?.message || error.message}`);
+            setHireEdit((h) => (h ? { ...h, saving: false } : h));
+        }
+    };
+
     const handlePrintBills = async () => {
         let groups = Object.entries(filteredReportData.billed || {}).map(([key, rows]) => ({
             code: rows[0]?.supplier_code || key.split(' - Bill: ')[0],
@@ -218,9 +263,36 @@ const SupplierReport = () => {
                     <h5 className="mb-0 fw-bold">
                         {tr('Supplier:', 'සැපයුම්කරු:')} {key}
                     </h5>
-                    <span className="badge bg-white text-primary">
-                        {tr('Records:', 'වාර්තා ගණන:')} {groups[key].length}
-                    </span>
+                    <div className="d-flex align-items-center gap-2">
+                        {hireEdit?.gk === `${type}|${key}` ? (
+                            <form className="d-flex align-items-center gap-1" onSubmit={(e) => { e.preventDefault(); saveHire(type, key, groups[key]); }}>
+                                <span className="fw-bold">{tr('Hire', 'කුලී')}:</span>
+                                <input type="number" min="0" step="0.01" autoFocus className="form-control form-control-sm" style={{ width: 110 }}
+                                    value={hireEdit.value} onChange={(e) => setHireEdit({ ...hireEdit, value: e.target.value })}
+                                    onKeyDown={(e) => { if (e.key === 'Escape') setHireEdit(null); }} />
+                                <button type="submit" className="btn btn-sm btn-light fw-bold" disabled={hireEdit.saving}>
+                                    {hireEdit.saving ? tr('Saving...', 'සුරකිමින්...') : tr('Save', 'සුරකින්න')}
+                                </button>
+                                <button type="button" className="btn btn-sm btn-outline-light" onClick={() => setHireEdit(null)}>{tr('Cancel', 'අවලංගු')}</button>
+                            </form>
+                        ) : (
+                            <>
+                                <span className="badge bg-white text-dark fs-6">
+                                    {tr('Hire', 'කුලී')}: {tr('Rs.', 'රු.')} {(hireByGroup[`${type}|${key}`] || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                                <button type="button" className="btn btn-sm btn-light fw-bold"
+                                    title={type === 'billed'
+                                        ? tr('Change the hire saved with this bill', 'මෙම බිලේ කුලී මුදල වෙනස් කරන්න')
+                                        : tr("Change the supplier's hire (taken off when the bill is printed)", 'සැපයුම්කරුගේ කුලී මුදල වෙනස් කරන්න (බිල මුද්‍රණය කරන විට අඩු කෙරේ)')}
+                                    onClick={() => setHireEdit({ gk: `${type}|${key}`, value: String(hireByGroup[`${type}|${key}`] || ''), saving: false })}>
+                                    ✏️ {tr('Edit Hire', 'කුලී සංස්කරණය')}
+                                </button>
+                            </>
+                        )}
+                        <span className="badge bg-white text-primary">
+                            {tr('Records:', 'වාර්තා ගණන:')} {groups[key].length}
+                        </span>
+                    </div>
                 </div>
 
                 <div className="card-body p-0">
