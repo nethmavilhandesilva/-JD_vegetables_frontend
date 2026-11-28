@@ -137,7 +137,9 @@ const SupplierReport = () => {
             } else {
                 await api.post('/suppliers/hire', { code, hire_amount: amount });
             }
-            setHireByGroup((m) => ({ ...m, [`${type}|${key}`]: amount }));
+            // Read it back from the server, so the header shows what the bill will print
+            const fresh = await fetchCharges(code, billNo);
+            setHireByGroup((m) => ({ ...m, [`${type}|${key}`]: fresh.hireAmount }));
             setHireEdit(null);
         } catch (error) {
             alert(`${tr('Could not save the hire amount', 'කුලී මුදල සුරැකීමට නොහැකි විය')}: ${error.response?.data?.message || error.message}`);
@@ -154,6 +156,12 @@ const SupplierReport = () => {
         if (groups.length === 0) {
             groups = Object.entries(filteredReportData.nonBilled || {}).map(([code, rows]) => ({ code, billNo: '', rows }));
         }
+        await printGroups(groups);
+    };
+
+    // Prints the given bills ({ code, billNo, rows }) with their advance / hire read fresh from
+    // the server. Used by "Print Bills" and by the Print button of each block.
+    const printGroups = async (groups) => {
         if (groups.length === 0) {
             alert(tr('No bills to print.', 'මුද්‍රණය කිරීමට බිල්පත් නැත.'));
             return;
@@ -292,6 +300,11 @@ const SupplierReport = () => {
                         <span className="badge bg-white text-primary">
                             {tr('Records:', 'වාර්තා ගණන:')} {groups[key].length}
                         </span>
+                        <button type="button" className="btn btn-sm btn-success fw-bold border-white" disabled={printing}
+                            title={tr('Print this bill', 'මෙම බිල මුද්‍රණය කරන්න')}
+                            onClick={() => printGroups([{ ...groupInfo(key, groups[key], type), rows: groups[key] }])}>
+                            🖨 {tr('Print', 'මුද්‍රණය')}
+                        </button>
                     </div>
                 </div>
 
