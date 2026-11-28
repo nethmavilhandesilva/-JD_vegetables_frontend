@@ -8,7 +8,7 @@ import { billDate, totalKuliya } from './billDate';
 // Advance and Hire on every supplier bill: bold black text inside a thick black box, so
 // the amounts taken off the bill stand out. `lines` = [[label, amountText], ...].
 // Returns one table row (colspan 2) for the thermal-style bills.
-export const supplierChargesBoxRow = (lines, { fontSize = '18px' } = {}) => `
+export const supplierChargesBoxRow = (lines, { fontSize = '15px' } = {}) => `
         <tr>
           <td colspan="2" style="padding-top:6px;">
             <div style="border:3px solid #000; padding:4px 8px; color:#000; font-weight:900;">
@@ -356,8 +356,8 @@ export const buildSupplierA4Bill = (supplierDetails = [], {
                 ${grandTotalPackCost > 0 ? `<div class="total-row"><span>${tr('Bags', 'මලු')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalPackCost)}</span></div>` : ''}
                 <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} +${formatNumber(grandKuliya)}</span></div>
                 <div style="border: 3px solid #000 !important; padding: 1mm 2mm; margin: 1mm 0; color: #000 !important; font-weight: 900 !important;">
-                    <div style="display: flex; justify-content: space-between; color: #000 !important; font-weight: 900 !important; font-size: 1.1em;"><span style="color: #000 !important; font-weight: 900 !important;">${tr('Advance', 'අත්තිකාරම්')}:</span><span style="color: #000 !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(grandAdvanceAmount)}</span></div>
-                    <div style="display: flex; justify-content: space-between; color: #000 !important; font-weight: 900 !important; font-size: 1.1em;"><span style="color: #000 !important; font-weight: 900 !important;">${tr('Hire', 'කුලී')}:</span><span style="color: #000 !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(hireAmount)}</span></div>
+                    <div style="display: flex; justify-content: space-between; color: #000 !important; font-weight: 900 !important; font-size: 0.9em;"><span style="color: #000 !important; font-weight: 900 !important;">${tr('Advance', 'අත්තිකාරම්')}:</span><span style="color: #000 !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(grandAdvanceAmount)}</span></div>
+                    <div style="display: flex; justify-content: space-between; color: #000 !important; font-weight: 900 !important; font-size: 0.9em;"><span style="color: #000 !important; font-weight: 900 !important;">${tr('Hire', 'කුලී')}:</span><span style="color: #000 !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(hireAmount)}</span></div>
                 </div>
                 ${deductionValue > 0 ? `<div class="total-row"><span>${tr('Deductions', 'අඩු කිරීම්')}${deductionNote ? ` (${deductionNote})` : ''}:</span><span>${tr('Rs.', 'රු.')} -${formatNumber(deductionValue)}</span></div>` : ''}
                 ${grandPaidAmount > 0 ? `<div class="total-row"><span>${tr('Paid Amount', 'ගෙවූ මුදල')}:</span><span>${tr('Rs.', 'රු.')} -${formatNumber(grandPaidAmount)}</span></div>` : ''}
