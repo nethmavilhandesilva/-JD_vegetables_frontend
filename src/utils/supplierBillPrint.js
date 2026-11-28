@@ -5,13 +5,13 @@ import { SHOP_NAME, SHOP_PHONE, SHOP_ADDRESS, SHOP_STALL_NO } from '../config/sh
 import { tr } from '../i18n/language';
 import { billDate, totalKuliya } from './billDate';
 
-// Advance and Hire on every supplier bill: bold black text inside a thick black box, so
+// Advance and Hire on every supplier bill: bold black text (no box), so
 // the amounts taken off the bill stand out. `lines` = [[label, amountText], ...].
 // Returns one table row (colspan 2) for the thermal-style bills.
 export const supplierChargesBoxRow = (lines, { fontSize = '15px' } = {}) => `
         <tr>
           <td colspan="2" style="padding-top:6px;">
-            <div style="border:3px solid #000; padding:4px 8px; color:#000; font-weight:900;">
+            <div style="color:#000; font-weight:900;">
               ${lines.map(([label, value]) => `<div style="display:flex; justify-content:space-between; gap:10px; font-size:${fontSize}; font-weight:900; color:#000; padding:2px 0;"><span style="font-weight:900; color:#000;">${label}</span><span style="font-weight:900; color:#000; white-space:nowrap;">${value}</span></div>`).join('')}
             </div>
           </td>
@@ -355,7 +355,7 @@ export const buildSupplierA4Bill = (supplierDetails = [], {
                 <div class="total-row"><span>${tr('Grand Total', 'මුළු එකතුව')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalSales)}</span></div>
                 ${grandTotalPackCost > 0 ? `<div class="total-row"><span>${tr('Bags', 'මලු')}:</span><span>${tr('Rs.', 'රු.')} ${formatNumber(grandTotalPackCost)}</span></div>` : ''}
                 <div class="total-row"><span>${tr('Bag Cost', 'මලු වියදම')}:</span><span>${tr('Rs.', 'රු.')} +${formatNumber(grandKuliya)}</span></div>
-                <div style="border: 3px solid #000 !important; padding: 1mm 2mm; margin: 1mm 0; color: #000 !important; font-weight: 900 !important;">
+                <div style="color: #000 !important; font-weight: 900 !important;">
                     <div style="display: flex; justify-content: space-between; color: #000 !important; font-weight: 900 !important; font-size: 0.9em;"><span style="color: #000 !important; font-weight: 900 !important;">${tr('Advance', 'අත්තිකාරම්')}:</span><span style="color: #000 !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(grandAdvanceAmount)}</span></div>
                     <div style="display: flex; justify-content: space-between; color: #000 !important; font-weight: 900 !important; font-size: 0.9em;"><span style="color: #000 !important; font-weight: 900 !important;">${tr('Hire', 'කුලී')}:</span><span style="color: #000 !important; font-weight: 900 !important;">${tr('Rs.', 'රු.')} -${formatNumber(hireAmount)}</span></div>
                 </div>
