@@ -229,7 +229,7 @@ const CreateCustomerLoan = ({ customers, grnCodes, onLoanCreated, editingLoan, o
                                 value="old" 
                                 checked={formData.loan_type === 'old'}
                                 onChange={handleChange}
-                            /> {tr("Trader's old loan", 'වෙළෙන්දාගේ ලාද පරණ නය')}
+                            /> {tr("Cus Settle Loans", 'වෙළෙන්දාගේ ලාද පරණ නය')}
                         </label>
                         <label className="me-3 text-white">
                             <input 
@@ -238,7 +238,7 @@ const CreateCustomerLoan = ({ customers, grnCodes, onLoanCreated, editingLoan, o
                                 value="today" 
                                 checked={formData.loan_type === 'today'}
                                 onChange={handleChange}
-                            /> {tr("Trader's loan taken today", 'වෙළෙන්දාගේ අද දින නය ගැනීම')}
+                            /> {tr("Cus Loans", 'වෙළෙන්දාගේ අද දින නය ගැනීම')}
                         </label>
                         <label className="me-3 text-white">
                             <input 

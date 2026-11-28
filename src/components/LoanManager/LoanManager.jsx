@@ -397,10 +397,10 @@ const LoanManager = () => {
                                     <label key={type} className="me-3">
                                         <input type="radio" name="loan_type" value={type} checked={form.loan_type === type} onChange={handleLoanTypeChange} />
                                         {' '}
-                                        {type === 'old' && tr('Trader\'s old loan', 'වෙළෙන්දාගේ ලාද පරණ නය')}
-                                        {type === 'today' && tr('Trader\'s loan taken today', 'වෙළෙන්දාගේ අද දින නය ගැනීම')}
-                                        {type === 'farmer_old' && tr('Farmer\'s old loan', 'ගොවියා ලාද පරණ නය')}
-                                        {type === 'farmer_today' && tr('Farmer\'s loan taken today', 'ගොවියා අද දින නය ගැනීම')}
+                                        {type === 'old' && tr('Cus Settle Loans', 'වෙළෙන්දාගේ ලාද පරණ නය')}
+                                        {type === 'today' && tr('Cus Loans', 'වෙළෙන්දාගේ අද දින නය ගැනීම')}
+                                        {type === 'farmer_old' && tr('Farmers Settle Loans', 'ගොවියා ලාද පරණ නය')}
+                                        {type === 'farmer_today' && tr('Farmers Loans', 'ගොවියා අද දින නය ගැනීම')}
                                         {type === 'ingoing' && tr('Other income', 'වෙනත් ලාභීම/ආදායම්')}
                                         {type === 'outgoing' && tr('Expenses', 'වි‍යදම්')}
                                         {type === 'returns' && 'Returns'}

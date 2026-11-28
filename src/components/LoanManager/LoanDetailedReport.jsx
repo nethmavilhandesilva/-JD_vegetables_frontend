@@ -9,10 +9,10 @@ const today = () => new Date().toISOString().slice(0, 10);
 const escapeHtml = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const loanTypeLabel = (type) => ({
-    old: tr("Trader's old loan", 'වෙළෙන්දාගේ පැරණි ණය'),
-    today: tr("Trader's loan taken today", 'වෙළෙන්දා අද ගත් ණය'),
-    farmer_old: tr("Farmer's old loan", 'ගොවියාගේ පැරණි ණය'),
-    farmer_today: tr("Farmer's loan taken today", 'ගොවියා අද ගත් ණය'),
+    old: tr("Cus Settle Loans", 'වෙළෙන්දාගේ පැරණි ණය'),
+    today: tr("Cus Loans", 'වෙළෙන්දා අද ගත් ණය'),
+    farmer_old: tr("Farmers Settle Loans", 'ගොවියාගේ පැරණි ණය'),
+    farmer_today: tr("Farmers Loans", 'ගොවියා අද ගත් ණය'),
     ingoing: tr('Other income', 'වෙනත් ආදායම්'),
     outgoing: tr('Expenses', 'වියදම්'),
     returns: tr('Returns', 'ආපසු'),
