@@ -3021,24 +3021,14 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
                                                     {tr('Total Sales:', 'මුළු විකුණුම්:')} Rs. {formatDecimal(totalSalesValue)}
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                                                    {/* Bulk Printing ticked: the same item at the same price is one line on the
-                                                        customer bill (any supplier). Unticked: every record on its own line. */}
-                                                    <input
-                                                        type="checkbox"
-                                                        id="bulkPrintCheckbox"
-                                                        checked={state.isBulkPrintEnabled}
-                                                        onChange={(e) => updateState({ isBulkPrintEnabled: e.target.checked })}
-                                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#4CAF50' }}
-                                                    />
-                                                    <label htmlFor="bulkPrintCheckbox" style={{ color: 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                                        {tr('Bulk Printing', 'තොග මුද්‍රණය')}
-                                                    </label>
+                                                    {/* Bulk Printing is always on (state.isBulkPrintEnabled starts true; no checkbox):
+                                                        the same item at the same price is one line on the customer bill (any supplier). */}
                                                     <input
                                                         type="checkbox"
                                                         id="keepOnHoldCheckbox"
                                                         checked={keepOnHold}
                                                         onChange={(e) => setKeepOnHold(e.target.checked)}
-                                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#f472b6', marginLeft: '12px' }}
+                                                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#f472b6' }}
                                                     />
                                                     <label htmlFor="keepOnHoldCheckbox" title={tr('After F5 the next bill starts with the last supplier code and item filled; the cursor goes to the customer code', 'F5 න් පසු ඊළඟ බිල්පත අවසන් සැපයුම්කරු කේතය සහ අයිතමය සමඟ ආරම්භ වේ; කර්සරය පාරිභෝගික කේතයට යයි')}
                                                         style={{ color: keepOnHold ? '#f472b6' : 'white', fontSize: '0.9rem', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>

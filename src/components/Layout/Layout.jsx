@@ -213,6 +213,27 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
                                                 <i className="material-icons align-middle me-1 text-success">account_balance_wallet</i> {tr("Today's Kuliya", 'අද කුලිය')}
                                             </button>
                                         </li>
+                                        <li><hr className="dropdown-divider" /></li>
+                                        <li>
+                                            <button type="button" className="dropdown-item" onClick={openItemReportModal}>
+                                                <i className="material-icons align-middle me-1">eco</i> {tr('Vegetables', 'එළවළු')}
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <button type="button" className="dropdown-item" onClick={openWeightReportModal}>
+                                                <i className="material-icons align-middle me-1">scale</i> {tr('By Weight', 'බර මත')}
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <button type="button" className="dropdown-item" onClick={openSalesAdjustmentReportModal}>
+                                                <i className="material-icons align-middle me-1">tune</i> {tr('Adjustments', 'වෙනස් කිරීම')}
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <button type="button" className="dropdown-item" onClick={handleProfitReportClick}>
+                                                <i className="material-icons align-middle me-1">trending_up</i> {tr('Supplier Profit', 'සැපයුම් ලාභ')}
+                                            </button>
+                                        </li>
                                     </ul>
                                 </div>
 
@@ -291,27 +312,6 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
                         {/* Bottom Navigation Buttons */}
                         <button
                             type="button"
-                            onClick={openItemReportModal}
-                            style={navTextBtn}
-                        >
-                            {tr('Vegetables', 'එළවළු')}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={openWeightReportModal}
-                            style={navTextBtn}
-                        >
-                            {tr('By Weight', 'බර මත')}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={openSalesAdjustmentReportModal}
-                            style={navTextBtn}
-                        >
-                            {tr('Adjustments', 'වෙනස් කිරීම')}
-                        </button>
-                        <button
-                            type="button"
                             onClick={() => window.location.href = `${BASE_URL}/financial-report`}
                             style={navTextBtn}
                         >
@@ -323,13 +323,6 @@ const Layout = ({ children, billSize, handleBillSizeChange, printMode, setPrintM
                             style={navTextBtn}
                         >
                             {tr('Sales Report', 'විකුණුම් වාර්තාව')}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleProfitReportClick}
-                            style={navTextBtn}
-                        >
-                            {tr('Supplier Profit', 'සැපයුම් ලාභ')}
                         </button>
                         <button
                             type="button"
