@@ -24,9 +24,8 @@ export const combineCustomerBillLines = (sales = [], options = {}) => {
     sales.forEach((sale) => {
         const price = parseFloat(sale.price_per_kg) || 0;
         const packCost = parseFloat(sale.CustomerPackCost) || 0;
-        // Pack by pack: packs of one item are one line even at different prices
-        const priceKey = options.packWeights ? '*' : price;
-        const key = `${String(sale.item_code || sale.item_name || '').toUpperCase()}|${priceKey}|${packCost}`;
+        // Same item at a different price is its own line (also with Pack by pack)
+        const key = `${String(sale.item_code || sale.item_name || '').toUpperCase()}|${price}|${packCost}`;
         const line = lines.get(key);
         if (!line) {
             lines.set(key, {
