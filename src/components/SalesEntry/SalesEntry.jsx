@@ -933,12 +933,20 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
             `ඔබ ${historyDateRef.current} (විකුණුම් ඉතිහාසය, කියවීමට පමණි) බලමින් සිටී. අද බිල්පත් සඳහා දිනය ඉවත් කරන්න.`));
         return true;
     };
+    // Save URL of a record: today's sales, or sales_histories while an earlier day is shown
+    const saleUrl = (id) => (historyDateRef.current ? `/sales/history/${id}` : `${routes.sales}/${id}`);
+    // Records from a history edit are shown the same way the history day was loaded
+    const asShown = (rows) => (historyDateRef.current
+        ? rows.map(r => ({ ...r, bill_printed: r.bill_printed === 'Y' ? 'Y' : 'N', _history: true }))
+        : rows);
     // Safety net: while a history day is shown nothing may write to today's sales
     useEffect(() => {
         if (!historyDate) return undefined;
         const id = api.interceptors.request.use((config) => {
             const method = String(config.method || 'get').toLowerCase();
-            if (method !== 'get' && String(config.url || '').startsWith('/sales')) {
+            const url = String(config.url || '');
+            // Editing an earlier day's record (PUT /sales/history/{id}) is the only write allowed
+            if (method !== 'get' && url.startsWith('/sales') && !(method === 'put' && url.startsWith('/sales/history/'))) {
                 return Promise.reject(new Error(tr('Read-only: a sales history date is selected.', 'කියවීමට පමණි: විකුණුම් ඉතිහාස දිනයක් තෝරා ඇත.')));
             }
             return config;
@@ -1936,7 +1944,7 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
     ), [sortedAllSalesRecords, editingSaleId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleEditClick = (sale) => {
-        if (historyBlocked()) return;
+        // An earlier day's records can be edited too (saved to sales history)
         if (hasPending(sale)) return; // still saving: can be opened a moment later
         // If same record clicked again → clear fields EXCEPT customer/contact fields
         if (state.editingSaleId === sale.id) {
@@ -2174,14 +2182,14 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
             || shared.supplier_code !== (first.supplier_code || '').toUpperCase()
             || shared.customer_code !== (first.customer_code || '').toUpperCase();
 
-        const requests = [api.put(`${routes.sales}/${first.id}`, {
+        const requests = [api.put(saleUrl(first.id), {
             ...shared, weight: firstWeight, packs: firstPacks, kuliya: firstKuliya,
             total: firstWeight * price + firstPacks * packDue,
         })];
         if (sharedChanged) {
             rest.forEach(m => {
                 const w = parseFloat(m.weight) || 0, p = parseFloat(m.packs) || 0;
-                requests.push(api.put(`${routes.sales}/${m.id}`, {
+                requests.push(api.put(saleUrl(m.id), {
                     ...shared, weight: w, packs: p, kuliya: parseFloat(m.Kuliya) || 0,
                     total: w * price + p * packDue, group_follow_up: true,
                 }));
@@ -2197,8 +2205,8 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
         pendingSaveRequestsRef.current.push(tracked);
         try {
             const results = await tracked;
-            const updated = results.filter(r => r.status === 'fulfilled')
-                .flatMap(r => r.value.data.sales || [r.value.data.sale || r.value.data.data].filter(Boolean));
+            const updated = asShown(results.filter(r => r.status === 'fulfilled')
+                .flatMap(r => r.value.data.sales || [r.value.data.sale || r.value.data.data].filter(Boolean)));
             const updatedIds = updated.map(s => s.id);
             setState(prev => ({ ...prev, allSales: prev.allSales.filter(s => !updatedIds.includes(s.id)).concat(updated) }));
             const failed = results.find(r => r.status === 'rejected');
@@ -2215,7 +2223,12 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
     // server), and the item + price stay filled so the next pack is just weight, Enter, Enter.
     const handleSubmit = async (e, opts = {}) => {
         e.preventDefault();
-        if (historyBlocked()) return;
+        // Earlier day: a record can be edited (sales history is updated), nothing new added
+        if (historyDateRef.current && (editingSaleId === null || opts.pack)) {
+            alert(tr(`You are viewing ${historyDateRef.current} (sales history). Click a record in the table to edit it; new records can only be added to today's bills.`,
+                `ඔබ ${historyDateRef.current} (විකුණුම් ඉතිහාසය) බලමින් සිටී. සංස්කරණය කිරීමට වගුවේ වාර්තාවක් ක්ලික් කරන්න; නව වාර්තා එක් කළ හැක්කේ අද බිල්පත් වලට පමණි.`));
+            return;
+        }
         const isPackEntry = !!opts.pack;
         const formData = isPackEntry ? { ...state.formData, packs: '1', kuliya: '' } : state.formData;
         // NOTE: no isSubmitting guard here — each Enter press is a distinct, legitimate
@@ -2306,7 +2319,7 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
             update_related_price: shouldUpdateRelatedPrice
         };
 
-        const url = isEditing ? `${routes.sales}/${editingSaleId}` : routes.sales;
+        const url = isEditing ? saleUrl(editingSaleId) : routes.sales;
         const method = isEditing ? "put" : "post";
 
         // --- INSTANT UI RESET: clear the form and jump the cursor to supplier_code right away
@@ -2381,7 +2394,7 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
         const saveTask = (async () => {
             try {
                 const response = await api[method](url, payload);
-                const updatedSales = response.data.sales || [response.data.sale || response.data.data || response.data];
+                const updatedSales = asShown(response.data.sales || [response.data.sale || response.data.data || response.data]);
                 const updatedIds = updatedSales.map(s => s.id);
                 if (lane === 'B') addLaneB(updatedIds); // before the record shows, so Bill 1 never takes it
                 commitSales(list => list
@@ -2392,7 +2405,8 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
                 updateState({
                     errors: { form: error.response?.data?.message || error.message || "An error occurred" }
                 });
-                if (isEditing) fetchSalesOnly({ force: true }); // put the real values back
+                if (isEditing && historyDateRef.current) changeHistoryDate(historyDateRef.current); // reload that day
+                else if (isEditing) fetchSalesOnly({ force: true }); // put the real values back
             }
         })();
         pendingSaveRequestsRef.current.push(saveTask);
@@ -2980,7 +2994,7 @@ function SalesEntryPanel({ printMode: propPrintMode = 'a4', setPrintMode: propSe
                                                 )}
                                                 {historyDate && (
                                                     <span style={{ color: '#f59e0b', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                                                        {historyLoading ? tr('Loading...', 'පූරණය වෙමින්...') : tr('History · read only', 'ඉතිහාසය · කියවීමට පමණි')}
+                                                        {historyLoading ? tr('Loading...', 'පූරණය වෙමින්...') : tr('History · click a record to edit', 'ඉතිහාසය · සංස්කරණයට වාර්තාවක් ක්ලික් කරන්න')}
                                                     </span>
                                                 )}
                                             </div>
